@@ -134,6 +134,8 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | GET | /piggy-banks/{id} | 获取储蓄罐详情 |
 | PUT | /piggy-banks/{id} | 更新储蓄罐 |
 | DELETE | /piggy-banks/{id} | 删除储蓄罐 |
+| POST | /piggy-banks/{id}/add | 向储蓄罐存入金额 |
+| POST | /piggy-banks/{id}/remove | 从储蓄罐取出金额 |
 | GET | /piggy-banks/{id}/events | 获取储蓄事件 |
 | GET | /piggy-banks/{id}/attachments | 获取关联附件 |
 | GET | /piggy-banks/{id}/accounts | 获取关联账户 |
@@ -242,10 +244,10 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /preferences | 列出偏好 |
-| POST | /preferences | 创建偏好 |
-| GET | /preferences/{id} | 获取详情 |
-| PUT | /preferences/{id} | 更新 |
-| DELETE | /preferences/{id} | 删除 |
+| POST | /preferences | 创建或更新偏好（upsert 语义） |
+| GET | /preferences/{name} | 获取指定偏好 |
+| PUT | /preferences/{name} | 更新指定偏好 |
+| DELETE | /preferences/{name} | 删除指定偏好 |
 
 ### 用户管理（Users，仅管理员）
 

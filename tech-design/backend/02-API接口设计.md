@@ -1521,6 +1521,7 @@
 
 | 值 | 说明 |
 |----|------|
+| ANY | 任意事件（匹配所有触发条件） |
 | STORE_TRANSACTION | 创建交易时 |
 | UPDATE_TRANSACTION | 更新交易时 |
 | DESTROY_TRANSACTION | 删除交易时 |
