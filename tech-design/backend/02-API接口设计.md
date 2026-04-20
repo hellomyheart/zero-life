@@ -1561,6 +1561,28 @@
 }
 ```
 
+### POST /api/v1/webhooks/:id/trigger-transaction
+
+手动触发指定交易的 Webhook。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| transaction_id | uint64 | 是 | 交易 ID |
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "triggered": true,
+    "message_id": 15,
+    "message": "Webhook 已触发"
+  }
+}
+```
+
 ### GET /api/v1/webhooks/:id/messages
 
 获取 Webhook 消息列表，含发送状态。
@@ -2150,6 +2172,497 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 
 ---
 
+## 交易日志接口
+
+### GET /api/v1/transaction-journals/:id
+
+获取交易日志详情，含关联的分类、预算、标签、交易记录。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "transaction_type_id": "withdrawal",
+    "description": "超市购物",
+    "date": "2024-03-15T00:00:00Z",
+    "currency_id": 1,
+    "category_id": 3,
+    "budget_id": 2,
+    "bill_id": null,
+    "tags": ["日常", "食品"],
+    "transactions": [
+      { "id": 1, "account_id": 1, "amount": "-156.80", "currency_id": 1 },
+      { "id": 2, "account_id": 5, "amount": "156.80", "currency_id": 1 }
+    ],
+    "notes": "周末采购",
+    "created_at": "2024-03-15T10:00:00Z"
+  }
+}
+```
+
+### DELETE /api/v1/transaction-journals/:id
+
+删除交易日志（软删除），同时删除关联的交易记录。
+
+**响应：** `204 No Content`
+
+### GET /api/v1/transaction-journals/:id/links
+
+获取交易日志的关联链接列表。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "link_type_id": 1,
+      "link_type_name": "Related",
+      "source_id": 1,
+      "destination_id": 5,
+      "inward": "相关",
+      "outward": "相关"
+    }
+  ]
+}
+```
+
+---
+
+## 可用预算接口
+
+### GET /api/v1/available-budgets
+
+列出可用预算，支持按币种和日期范围过滤。
+
+**查询参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| currency_id | uint64 | 币种 ID 过滤 |
+| start | string | 开始日期 (YYYY-MM-DD) |
+| end | string | 结束日期 (YYYY-MM-DD) |
+| page | int | 页码 |
+| per_page | int | 每页数量 |
+
+### POST /api/v1/available-budgets
+
+创建可用预算。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| currency_id | uint64 | 是 | 币种 ID |
+| amount | string | 是 | 可用金额（decimal） |
+| start_date | string | 是 | 开始日期 |
+| end_date | string | 是 | 结束日期 |
+
+**响应：** `201 Created`
+
+### GET /api/v1/available-budgets/:id
+
+获取可用预算详情。
+
+### PUT /api/v1/available-budgets/:id
+
+更新可用预算。请求体与 POST 相同，所有字段可选。
+
+### DELETE /api/v1/available-budgets/:id
+
+删除可用预算。
+
+---
+
+## 用户组与成员管理接口
+
+### GET /api/v1/user-groups
+
+列出用户可见的用户组。
+
+### POST /api/v1/user-groups
+
+创建用户组。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 是 | 组名称，max=255 |
+
+**响应：** `201 Created`
+
+### GET /api/v1/user-groups/:id
+
+获取用户组详情，含成员列表。
+
+### PUT /api/v1/user-groups/:id
+
+更新用户组。
+
+### DELETE /api/v1/user-groups/:id
+
+删除用户组（仅 OWNER 可操作）。
+
+### GET /api/v1/user-groups/:id/memberships
+
+获取用户组成员列表。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "user_email": "admin@example.com",
+      "user_role": "OWNER",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /api/v1/user-groups/:id/memberships
+
+添加成员到用户组。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | uint64 | 是 | 用户 ID |
+| user_role | string | 是 | 组内角色（见 UserRoleEnum） |
+
+### PUT /api/v1/user-groups/:id/memberships/:membershipId
+
+更新成员角色。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_role | string | 是 | 新的组内角色 |
+
+### DELETE /api/v1/user-groups/:id/memberships/:membershipId
+
+移除成员。
+
+---
+
+## 邀请接口
+
+### POST /api/v1/invitations
+
+创建邀请。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_group_id | uint64 | 是 | 邀请加入的用户组 ID |
+| email | string | 是 | 被邀请者邮箱 |
+
+**响应：** `201 Created`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "email": "newuser@example.com",
+    "invite_code": "abc123def456",
+    "expires_at": "2024-04-20T00:00:00Z"
+  }
+}
+```
+
+### POST /api/v1/invitations/redeem
+
+兑换邀请码。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| invite_code | string | 是 | 邀请码 |
+
+**响应：** `200 OK`
+
+### GET /api/v1/invitations
+
+列出当前用户组内的邀请（需 OWNER 或 FULL 角色）。
+
+### DELETE /api/v1/invitations/:id
+
+撤销邀请。
+
+---
+
+## 全局角色接口
+
+### GET /api/v1/roles
+
+列出所有全局角色。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": [
+    { "id": 1, "name": "owner", "description": "站点所有者" },
+    { "id": 2, "name": "demo", "description": "演示用户" }
+  ]
+}
+```
+
+### POST /api/v1/users/:id/roles
+
+为用户分配全局角色（需站点 OWNER）。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| role_id | uint64 | 是 | 角色 ID |
+
+### DELETE /api/v1/users/:id/roles/:roleId
+
+移除用户的全局角色（需站点 OWNER）。
+
+---
+
+## 数据导出接口
+
+### POST /api/v1/export/accounts
+
+导出账户数据为 CSV。
+
+**响应：** CSV 文件流，Content-Type: text/csv
+
+### POST /api/v1/export/bills
+
+导出账单数据为 CSV。
+
+### POST /api/v1/export/budgets
+
+导出预算数据为 CSV。
+
+### POST /api/v1/export/categories
+
+导出分类数据为 CSV。
+
+### POST /api/v1/export/piggy-banks
+
+导出储蓄罐数据为 CSV。
+
+### POST /api/v1/export/recurrences
+
+导出定期交易数据为 CSV。
+
+### POST /api/v1/export/rules
+
+导出规则数据为 CSV。
+
+### POST /api/v1/export/tags
+
+导出标签数据为 CSV。
+
+### POST /api/v1/export/transactions
+
+导出交易数据为 CSV。
+
+**查询参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| start | string | 开始日期 |
+| end | string | 结束日期 |
+| type | string | 交易类型过滤 |
+
+---
+
+## 数据导入接口
+
+### POST /api/v1/imports
+
+创建导入任务。
+
+**请求体：** `multipart/form-data`
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | file | 是 | 导入文件（CSV） |
+| type | string | 是 | 导入类型：csv/spectre/nordigen/bunq |
+
+**响应：** `201 Created`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "type": "csv",
+    "status": "uploaded",
+    "created_at": "2024-03-15T10:00:00Z"
+  }
+}
+```
+
+### GET /api/v1/imports/:id
+
+获取导入任务状态。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "type": "csv",
+    "status": "completed",
+    "imported_count": 150,
+    "skipped_count": 5,
+    "error_count": 2,
+    "created_at": "2024-03-15T10:00:00Z"
+  }
+}
+```
+
+### POST /api/v1/imports/:id/configure
+
+配置导入列映射（CSV 导入第二步）。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| column_map | object | 是 | 列映射：系统字段 -> CSV 列索引 |
+| date_format | string | 否 | 日期格式，默认 Y-m-d |
+| delimiter | string | 否 | 分隔符，默认 , |
+| currency_id | uint64 | 否 | 默认币种 ID |
+| duplicate_check | bool | 否 | 是否启用重复检测，默认 true |
+
+### POST /api/v1/imports/:id/preview
+
+预览导入数据（不实际写入）。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "total_rows": 200,
+    "preview_rows": [
+      { "date": "2024-03-15", "description": "超市购物", "amount": "156.80" }
+    ],
+    "duplicates_count": 5
+  }
+}
+```
+
+### POST /api/v1/imports/:id/execute
+
+执行导入。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "imported_count": 150,
+    "skipped_count": 5,
+    "error_count": 2,
+    "errors": [
+      { "row": 10, "message": "账户不存在" }
+    ]
+  }
+}
+```
+
+### DELETE /api/v1/imports/:id
+
+删除导入任务。
+
+---
+
+## 数据销毁接口
+
+### POST /api/v1/data/destroy
+
+选择性销毁指定类型的数据。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| types | string[] | 是 | 要销毁的数据类型：accounts/bills/budgets/categories/piggy_banks/recurrences/rules/tags/transactions |
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "destroyed": {
+      "transactions": 500,
+      "accounts": 20,
+      "categories": 15
+    },
+    "message": "数据已销毁"
+  }
+}
+```
+
+### POST /api/v1/data/purge
+
+彻底清除当前用户组的所有财务数据。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "message": "所有数据已清除"
+  }
+}
+```
+
+> **警告：** 此操作不可逆，将删除所有交易、账户、预算、分类、标签、规则等财务数据。
+
+---
+
+## 批量操作接口
+
+### POST /api/v1/transactions/bulk
+
+批量更新交易。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| transaction_ids | uint64[] | 是 | 要更新的交易 ID 列表 |
+| category_id | uint64 | 否 | 批量设置分类 |
+| budget_id | uint64 | 否 | 批量设置预算 |
+| add_tags | string[] | 否 | 批量添加标签 |
+| remove_tags | string[] | 否 | 批量移除标签 |
+| notes | string | 否 | 批量设置备注 |
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "updated_count": 25,
+    "message": "25 笔交易已更新"
+  }
+}
+```
+
+---
+
 ## 系统接口
 
 ### GET /api/v1/about
@@ -2163,7 +2676,7 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
   "data": {
     "version": "1.0.0",
     "api_version": "1.0.0",
-    "php_version": "go1.22",
+    "go_version": "go1.22",
     "environment": "production"
   }
 }
