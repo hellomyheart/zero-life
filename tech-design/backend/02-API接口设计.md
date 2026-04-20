@@ -107,6 +107,27 @@
 
 ## 认证接口
 
+### GET /api/v1/auth/me
+
+获取当前登录用户信息。
+
+**响应：** `200 OK`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "email": "user@example.com",
+    "default_group_id": 1,
+    "two_factor_enabled": false,
+    "blocked": false,
+    "groups": [
+      { "id": 1, "title": "默认组", "user_role": "OWNER" }
+    ]
+  }
+}
+```
+
 ### POST /api/v1/auth/register
 
 注册新用户，同时自动创建默认用户组。
@@ -2677,6 +2698,18 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 
 ## 系统接口
 
+### GET /api/v1/health
+
+健康检查（无需认证）。
+
+**响应：** `200 OK`
+
+```json
+{
+  "status": "ok"
+}
+```
+
 ### GET /api/v1/about
 
 获取系统基本信息（无需认证）。
@@ -2722,7 +2755,8 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 1. 检查并创建到期的定期交易
 2. 检查到期账单并发送提醒
 3. 从外部源下载最新汇率
-4. 清理过期的 session 和日志
+4. 检查是否有新版本可用
+5. 清理过期的 session 和日志
 
 **响应：** `200 OK`
 
@@ -2732,6 +2766,7 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
     "recurrences_created": 2,
     "bills_reminded": 1,
     "rates_updated": 28,
+    "version_checked": true,
     "message": "Cron job executed successfully"
   }
 }

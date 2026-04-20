@@ -417,7 +417,9 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 {
   "data": {
     "id": 1,
-    "email": "user@example.com"
+    "email": "user@example.com",
+    "default_group_id": 1,
+    "created_at": "2024-03-15T10:00:00Z"
   }
 }
 ```
@@ -439,8 +441,20 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 {
   "data": {
     "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
     "token_type": "Bearer",
     "expires_in": 86400
+  }
+}
+```
+
+**已启用 2FA 时的响应：** `200 OK`
+```json
+{
+  "data": {
+    "two_factor_required": true,
+    "temp_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 300
   }
 }
 ```
@@ -488,6 +502,18 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 ```json
 {
   "code": "123456"
+}
+```
+
+**响应：** `200 OK`
+```json
+{
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 86400
+  }
 }
 ```
 
