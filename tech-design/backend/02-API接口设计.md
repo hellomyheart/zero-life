@@ -2033,6 +2033,18 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 }
 ```
 
+### PUT /api/v1/preferences/:name
+
+更新指定偏好（upsert 语义，不存在则创建）。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| data | any | 是 | 偏好值 |
+
+**响应：** `200 OK`
+
 ### DELETE /api/v1/preferences/:name
 
 删除指定偏好，恢复为默认值。

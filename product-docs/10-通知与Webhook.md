@@ -27,7 +27,7 @@ Zero-Life 支持多种通知渠道，用于向用户或管理员推送重要事�
 
 邮件通知的发送目标按以下优先级确定：
 
-1. 如果用户有自定义方法 `routeNotificationFor{Driver}`，使用自定义路由
+1. 如果用户有自定义通知路由方法，使用自定义路由
 2. 检查用户偏好 `remote_guard_alt_email`（备用邮箱）
 3. 如果用户是 demo 角色，发送给站点所有者
 4. 默认使用用户注册邮箱
@@ -45,7 +45,7 @@ Slack 通知的发送目标按以下逻辑确定：
 
 Pushover 通知需要配置：
 - `pushover_app_token` - 应用 Token（全局配置）
-- `pushover_user_token` - 用户 Token（全局配置）
+- `pushover_user_token` - 用户 Token（用户偏好配置）
 
 ## Webhook 系统
 

@@ -275,9 +275,79 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | /health | 健康检查（无需认证） |
 | GET | /about | 系统基本信息 |
 | GET | /configuration | 系统配置（管理员） |
 | PUT | /configuration | 更新配置（管理员） |
+
+### 用户组与成员（User Groups）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /user-groups | 列出用户组 |
+| POST | /user-groups | 创建用户组 |
+| GET | /user-groups/{id} | 获取用户组详情 |
+| PUT | /user-groups/{id} | 更新用户组 |
+| DELETE | /user-groups/{id} | 删除用户组 |
+| GET | /user-groups/{id}/memberships | 获取成员列表 |
+| POST | /user-groups/{id}/memberships | 添加成员 |
+| PUT | /user-groups/{id}/memberships/{mid} | 更新成员角色 |
+| DELETE | /user-groups/{id}/memberships/{mid} | 移除成员 |
+
+### 邀请（Invitations）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /invitations | 列出邀请 |
+| POST | /invitations | 创建邀请 |
+| POST | /invitations/redeem | 兑换邀请码 |
+| DELETE | /invitations/{id} | 撤销邀请 |
+
+### 全局角色（Roles）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /roles | 列出全局角色 |
+| POST | /users/{id}/roles | 分配全局角色 |
+| DELETE | /users/{id}/roles/{roleId} | 移除全局角色 |
+
+### 数据导出（Export）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /export/accounts | 导出账户 |
+| POST | /export/bills | 导出账单 |
+| POST | /export/budgets | 导出预算 |
+| POST | /export/categories | 导出分类 |
+| POST | /export/piggy-banks | 导出储蓄罐 |
+| POST | /export/recurrences | 导出定期交易 |
+| POST | /export/rules | 导出规则 |
+| POST | /export/tags | 导出标签 |
+| POST | /export/transactions | 导出交易 |
+
+### 数据导入（Imports）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /imports | 创建导入任务 |
+| GET | /imports/{id} | 获取导入状态 |
+| POST | /imports/{id}/configure | 配置列映射 |
+| POST | /imports/{id}/preview | 预览导入数据 |
+| POST | /imports/{id}/execute | 执行导入 |
+| DELETE | /imports/{id} | 删除导入任务 |
+
+### 数据销毁（Data）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /data/destroy | 选择性销毁数据 |
+| POST | /data/purge | 清除所有财务数据 |
+
+### 批量操作
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /transactions/bulk | 批量更新交易 |
 
 ### 搜索
 

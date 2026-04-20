@@ -174,6 +174,24 @@ export const autocompleteApi = {
   currencies(query: string): Promise<{ data: AutocompleteItem[] }> {
     return api.get('/autocomplete/currencies', { params: { query, limit: 10 } })
   },
+  piggyBanks(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/piggy-banks', { params: { query, limit: 10 } })
+  },
+  rules(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/rules', { params: { query, limit: 10 } })
+  },
+  ruleGroups(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/rule-groups', { params: { query, limit: 10 } })
+  },
+  recurrences(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/recurrences', { params: { query, limit: 10 } })
+  },
+  webhooks(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/webhooks', { params: { query, limit: 10 } })
+  },
+  transactionTypes(query: string): Promise<{ data: AutocompleteItem[] }> {
+    return api.get('/autocomplete/transaction-types', { params: { query, limit: 10 } })
+  },
 }
 ```
 
@@ -586,10 +604,15 @@ export function useDateRange() {
     { label: '本周', value: '1W' },
     { label: '本月', value: '1M' },
     { label: '本季', value: '3M' },
+    { label: '半年', value: '6M' },
     { label: '本年', value: '1Y' },
     { label: '最近7天', value: 'last7' },
     { label: '最近30天', value: 'last30' },
     { label: '最近90天', value: 'last90' },
+    { label: '最近365天', value: 'last365' },
+    { label: '月初至今', value: 'MTD' },
+    { label: '季初至今', value: 'QTD' },
+    { label: '年初至今', value: 'YTD' },
   ]
 
   function setRange(range: string) {
