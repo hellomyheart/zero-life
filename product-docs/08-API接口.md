@@ -2,17 +2,17 @@
 
 ## 概述
 
-Firefly III 提供完整的 RESTful API，基于 Laravel Passport 实现 OAuth2 认证。API 版本为 2.1.0，基础路径为 `/api/v1/`。
+Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版本为 1.0.0，基础路径为 `/api/v1/`。
 
 ## 认证
 
-### OAuth2 认证
+### JWT 认证
 
 | 模式 | 说明 |
 |------|------|
-| Authorization Code | 适用于第三方应用 |
-| Password Grant | 适用于受信任的第一方应用 |
-| Personal Access Token | 适用于个人脚本和工具 |
+| Access Token | 登录获取，有效期 24 小时 |
+| Refresh Token | 用于刷新 Access Token，有效期 7 天 |
+| Personal Access Token | 用户在设置中生成的长期令牌 |
 
 所有 API 请求需在 Header 中携带：`Authorization: Bearer <token>`
 
@@ -304,4 +304,191 @@ Firefly III 提供完整的 RESTful API，基于 Laravel Passport 实现 OAuth2 
 ### 图表
 
 | 方法 | 路径 | 说明 |
-|------
+|------|------|------|
+| GET | /chart/balance | 资产余额趋势 |
+| GET | /chart/account/overview | 账户收支概览 |
+| GET | /chart/budget/overview | 预算使用概览 |
+| GET | /chart/category/overview | 分类收支概览 |
+
+### 报表与洞察
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /summary/basic | 基本财务摘要 |
+| GET | /insight/expense | 支出洞察 |
+| GET | /insight/income | 收入洞察 |
+| GET | /insight/transfer | 转账洞察 |
+
+### 定时任务
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /cron/{token} | 触发定时任务 |
+
+## 认证接口详细说明
+
+### POST /auth/register
+
+注册新用户。
+
+**请求体：**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+**响应：** `201 Created`
+```json
+{
+  "data": {
+    "id": 1,
+    "email": "user@example.com"
+  }
+}
+```
+
+### POST /auth/login
+
+登录获取 Token。
+
+**请求体：**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**响应：** `200 OK`
+```json
+{
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 86400
+  }
+}
+```
+
+### POST /auth/refresh
+
+刷新 Token。
+
+**请求头：** `Authorization: Bearer <refresh_token>`
+
+**响应：** `200 OK`
+```json
+{
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 86400
+  }
+}
+```
+
+### POST /auth/logout
+
+注销当前 Token（加入黑名单）。
+
+### POST /auth/2fa/enable
+
+启用双因素认证，返回 TOTP Secret 和 QR Code URL。
+
+**响应：** `200 OK`
+```json
+{
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qr_code_url": "otpauth://totp/ZeroLife:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=ZeroLife"
+  }
+}
+```
+
+### POST /auth/2fa/verify
+
+验证双因素认证码，返回完整访问 Token。
+
+**请求体：**
+```json
+{
+  "code": "123456"
+}
+```
+
+## 通用请求/响应规范
+
+### 分页参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码 |
+| per_page | int | 50 | 每页数量（最大 500） |
+
+### 日期范围参数
+
+| 参数 | 类型 | 格式 | 说明 |
+|------|------|------|------|
+| start | string | YYYY-MM-DD | 开始日期 |
+| end | string | YYYY-MM-DD | 结束日期 |
+
+### 统一成功响应
+
+```json
+{
+  "data": { ... }
+}
+```
+
+### 统一分页响应
+
+```json
+{
+  "data": [ ... ],
+  "meta": {
+    "page": 1,
+    "per_page": 50,
+    "total": 100,
+    "total_pages": 2
+  },
+  "links": {
+    "self": "/api/v1/accounts?page=1",
+    "first": "/api/v1/accounts?page=1",
+    "last": "/api/v1/accounts?page=2",
+    "next": "/api/v1/accounts?page=2"
+  }
+}
+```
+
+### 统一错误响应
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "请求参数校验失败",
+    "details": [
+      { "field": "name", "message": "名称不能为空" }
+    ]
+  }
+}
+```
+
+### HTTP 状态码
+
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 成功 |
+| 201 | 创建成功 |
+| 204 | 删除成功（无返回体） |
+| 400 | 请求参数错误 |
+| 401 | 未认证 |
+| 403 | 无权限 |
+| 404 | 资源不存在 |
+| 409 | 冲突（如重复创建） |
+| 422 | 业务校验失败 |
+| 429 | 请求限流 |
+| 500 | 服务器内部错误 |
