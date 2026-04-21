@@ -2113,6 +2113,46 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 
 ---
 
+## 个人访问令牌接口
+
+### GET /api/v1/users/:id/tokens
+
+列出用户的个人访问令牌。
+
+### POST /api/v1/users/:id/tokens
+
+创建个人访问令牌。
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 令牌名称，max=255 |
+| scopes | string[] | 否 | 权限范围 |
+| expires_at | string | 否 | 过期时间 |
+
+**响应：** `201 Created`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "CI/CD Token",
+    "scopes": ["read"],
+    "expires_at": "2025-12-31T00:00:00Z",
+    "plain_text_token": "zl_pat_abc123...xyz"
+  }
+}
+```
+
+> **注意**：`plain_text_token` 仅在创建时返回一次，后续无法再查看。
+
+### DELETE /api/v1/users/:id/tokens/:tokenId
+
+撤销个人访问令牌。
+
+---
+
 ## 对象分组接口
 
 ### GET /api/v1/object-groups
@@ -2698,9 +2738,9 @@ description_contains:"超市" amount_max:500 date_after:"2024-03-01" category_is
 
 ## 系统接口
 
-### GET /api/v1/health
+### GET /health
 
-健康检查（无需认证）。
+健康检查（无需认证，不在 /api/v1 前缀下）。
 
 **响应：** `200 OK`
 

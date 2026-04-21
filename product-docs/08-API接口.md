@@ -276,9 +276,9 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /health | 健康检查（无需认证） |
-| GET | /about | 系统基本信息 |
-| GET | /configuration | 系统配置（管理员） |
-| PUT | /configuration | 更新配置（管理员） |
+| GET | /about | 系统基本信息（无需认证） |
+| GET | /configuration | 系统配置（需 OWNER 全局角色） |
+| PUT | /configuration | 更新配置（需 OWNER 全局角色） |
 
 ### 用户组与成员（User Groups）
 
@@ -291,8 +291,8 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | DELETE | /user-groups/{id} | 删除用户组 |
 | GET | /user-groups/{id}/memberships | 获取成员列表 |
 | POST | /user-groups/{id}/memberships | 添加成员 |
-| PUT | /user-groups/{id}/memberships/{mid} | 更新成员角色 |
-| DELETE | /user-groups/{id}/memberships/{mid} | 移除成员 |
+| PUT | /user-groups/{id}/memberships/{membershipId} | 更新成员角色 |
+| DELETE | /user-groups/{id}/memberships/{membershipId} | 移除成员 |
 
 ### 邀请（Invitations）
 
@@ -398,6 +398,23 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | GET | /cron/{token} | 触发定时任务 |
 
 ## 认证接口详细说明
+
+### GET /auth/me
+
+获取当前登录用户信息。
+
+**响应：** `200 OK`
+```json
+{
+  "data": {
+    "id": 1,
+    "email": "user@example.com",
+    "default_group_id": 1,
+    "two_factor_enabled": false,
+    "blocked": false
+  }
+}
+```
 
 ### POST /auth/register
 

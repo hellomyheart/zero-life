@@ -61,7 +61,7 @@ Webhook 允许在特定事件发生时向外部 URL 发送 HTTP 请求，实现�
 | trigger | 触发条件 |
 | response | 响应内容 |
 | delivery | 交付方式 |
-| active | 是否启用 |
+| is_active | 是否启用 |
 
 ### Webhook 触发器（Trigger）
 

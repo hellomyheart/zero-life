@@ -475,6 +475,9 @@ export interface AccountForm {
   opening_balance?: string
   opening_balance_date?: string
   is_active?: boolean
+  is_virtual?: boolean
+  interest?: string
+  interest_period?: string
   notes?: string
   object_group_id?: number
 }
@@ -548,6 +551,7 @@ export interface TransactionItemForm {
   tags?: string[]
   description?: string
   notes?: string
+  reconciled?: boolean
 }
 ```
 
