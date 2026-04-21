@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"github.com/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 )
 
 func RateLimit(rdb *redis.Client, limit int, window time.Duration) gin.HandlerFunc {

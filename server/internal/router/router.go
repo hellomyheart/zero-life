@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zero-life/server/internal/controller"
-	"github.com/zero-life/server/internal/middleware"
-	"github.com/zero-life/server/internal/pkg/jwt"
+	"github.com/hellomyheart/zero-life/server/internal/controller"
+	"github.com/hellomyheart/zero-life/server/internal/middleware"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 )
 
 type Router struct {

@@ -1,4 +1,4 @@
-module github.com/zero-life/server
+module github.com/hellomyheart/zero-life/server
 
 go 1.26.1
 

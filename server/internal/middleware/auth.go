@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zero-life/server/internal/pkg/errcode"
-	"github.com/zero-life/server/internal/pkg/jwt"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 )
 
 func Auth(jwtService *jwt.Service) gin.HandlerFunc {

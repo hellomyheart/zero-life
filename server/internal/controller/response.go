@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zero-life/server/internal/pkg/errcode"
-	"github.com/zero-life/server/internal/pkg/pagination"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/pagination"
 )
 
 func Success(c *gin.Context, data interface{}) {

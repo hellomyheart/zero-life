@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/zero-life/server/internal/config"
+	"github.com/hellomyheart/zero-life/server/internal/config"
 )
 
 type Claims struct {

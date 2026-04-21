@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/zero-life/server/internal/dto/request"
-	"github.com/zero-life/server/internal/dto/response"
-	"github.com/zero-life/server/internal/model"
-	"github.com/zero-life/server/internal/pkg/errcode"
-	"github.com/zero-life/server/internal/pkg/hash"
-	"github.com/zero-life/server/internal/pkg/jwt"
-	"github.com/zero-life/server/internal/repository"
+	"github.com/hellomyheart/zero-life/server/internal/dto/request"
+	"github.com/hellomyheart/zero-life/server/internal/dto/response"
+	"github.com/hellomyheart/zero-life/server/internal/model"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
+	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"gorm.io/gorm"
 )
 

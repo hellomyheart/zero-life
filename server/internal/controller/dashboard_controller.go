@@ -2,7 +2,7 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zero-life/server/internal/service"
+	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
 type DashboardController struct {

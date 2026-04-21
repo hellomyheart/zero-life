@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/zero-life/server/internal/dto/response"
-	"github.com/zero-life/server/internal/model"
-	"github.com/zero-life/server/internal/pkg/errcode"
-	"github.com/zero-life/server/internal/repository"
+	"github.com/hellomyheart/zero-life/server/internal/dto/response"
+	"github.com/hellomyheart/zero-life/server/internal/model"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
 type DashboardService struct {

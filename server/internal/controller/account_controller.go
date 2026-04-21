@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zero-life/server/internal/dto/request"
-	"github.com/zero-life/server/internal/pkg/errcode"
-	"github.com/zero-life/server/internal/service"
+	"github.com/hellomyheart/zero-life/server/internal/dto/request"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
 type AccountController struct {

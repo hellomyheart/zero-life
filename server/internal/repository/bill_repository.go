@@ -3,7 +3,7 @@ package repository
 import (
 	"time"
 
-	"github.com/zero-life/server/internal/model"
+	"github.com/hellomyheart/zero-life/server/internal/model"
 	"gorm.io/gorm"
 )
 
