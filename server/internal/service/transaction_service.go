@@ -1,0 +1,431 @@
+package service
+
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+	"github.com/zero-life/server/internal/dto/request"
+	"github.com/zero-life/server/internal/dto/response"
+	"github.com/zero-life/server/internal/model"
+	"github.com/zero-life/server/internal/pkg/errcode"
+	"github.com/zero-life/server/internal/pkg/pagination"
+	"github.com/zero-life/server/internal/repository"
+	"gorm.io/gorm"
+)
+
+type TransactionService struct {
+	txnRepo    *repository.TransactionRepository
+	accountRepo *repository.AccountRepository
+	db         *gorm.DB
+}
+
+func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB) *TransactionService {
+	return &TransactionService{
+		txnRepo:    txnRepo,
+		accountRepo: accountRepo,
+		db:         db,
+	}
+}
+
+func (s *TransactionService) Create(userID uint64, req *request.CreateTransactionReq) (*response.TransactionResp, error) {
+	amount, err := decimal.NewFromString(req.Amount)
+	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
+		return nil, errcode.ErrInvalidAmount
+	}
+
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return nil, errcode.ErrBadRequest
+	}
+
+	txnType := model.TransactionType(req.Type)
+
+	// Validate transaction type and accounts
+	if err := s.validateTransaction(userID, txnType, req.SourceID, req.DestinationID); err != nil {
+		return nil, err
+	}
+
+	txn := &model.Transaction{
+		UserID:        userID,
+		Type:          txnType,
+		Date:          date,
+		Description:   req.Description,
+		Amount:        amount,
+		SourceID:      req.SourceID,
+		DestinationID: req.DestinationID,
+		CategoryID:    req.CategoryID,
+		Notes:         req.Notes,
+	}
+
+	// Calculate balance changes
+	balanceChanges := s.calculateBalanceChanges(txnType, amount, req.SourceID, req.DestinationID)
+
+	// Execute in DB transaction
+	err = s.db.Transaction(func(dbTx *gorm.DB) error {
+		// Create transaction with tags
+		if err := s.txnRepo.Create(txn, req.Tags); err != nil {
+			return err
+		}
+
+		// Create splits if any
+		if len(req.Splits) > 0 {
+			splitTotal := decimal.Zero
+			for _, splitReq := range req.Splits {
+				splitAmount, _ := decimal.NewFromString(splitReq.Amount)
+				splitTotal = splitTotal.Add(splitAmount)
+
+				split := &model.Transaction{
+					UserID:     userID,
+					Type:        txnType,
+					Date:        date,
+					Description: req.Description,
+					Amount:      splitAmount,
+					SourceID:    req.SourceID,
+					DestinationID: req.DestinationID,
+					CategoryID:  splitReq.CategoryID,
+					Notes:       splitReq.Notes,
+					ParentID:    &txn.ID,
+				}
+				if err := s.txnRepo.Create(split, splitReq.Tags); err != nil {
+					return err
+				}
+			}
+			if !splitTotal.Equal(amount) {
+				return errcode.ErrSplitAmountMismatch
+			}
+		}
+
+		// Update account balances
+		for accountID, change := range balanceChanges {
+			if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			return nil, e
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	// Reload
+	created, err := s.txnRepo.GetByID(txn.ID, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return s.toResp(created), nil
+}
+
+func (s *TransactionService) Get(userID, id uint64) (*response.TransactionResp, error) {
+	txn, err := s.txnRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+	return s.toResp(txn), nil
+}
+
+func (s *TransactionService) List(userID uint64, req *request.TransactionListReq) (*pagination.Result, error) {
+	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
+	params.Normalize()
+
+	filter := repository.TransactionFilter{
+		Type:       req.Type,
+		StartDate:  req.StartDate,
+		EndDate:    req.EndDate,
+		AccountID:  req.AccountID,
+		CategoryID: req.CategoryID,
+		TagID:      req.TagID,
+	}
+
+	txns, err := s.txnRepo.List(userID, filter, params.Offset(), params.PageSize)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	total, err := s.txnRepo.Count(userID, filter)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	items := make([]response.TransactionResp, 0, len(txns))
+	for _, t := range txns {
+		items = append(items, *s.toResp(&t))
+	}
+
+	return pagination.NewResult(items, total, params), nil
+}
+
+func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransactionReq) (*response.TransactionResp, error) {
+	oldTxn, err := s.txnRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	newAmount, err := decimal.NewFromString(req.Amount)
+	if err != nil || newAmount.LessThanOrEqual(decimal.Zero) {
+		return nil, errcode.ErrInvalidAmount
+	}
+
+	newDate, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return nil, errcode.ErrBadRequest
+	}
+
+	newType := model.TransactionType(req.Type)
+
+	if err := s.validateTransaction(userID, newType, req.SourceID, req.DestinationID); err != nil {
+		return nil, err
+	}
+
+	// Rollback old balance changes
+	oldChanges := s.calculateBalanceChanges(oldTxn.Type, oldTxn.Amount, oldTxn.SourceID, oldTxn.DestinationID)
+	// Apply new balance changes
+	newChanges := s.calculateBalanceChanges(newType, newAmount, req.SourceID, req.DestinationID)
+
+	// Net changes: new - old
+	netChanges := make(map[uint64]decimal.Decimal)
+	for accountID, change := range newChanges {
+		netChanges[accountID] = change
+	}
+	for accountID, change := range oldChanges {
+		if existing, ok := netChanges[accountID]; ok {
+			netChanges[accountID] = existing.Sub(change)
+		} else {
+			netChanges[accountID] = change.Neg()
+		}
+	}
+
+	// Update transaction
+	oldTxn.Type = newType
+	oldTxn.Date = newDate
+	oldTxn.Description = req.Description
+	oldTxn.Amount = newAmount
+	oldTxn.SourceID = req.SourceID
+	oldTxn.DestinationID = req.DestinationID
+	oldTxn.CategoryID = req.CategoryID
+	oldTxn.Notes = req.Notes
+
+	err = s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.UpdateWithTags(oldTxn, req.Tags); err != nil {
+			return err
+		}
+		for accountID, change := range netChanges {
+			if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	updated, err := s.txnRepo.GetByID(id, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return s.toResp(updated), nil
+}
+
+func (s *TransactionService) Delete(userID, id uint64) error {
+	txn, err := s.txnRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errcode.ErrNotFound
+		}
+		return errcode.ErrInternal
+	}
+
+	// Rollback balance changes
+	changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
+
+	err = s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.Delete(id, userID); err != nil {
+			return err
+		}
+		for accountID, change := range changes {
+			if err := s.updateAccountBalance(dbTx, accountID, change.Neg()); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func (s *TransactionService) Search(userID uint64, req *request.TransactionSearchReq) (*pagination.Result, error) {
+	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
+	params.Normalize()
+
+	txns, err := s.txnRepo.Search(userID, req.Keyword, params.Offset(), params.PageSize)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	total, err := s.txnRepo.SearchCount(userID, req.Keyword)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	items := make([]response.TransactionResp, 0, len(txns))
+	for _, t := range txns {
+		items = append(items, *s.toResp(&t))
+	}
+
+	return pagination.NewResult(items, total, params), nil
+}
+
+func (s *TransactionService) validateTransaction(userID uint64, txnType model.TransactionType, sourceID uint64, destID *uint64) error {
+	// Verify source account exists and belongs to user
+	_, err := s.accountRepo.GetByID(sourceID, userID)
+	if err != nil {
+		return errcode.ErrNotFound
+	}
+
+	// For transfer, destination must exist
+	if txnType == model.TransactionTypeTransfer {
+		if destID == nil {
+			return errcode.ErrInvalidTxnType
+		}
+		_, err := s.accountRepo.GetByID(*destID, userID)
+		if err != nil {
+			return errcode.ErrNotFound
+		}
+	}
+
+	return nil
+}
+
+func (s *TransactionService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64) map[uint64]decimal.Decimal {
+	changes := make(map[uint64]decimal.Decimal)
+
+	switch txnType {
+	case model.TransactionTypeDeposit:
+		// Money goes into source account (increase)
+		changes[sourceID] = amount
+	case model.TransactionTypeWithdrawal:
+		// Money leaves source account (decrease)
+		changes[sourceID] = amount.Neg()
+	case model.TransactionTypeTransfer:
+		// Money leaves source, enters destination
+		changes[sourceID] = amount.Neg()
+		if destID != nil {
+			changes[*destID] = amount
+		}
+	}
+
+	return changes
+}
+
+func (s *TransactionService) updateAccountBalance(dbTx *gorm.DB, accountID uint64, change decimal.Decimal) error {
+	return dbTx.Model(&model.Account{}).Where("id = ?", accountID).
+		Update("current_balance", gorm.Expr("current_balance + ?", change)).Error
+}
+
+func (s *TransactionService) toResp(t *model.Transaction) *response.TransactionResp {
+	resp := &response.TransactionResp{
+		ID:            t.ID,
+		Type:          string(t.Type),
+		Date:          t.Date,
+		Description:   t.Description,
+		Amount:        t.Amount.StringFixed(4),
+		SourceID:      t.SourceID,
+		Source:        *accountModelToResp(&t.Source),
+		DestinationID: t.DestinationID,
+		CategoryID:    t.CategoryID,
+		Notes:         t.Notes,
+		BillID:        t.BillID,
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
+	}
+
+	if t.Destination != nil {
+		dest := accountModelToResp(t.Destination)
+		resp.Destination = dest
+	}
+
+	if t.Category != nil {
+		resp.Category = categoryModelToResp(t.Category)
+	}
+
+	tags := make([]response.TagResp, 0, len(t.Tags))
+	for _, tag := range t.Tags {
+		tags = append(tags, tagModelToResp(&tag))
+	}
+	resp.Tags = tags
+
+	splits := make([]response.SplitResp, 0, len(t.Splits))
+	for _, split := range t.Splits {
+		splitResp := response.SplitResp{
+			ID:         split.ID,
+			Amount:     split.Amount.StringFixed(4),
+			CategoryID: split.CategoryID,
+			Notes:      split.Notes,
+		}
+		if split.Category != nil {
+			splitResp.Category = categoryModelToResp(split.Category)
+		}
+		splitTags := make([]response.TagResp, 0, len(split.Tags))
+		for _, tag := range split.Tags {
+			splitTags = append(splitTags, tagModelToResp(&tag))
+		}
+		splitResp.Tags = splitTags
+		splits = append(splits, splitResp)
+	}
+	resp.Splits = splits
+
+	return resp
+}
+
+func accountModelToResp(a *model.Account) *response.AccountResp {
+	return &response.AccountResp{
+		ID:             a.ID,
+		Name:           a.Name,
+		Type:           string(a.Type),
+		CurrencyID:     a.CurrencyID,
+		Currency:       currencyToResp(&a.Currency),
+		InitialBalance: a.InitialBalance.StringFixed(4),
+		CurrentBalance: a.CurrentBalance.StringFixed(4),
+		IsVirtual:      a.IsVirtual,
+		Notes:          a.Notes,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
+	}
+}
+
+func categoryModelToResp(c *model.Category) *response.CategoryResp {
+	return &response.CategoryResp{
+		ID:        c.ID,
+		Name:      c.Name,
+		ParentID:  c.ParentID,
+		Icon:      c.Icon,
+		Notes:     c.Notes,
+		SortOrder: c.SortOrder,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+	}
+}
+
+func tagModelToResp(t *model.Tag) response.TagResp {
+	return response.TagResp{
+		ID:        t.ID,
+		Name:      t.Name,
+		Color:     t.Color,
+		CreatedAt: t.CreatedAt,
+		UpdatedAt: t.UpdatedAt,
+	}
+}

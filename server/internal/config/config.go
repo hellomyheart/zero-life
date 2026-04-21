@@ -1,0 +1,84 @@
+package config
+
+import (
+	"time"
+
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	App      AppConfig      `mapstructure:"app"`
+	DB       DBConfig       `mapstructure:"db"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	SMTP     SMTPConfig     `mapstructure:"smtp"`
+	CORS     CORSConfig     `mapstructure:"cors"`
+	Log      LogConfig      `mapstructure:"log"`
+}
+
+type AppConfig struct {
+	Env  string `mapstructure:"env"`
+	Port string `mapstructure:"port"`
+}
+
+type DBConfig struct {
+	Host         string        `mapstructure:"host"`
+	Port         int           `mapstructure:"port"`
+	User         string        `mapstructure:"user"`
+	Password     string        `mapstructure:"password"`
+	Name         string        `mapstructure:"name"`
+	MaxIdleConns int           `mapstructure:"max_idle_conns"`
+	MaxOpenConns int           `mapstructure:"max_open_conns"`
+	MaxLifetime  time.Duration `mapstructure:"max_lifetime"`
+}
+
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
+type JWTConfig struct {
+	Secret          string        `mapstructure:"secret"`
+	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
+}
+
+type SMTPConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	From     string `mapstructure:"from"`
+}
+
+type CORSConfig struct {
+	AllowOrigins []string `mapstructure:"allow_origins"`
+}
+
+type LogConfig struct {
+	Level  string `mapstructure:"level"`
+	Format string `mapstructure:"format"`
+}
+
+var C Config
+
+func Load() error {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err != nil {
+		return err
+	}
+
+	if err := viper.Unmarshal(&C); err != nil {
+		return err
+	}
+
+	return nil
+}

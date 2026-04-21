@@ -1,0 +1,52 @@
+package request
+
+type CreateTransactionReq struct {
+	Type          string            `json:"type" binding:"required,oneof=deposit withdrawal transfer"`
+	Date          string            `json:"date" binding:"required"`
+	Description   string            `json:"description" binding:"required"`
+	Amount        string            `json:"amount" binding:"required"`
+	SourceID      uint64            `json:"source_id" binding:"required"`
+	DestinationID *uint64           `json:"destination_id"`
+	CategoryID    *uint64           `json:"category_id"`
+	Notes         string            `json:"notes"`
+	Tags          []uint64          `json:"tags"`
+	Splits        []CreateSplitReq  `json:"splits"`
+}
+
+type CreateSplitReq struct {
+	Amount     string   `json:"amount" binding:"required"`
+	CategoryID *uint64  `json:"category_id"`
+	Tags       []uint64 `json:"tags"`
+	Notes      string   `json:"notes"`
+}
+
+type UpdateTransactionReq struct {
+	Type          string            `json:"type" binding:"required,oneof=deposit withdrawal transfer"`
+	Date          string            `json:"date" binding:"required"`
+	Description   string            `json:"description" binding:"required"`
+	Amount        string            `json:"amount" binding:"required"`
+	SourceID      uint64            `json:"source_id" binding:"required"`
+	DestinationID *uint64           `json:"destination_id"`
+	CategoryID    *uint64           `json:"category_id"`
+	Notes         string            `json:"notes"`
+	Tags          []uint64          `json:"tags"`
+	Splits        []CreateSplitReq  `json:"splits"`
+}
+
+type TransactionListReq struct {
+	Page       int     `form:"page,default=1"`
+	PageSize   int     `form:"page_size,default=20"`
+	Type       string  `form:"type"`
+	StartDate  string  `form:"start_date"`
+	EndDate    string  `form:"end_date"`
+	AccountID  *uint64 `form:"account_id"`
+	CategoryID *uint64 `form:"category_id"`
+	TagID      *uint64 `form:"tag_id"`
+	Sort       string  `form:"sort,default=-date"`
+}
+
+type TransactionSearchReq struct {
+	Page     int    `form:"page,default=1"`
+	PageSize int    `form:"page_size,default=20"`
+	Keyword  string `form:"keyword" binding:"required"`
+}

@@ -1,0 +1,39 @@
+app:
+  env: development
+  port: "8080"
+
+db:
+  host: localhost
+  port: 3306
+  user: root
+  password: ""
+  name: firefly_go_dev
+  max_idle_conns: 10
+  max_open_conns: 100
+  max_lifetime: 1h
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "change-me-in-production"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+
+smtp:
+  host: ""
+  port: 587
+  user: ""
+  password: ""
+  from: ""
+
+cors:
+  allow_origins:
+    - "http://localhost:5173"
+
+log:
+  level: debug
+  format: json
