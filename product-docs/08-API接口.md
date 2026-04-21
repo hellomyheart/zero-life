@@ -258,6 +258,9 @@ Zero-Life 提供完整的 RESTful API，基于 JWT 实现 API 认证。API 版�
 | GET | /users/{id} | 获取用户详情 |
 | PUT | /users/{id} | 更新用户 |
 | DELETE | /users/{id} | 删除用户 |
+| GET | /users/{id}/tokens | 列出个人访问令牌 |
+| POST | /users/{id}/tokens | 创建个人访问令牌 |
+| DELETE | /users/{id}/tokens/{tokenId} | 撤销个人访问令牌 |
 
 ### 对象分组（Object Groups）
 

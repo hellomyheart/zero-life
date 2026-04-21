@@ -121,6 +121,7 @@
     "default_group_id": 1,
     "two_factor_enabled": false,
     "blocked": false,
+    "roles": ["owner"],
     "groups": [
       { "id": 1, "title": "默认组", "user_role": "OWNER" }
     ]
@@ -1202,7 +1203,7 @@
 | type | string | 是 | 触发器类型（见下方枚举） |
 | value | string | 否 | 触发器值 |
 | order | int | 否 | 检查顺序 |
-| active | bool | 否 | 默认 true |
+| is_active | bool | 否 | 默认 true |
 | stop_processing | bool | 否 | 匹配后停止检查后续触发器 |
 
 **触发器类型枚举：**
@@ -1233,7 +1234,7 @@
 | type | string | 是 | 动作类型（见下方枚举） |
 | value | string | 否 | 动作值（可使用表达式语言 `=amount*0.1`） |
 | order | int | 否 | 执行顺序 |
-| active | bool | 否 | 默认 true |
+| is_active | bool | 否 | 默认 true |
 | stop_processing | bool | 否 | 执行后停止后续动作 |
 
 **动作类型枚举：**
@@ -1536,7 +1537,7 @@
 | trigger | string | 是 | 触发条件（见枚举） |
 | response | string | 否 | 响应内容，默认 RELEVANT |
 | delivery | string | 否 | 交付方式，默认 JSON |
-| active | bool | 否 | 默认 true |
+| is_active | bool | 否 | 默认 true |
 
 **trigger 枚举：**
 
@@ -1716,6 +1717,7 @@
 | amount_max | `amount_max:500` | 金额最大值 |
 | date_after | `date_after:"2024-03-01"` | 日期晚于 |
 | date_before | `date_before:"2024-03-31"` | 日期早于 |
+| date_on | `date_on:"2024-03-15"` | 日期等于 |
 | source_is | `source_is:"招商银行"` | 来源账户名 |
 | destination_is | `destination_is:"超市"` | 目标账户名 |
 | category_is | `category_is:"食品"` | 分类名 |
@@ -1723,6 +1725,7 @@
 | has_any_category | `has_any_category:true` | 有分类 |
 | has_any_tag | `has_any_tag:true` | 有标签 |
 | on_budget | `on_budget:true` | 有预算 |
+| not_on_budget | `not_on_budget:true` | 无预算 |
 | reconciled | `reconciled:true` | 已对账 |
 
 **组合示例：**

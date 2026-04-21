@@ -635,7 +635,7 @@ export function useDateRange() {
 
 ```typescript
 // composables/useAutocomplete.ts
-export function useAutocomplete(type: 'accounts' | 'categories' | 'tags' | 'budgets' | 'bills' | 'currencies') {
+export function useAutocomplete(type: 'accounts' | 'categories' | 'tags' | 'budgets' | 'bills' | 'currencies' | 'piggyBanks' | 'rules' | 'ruleGroups' | 'recurrences' | 'webhooks' | 'transactionTypes') {
   const items = ref<AutocompleteItem[]>([])
   const loading = ref(false)
   let debounceTimer: ReturnType<typeof setTimeout>
