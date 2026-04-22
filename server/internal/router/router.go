@@ -10,18 +10,22 @@ import (
 type Router struct {
 	engine *gin.Engine
 
-	authCtrl       *controller.AuthController
-	accountCtrl    *controller.AccountController
-	txnCtrl        *controller.TransactionController
-	categoryCtrl   *controller.CategoryController
-	tagCtrl        *controller.TagController
-	budgetCtrl     *controller.BudgetController
-	billCtrl       *controller.BillController
-	currencyCtrl   *controller.CurrencyController
-	ruleCtrl       *controller.RuleController
-	reportCtrl     *controller.ReportController
-	dashboardCtrl  *controller.DashboardController
-	importCtrl     *controller.ImportController
+	authCtrl        *controller.AuthController
+	accountCtrl     *controller.AccountController
+	txnCtrl         *controller.TransactionController
+	categoryCtrl    *controller.CategoryController
+	tagCtrl         *controller.TagController
+	budgetCtrl      *controller.BudgetController
+	billCtrl        *controller.BillController
+	currencyCtrl    *controller.CurrencyController
+	ruleCtrl        *controller.RuleController
+	reportCtrl      *controller.ReportController
+	dashboardCtrl   *controller.DashboardController
+	importCtrl      *controller.ImportController
+	piggyBankCtrl   *controller.PiggyBankController
+	attachmentCtrl  *controller.AttachmentController
+	autocompleteCtrl *controller.AutocompleteController
+	exportCtrl      *controller.ExportController
 }
 
 func NewRouter(
@@ -38,21 +42,29 @@ func NewRouter(
 	reportCtrl *controller.ReportController,
 	dashboardCtrl *controller.DashboardController,
 	importCtrl *controller.ImportController,
+	piggyBankCtrl *controller.PiggyBankController,
+	attachmentCtrl *controller.AttachmentController,
+	autocompleteCtrl *controller.AutocompleteController,
+	exportCtrl *controller.ExportController,
 ) *Router {
 	return &Router{
-		engine:        engine,
-		authCtrl:      authCtrl,
-		accountCtrl:   accountCtrl,
-		txnCtrl:       txnCtrl,
-		categoryCtrl:  categoryCtrl,
-		tagCtrl:       tagCtrl,
-		budgetCtrl:    budgetCtrl,
-		billCtrl:      billCtrl,
-		currencyCtrl:  currencyCtrl,
-		ruleCtrl:      ruleCtrl,
-		reportCtrl:    reportCtrl,
-		dashboardCtrl: dashboardCtrl,
-		importCtrl:    importCtrl,
+		engine:           engine,
+		authCtrl:         authCtrl,
+		accountCtrl:      accountCtrl,
+		txnCtrl:          txnCtrl,
+		categoryCtrl:     categoryCtrl,
+		tagCtrl:          tagCtrl,
+		budgetCtrl:       budgetCtrl,
+		billCtrl:         billCtrl,
+		currencyCtrl:     currencyCtrl,
+		ruleCtrl:         ruleCtrl,
+		reportCtrl:       reportCtrl,
+		dashboardCtrl:    dashboardCtrl,
+		importCtrl:       importCtrl,
+		piggyBankCtrl:    piggyBankCtrl,
+		attachmentCtrl:   attachmentCtrl,
+		autocompleteCtrl: autocompleteCtrl,
+		exportCtrl:       exportCtrl,
 	}
 }
 
@@ -175,6 +187,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			reports.GET("/budget", r.reportCtrl.Budget)
 			reports.GET("/net-worth", r.reportCtrl.NetWorth)
 			reports.GET("/trend", r.reportCtrl.Trend)
+			reports.GET("/tag", r.reportCtrl.Tag)
 		}
 
 		// Import
@@ -189,6 +202,44 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 		dashboard := authenticated.Group("/dashboard")
 		{
 			dashboard.GET("", r.dashboardCtrl.Get)
+		}
+
+		// Piggy Banks
+		piggyBanks := authenticated.Group("/piggy-banks")
+		{
+			piggyBanks.POST("", r.piggyBankCtrl.Create)
+			piggyBanks.GET("", r.piggyBankCtrl.List)
+			piggyBanks.GET("/:id", r.piggyBankCtrl.Get)
+			piggyBanks.PUT("/:id", r.piggyBankCtrl.Update)
+			piggyBanks.DELETE("/:id", r.piggyBankCtrl.Delete)
+			piggyBanks.POST("/:id/add", r.piggyBankCtrl.AddAmount)
+			piggyBanks.POST("/:id/remove", r.piggyBankCtrl.RemoveAmount)
+			piggyBanks.GET("/:id/events", r.piggyBankCtrl.GetEvents)
+		}
+
+		// Attachments
+		attachments := authenticated.Group("/attachments")
+		{
+			attachments.POST("/upload", r.attachmentCtrl.Upload)
+			attachments.GET("/:id/download", r.attachmentCtrl.Download)
+			attachments.GET("", r.attachmentCtrl.List)
+			attachments.DELETE("/:id", r.attachmentCtrl.Delete)
+		}
+
+		// Autocomplete
+		autocomplete := authenticated.Group("/autocomplete")
+		{
+			autocomplete.GET("/accounts", r.autocompleteCtrl.Accounts)
+			autocomplete.GET("/categories", r.autocompleteCtrl.Categories)
+			autocomplete.GET("/tags", r.autocompleteCtrl.Tags)
+			autocomplete.GET("/currencies", r.autocompleteCtrl.Currencies)
+		}
+
+		// Exports
+		exports := authenticated.Group("/exports")
+		{
+			exports.GET("/transactions", r.exportCtrl.ExportTransactions)
+			exports.GET("/accounts", r.exportCtrl.ExportAccounts)
 		}
 	}
 }

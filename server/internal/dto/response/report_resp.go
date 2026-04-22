@@ -61,3 +61,14 @@ type TrendItemResp struct {
 	Income  string `json:"income"`
 	Expense string `json:"expense"`
 }
+
+type TagReportResp struct {
+	Items []TagReportItemResp `json:"items"`
+}
+
+type TagReportItemResp struct {
+	TagID   uint64 `json:"tag_id"`
+	TagName string `json:"tag_name"`
+	Income  string `json:"income"`
+	Expense string `json:"expense"`
+}

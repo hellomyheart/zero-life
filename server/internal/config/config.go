@@ -14,6 +14,7 @@ type Config struct {
 	SMTP     SMTPConfig     `mapstructure:"smtp"`
 	CORS     CORSConfig     `mapstructure:"cors"`
 	Log      LogConfig      `mapstructure:"log"`
+	Attach   AttachConfig   `mapstructure:"attach"`
 }
 
 type AppConfig struct {
@@ -56,6 +57,10 @@ type CORSConfig struct {
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"`
+}
+
+type AttachConfig struct {
+	Path string `mapstructure:"path"`
 }
 
 var C Config

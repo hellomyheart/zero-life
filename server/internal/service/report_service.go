@@ -17,6 +17,7 @@ type ReportService struct {
 	accountRepo *repository.AccountRepository
 	budgetRepo  *repository.BudgetRepository
 	categoryRepo *repository.CategoryRepository
+	tagRepo     *repository.TagRepository
 }
 
 func NewReportService(
@@ -24,12 +25,14 @@ func NewReportService(
 	accountRepo *repository.AccountRepository,
 	budgetRepo *repository.BudgetRepository,
 	categoryRepo *repository.CategoryRepository,
+	tagRepo *repository.TagRepository,
 ) *ReportService {
 	return &ReportService{
 		txnRepo:     txnRepo,
 		accountRepo: accountRepo,
 		budgetRepo:  budgetRepo,
 		categoryRepo: categoryRepo,
+		tagRepo:     tagRepo,
 	}
 }
 
@@ -141,7 +144,22 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 }
 
 func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response.BudgetReportResp, error) {
+	startDate, endDate, err := s.parseDateRange(req)
+	if err != nil {
+		return nil, err
+	}
+
 	budgets, err := s.budgetRepo.List(userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	filter := repository.TransactionFilter{
+		StartDate: startDate.Format("2006-01-02"),
+		EndDate:   endDate.Format("2006-01-02"),
+	}
+
+	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -151,14 +169,34 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 		if !b.IsEnabled {
 			continue
 		}
-		// Simplified: use budget amount as is
-		usageRate, _ := decimal.Zero.Div(b.Amount).Float64()
+
+		// Calculate actual spent for this budget's categories
+		spent := decimal.Zero
+		categoryIDs := make(map[uint64]bool)
+		for _, cat := range b.Categories {
+			categoryIDs[cat.ID] = true
+		}
+
+		for _, txn := range txns {
+			if txn.Type == model.TransactionTypeWithdrawal && txn.CategoryID != nil {
+				if categoryIDs[*txn.CategoryID] {
+					spent = spent.Add(txn.Amount)
+				}
+			}
+		}
+
+		remaining := b.Amount.Sub(spent)
+		var usageRate float64
+		if b.Amount.IsPositive() {
+			usageRate, _ = spent.Div(b.Amount).Float64()
+		}
+
 		items = append(items, response.BudgetReportItemResp{
 			BudgetID:   b.ID,
 			BudgetName: b.Name,
 			Amount:     b.Amount.StringFixed(4),
-			Spent:      "0.0000",
-			Remaining:  b.Amount.StringFixed(4),
+			Spent:      spent.StringFixed(4),
+			Remaining:  remaining.StringFixed(4),
 			UsageRate:  usageRate,
 		})
 	}
@@ -167,13 +205,11 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 }
 
 func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*response.NetWorthResp, error) {
-	// Get all asset accounts
 	accounts, err := s.accountRepo.List(userID, string(model.AccountTypeAsset), "", "name", 0, 1000)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	// Get all liability accounts
 	liabilities, err := s.accountRepo.List(userID, string(model.AccountTypeLiability), "", "name", 0, 1000)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -191,9 +227,62 @@ func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*respon
 
 	netWorth := totalAssets.Sub(totalLiabilities)
 
+	// Calculate trend by month
+	startDate, endDate, err := s.parseDateRange(req)
+	if err != nil {
+		return &response.NetWorthResp{
+			TotalNetWorth: netWorth.StringFixed(4),
+			Trend:         []response.NetWorthPointResp{},
+		}, nil
+	}
+
+	trend := make([]response.NetWorthPointResp, 0)
+	current := time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, startDate.Location())
+	for current.Before(endDate) || current.Equal(endDate) {
+		monthEnd := current.AddDate(0, 1, 0).Add(-time.Second)
+
+		filter := repository.TransactionFilter{
+			StartDate: startDate.Format("2006-01-02"),
+			EndDate:   monthEnd.Format("2006-01-02"),
+		}
+		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+		if err == nil {
+			monthAssets := decimal.Zero
+			monthLiabilities := decimal.Zero
+
+			// Start with initial balances
+			for _, a := range accounts {
+				monthAssets = monthAssets.Add(a.InitialBalance)
+			}
+			for _, a := range liabilities {
+				monthLiabilities = monthLiabilities.Add(a.InitialBalance)
+			}
+
+			// Add transaction effects
+			for _, txn := range txns {
+				switch txn.Type {
+				case model.TransactionTypeDeposit:
+					monthAssets = monthAssets.Add(txn.Amount)
+				case model.TransactionTypeWithdrawal:
+					monthAssets = monthAssets.Sub(txn.Amount)
+				case model.TransactionTypeTransfer:
+					// Transfers don't change net worth
+				}
+			}
+
+			monthNetWorth := monthAssets.Sub(monthLiabilities)
+			trend = append(trend, response.NetWorthPointResp{
+				Date:     current.Format("2006-01"),
+				NetWorth: monthNetWorth.StringFixed(4),
+			})
+		}
+
+		current = current.AddDate(0, 1, 0)
+	}
+
 	return &response.NetWorthResp{
 		TotalNetWorth: netWorth.StringFixed(4),
-		Trend:         []response.NetWorthPointResp{},
+		Trend:         trend,
 	}, nil
 }
 
@@ -259,6 +348,57 @@ func (s *ReportService) Trend(userID uint64, req *request.ReportReq) (*response.
 	}
 
 	return &response.TrendResp{Items: items}, nil
+}
+
+func (s *ReportService) Tag(userID uint64, req *request.ReportReq) (*response.TagReportResp, error) {
+	startDate, endDate, err := s.parseDateRange(req)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := repository.TransactionFilter{
+		StartDate: startDate.Format("2006-01-02"),
+		EndDate:   endDate.Format("2006-01-02"),
+	}
+
+	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	type tagStats struct {
+		income  decimal.Decimal
+		expense decimal.Decimal
+	}
+	tagData := make(map[uint64]*tagStats)
+	tagNames := make(map[uint64]string)
+
+	for _, txn := range txns {
+		for _, t := range txn.Tags {
+			if _, ok := tagData[t.ID]; !ok {
+				tagData[t.ID] = &tagStats{income: decimal.Zero, expense: decimal.Zero}
+				tagNames[t.ID] = t.Name
+			}
+			switch txn.Type {
+			case model.TransactionTypeDeposit:
+				tagData[t.ID].income = tagData[t.ID].income.Add(txn.Amount)
+			case model.TransactionTypeWithdrawal:
+				tagData[t.ID].expense = tagData[t.ID].expense.Add(txn.Amount)
+			}
+		}
+	}
+
+	items := make([]response.TagReportItemResp, 0, len(tagData))
+	for tagID, stats := range tagData {
+		items = append(items, response.TagReportItemResp{
+			TagID:   tagID,
+			TagName: tagNames[tagID],
+			Income:  stats.income.StringFixed(4),
+			Expense: stats.expense.StringFixed(4),
+		})
+	}
+
+	return &response.TagReportResp{Items: items}, nil
 }
 
 func (s *ReportService) parseDateRange(req *request.ReportReq) (time.Time, time.Time, error) {

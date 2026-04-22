@@ -106,3 +106,21 @@ func (ctrl *ReportController) Trend(c *gin.Context) {
 
 	Success(c, result)
 }
+
+func (ctrl *ReportController) Tag(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+
+	var req request.ReportReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	result, err := ctrl.reportService.Tag(userID, &req)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}

@@ -80,8 +80,20 @@ func main() {
 		&model.Rule{},
 		&model.RuleCondition{},
 		&model.RuleAction{},
+		&model.PiggyBank{},
+		&model.PiggyEvent{},
+		&model.Attachment{},
 	); err != nil {
 		logger.Fatal("Failed to auto migrate", zap.Error(err))
+	}
+
+	// Initialize attachment storage directory
+	attachPath := config.C.Attach.Path
+	if attachPath == "" {
+		attachPath = "./data/attachments"
+	}
+	if err := os.MkdirAll(attachPath, 0755); err != nil {
+		logger.Fatal("Failed to create attachment directory", zap.Error(err))
 	}
 
 	// Initialize Redis
@@ -104,6 +116,8 @@ func main() {
 	billRepo := repository.NewBillRepository(db)
 	currencyRepo := repository.NewCurrencyRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
+	piggyBankRepo := repository.NewPiggyBankRepository(db)
+	attachmentRepo := repository.NewAttachmentRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(authRepo, jwtService, rdb)
@@ -114,10 +128,13 @@ func main() {
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo)
 	billService := service.NewBillService(billRepo)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
-	ruleService := service.NewRuleService(ruleRepo)
-	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo)
+	ruleService := service.NewRuleService(ruleRepo, txnRepo)
+	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo)
 	importService := service.NewImportService(txnRepo, accountRepo, db)
+	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
+	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
+	exportService := service.NewExportService(txnRepo, accountRepo)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -137,6 +154,10 @@ func main() {
 	reportCtrl := controller.NewReportController(reportService)
 	dashboardCtrl := controller.NewDashboardController(dashboardService)
 	importCtrl := controller.NewImportController(importService)
+	piggyBankCtrl := controller.NewPiggyBankController(piggyBankService)
+	attachmentCtrl := controller.NewAttachmentController(attachmentService)
+	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo)
+	exportCtrl := controller.NewExportController(exportService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -160,6 +181,10 @@ func main() {
 		reportCtrl,
 		dashboardCtrl,
 		importCtrl,
+		piggyBankCtrl,
+		attachmentCtrl,
+		autocompleteCtrl,
+		exportCtrl,
 	)
 	r.Setup(jwtService)
 

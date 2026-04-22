@@ -8,6 +8,7 @@ type RuleResp struct {
 	Priority   int                 `json:"priority"`
 	IsEnabled  bool                `json:"is_enabled"`
 	LogicType  string              `json:"logic_type"`
+	Trigger    string              `json:"trigger"`
 	Conditions []RuleConditionResp `json:"conditions"`
 	Actions    []RuleActionResp    `json:"actions"`
 	CreatedAt  time.Time           `json:"created_at"`
@@ -25,4 +26,11 @@ type RuleActionResp struct {
 	ID    uint64 `json:"id"`
 	Type  string `json:"type"`
 	Value string `json:"value"`
+}
+
+type RuleExecuteResultResp struct {
+	MatchedCount int      `json:"matched_count"`
+	SuccessCount int      `json:"success_count"`
+	FailCount    int      `json:"fail_count"`
+	Errors       []string `json:"errors,omitempty"`
 }

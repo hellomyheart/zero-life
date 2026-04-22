@@ -33,3 +33,6 @@ cors:
 log:
   level: debug
   format: json
+
+attach:
+  path: "./data/attachments"
