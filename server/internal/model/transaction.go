@@ -18,7 +18,7 @@ const (
 type Transaction struct {
 	ID            uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID        uint64          `gorm:"not null;index:idx_user_date" json:"user_id"`
-	Type          TransactionType `gorm:"type:enum('deposit','withdrawal','transfer');not null" json:"type"`
+	Type          TransactionType `gorm:"not null;size:20" json:"type"`
 	Date          time.Time       `gorm:"not null;index:idx_user_date" json:"date"`
 	Description   string          `gorm:"not null;size:500" json:"description"`
 	Amount        decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"amount"`

@@ -3,14 +3,10 @@ app:
   port: "8080"
 
 db:
-  host: localhost
-  port: 3306
-  user: root
-  password: ""
-  name: firefly_go_dev
-  max_idle_conns: 10
-  max_open_conns: 100
-  max_lifetime: 1h
+  path: "./data/zero-life.db"
+  max_idle_conns: 1
+  max_open_conns: 1
+  max_lifetime: 0s
 
 redis:
   host: localhost

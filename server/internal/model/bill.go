@@ -21,7 +21,7 @@ type Bill struct {
 	UserID     uint64          `gorm:"not null;index" json:"user_id"`
 	Name       string          `gorm:"not null;size:100" json:"name"`
 	Amount     decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"amount"`
-	RepeatRule RepeatRule      `gorm:"type:enum('daily','weekly','monthly','yearly');not null" json:"repeat_rule"`
+	RepeatRule RepeatRule      `gorm:"not null;size:20" json:"repeat_rule"`
 	NextDue    time.Time       `gorm:"not null" json:"next_due"`
 	SourceID   *uint64         `json:"source_id"`
 	CategoryID *uint64         `json:"category_id"`

@@ -1,21 +1,6 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-firefly123}
-      MYSQL_DATABASE: ${DB_NAME:-firefly_go}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7.0-alpine
     ports:
@@ -34,20 +19,16 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_ENV: production
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: ${DB_PASSWORD:-firefly123}
-      DB_NAME: ${DB_NAME:-firefly_go}
+      DB_PATH: /app/data/zero-life.db
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       GIN_MODE: release
     ports:
       - "8080:8080"
+    volumes:
+      - sqlite_data:/app/data
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -61,5 +42,5 @@ services:
       - api
 
 volumes:
-  mysql_data:
+  sqlite_data:
   redis_data:

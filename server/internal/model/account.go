@@ -20,7 +20,7 @@ type Account struct {
 	ID             uint64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID         uint64          `gorm:"not null;index" json:"user_id"`
 	Name           string          `gorm:"not null;size:255" json:"name"`
-	Type           AccountType     `gorm:"type:enum('asset','expense','revenue','liability');not null" json:"type"`
+	Type           AccountType     `gorm:"not null;size:20" json:"type"`
 	CurrencyID     uint64          `gorm:"not null" json:"currency_id"`
 	InitialBalance decimal.Decimal `gorm:"type:decimal(19,4);default:0" json:"initial_balance"`
 	CurrentBalance decimal.Decimal `gorm:"type:decimal(19,4);default:0" json:"current_balance"`

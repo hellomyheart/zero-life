@@ -22,11 +22,7 @@ type AppConfig struct {
 }
 
 type DBConfig struct {
-	Host         string        `mapstructure:"host"`
-	Port         int           `mapstructure:"port"`
-	User         string        `mapstructure:"user"`
-	Password     string        `mapstructure:"password"`
-	Name         string        `mapstructure:"name"`
+	Path         string        `mapstructure:"path"`
 	MaxIdleConns int           `mapstructure:"max_idle_conns"`
 	MaxOpenConns int           `mapstructure:"max_open_conns"`
 	MaxLifetime  time.Duration `mapstructure:"max_lifetime"`

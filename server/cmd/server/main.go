@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -14,7 +16,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/router"
 	"github.com/hellomyheart/zero-life/server/internal/service"
 	"go.uber.org/zap"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -38,15 +40,13 @@ func main() {
 	defer logger.Sync()
 
 	// Initialize database
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		config.C.DB.User,
-		config.C.DB.Password,
-		config.C.DB.Host,
-		config.C.DB.Port,
-		config.C.DB.Name,
-	)
+	dbPath := config.C.DB.Path
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		logger.Fatal("Failed to create database directory", zap.Error(err))
+	}
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
@@ -58,6 +58,10 @@ func main() {
 	sqlDB.SetMaxIdleConns(config.C.DB.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(config.C.DB.MaxOpenConns)
 	sqlDB.SetConnMaxLifetime(config.C.DB.MaxLifetime)
+
+	// SQLite PRAGMA settings
+	db.Exec("PRAGMA journal_mode=WAL")
+	db.Exec("PRAGMA foreign_keys=ON")
 
 	// Auto migrate
 	if err := db.AutoMigrate(

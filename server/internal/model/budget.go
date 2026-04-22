@@ -19,7 +19,7 @@ type Budget struct {
 	UserID    uint64         `gorm:"not null;index" json:"user_id"`
 	Name      string         `gorm:"not null;size:100" json:"name"`
 	Amount    decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"amount"`
-	Period    BudgetPeriod   `gorm:"type:enum('monthly','yearly');not null" json:"period"`
+	Period    BudgetPeriod   `gorm:"not null;size:20" json:"period"`
 	IsEnabled bool           `gorm:"default:true" json:"is_enabled"`
 	CreatedAt time.Time      `gorm:"not null" json:"created_at"`
 	UpdatedAt time.Time      `gorm:"not null" json:"updated_at"`

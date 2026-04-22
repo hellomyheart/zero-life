@@ -19,7 +19,7 @@ type Rule struct {
 	Name      string         `gorm:"not null;size:100" json:"name"`
 	Priority  int            `gorm:"default:0" json:"priority"`
 	IsEnabled bool           `gorm:"default:true" json:"is_enabled"`
-	LogicType LogicType      `gorm:"type:enum('and','or');not null" json:"logic_type"`
+	LogicType LogicType      `gorm:"not null;size:20" json:"logic_type"`
 	CreatedAt time.Time      `gorm:"not null" json:"created_at"`
 	UpdatedAt time.Time      `gorm:"not null" json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -50,8 +50,8 @@ const (
 type RuleCondition struct {
 	ID        uint64            `gorm:"primaryKey;autoIncrement" json:"id"`
 	RuleID    uint64            `gorm:"not null;index" json:"rule_id"`
-	Field     ConditionField    `gorm:"type:enum('description','amount','source_account');not null" json:"field"`
-	Operator  ConditionOperator `gorm:"type:enum('contains','equals','starts_with','ends_with');not null" json:"operator"`
+	Field     ConditionField    `gorm:"not null;size:20" json:"field"`
+	Operator  ConditionOperator `gorm:"not null;size:20" json:"operator"`
 	Value     string            `gorm:"not null;size:255" json:"value"`
 	CreatedAt time.Time         `gorm:"not null" json:"created_at"`
 }
@@ -69,7 +69,7 @@ const (
 type RuleAction struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	RuleID    uint64    `gorm:"not null;index" json:"rule_id"`
-	Type      ActionType `gorm:"type:enum('set_category','add_tag','set_notes');not null" json:"type"`
+	Type      ActionType `gorm:"not null;size:20" json:"type"`
 	Value     string    `gorm:"not null;size:255" json:"value"`
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`
 }
