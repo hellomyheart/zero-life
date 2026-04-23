@@ -56,6 +56,8 @@ var (
 	// 规则错误 8xxxx
 	ErrRuleConditionInvalid = &Error{Code: 80001, Message: "invalid rule condition"}
 	ErrRuleActionInvalid    = &Error{Code: 80002, Message: "invalid rule action"}
+	ErrRuleGroupHasRules    = &Error{Code: 80003, Message: "rule group has associated rules"}
+	ErrRuleGroupInactive    = &Error{Code: 80004, Message: "rule group is inactive"}
 
 	// 导入错误 9xxxx
 	ErrImportFileInvalid = &Error{Code: 90001, Message: "invalid import file"}

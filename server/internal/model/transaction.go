@@ -28,6 +28,7 @@ type Transaction struct {
 	Notes         string          `gorm:"type:text" json:"notes"`
 	BillID        *uint64         `json:"bill_id"`
 	ParentID      *uint64         `gorm:"index" json:"parent_id"`
+	IsReconciled  bool            `gorm:"default:false" json:"is_reconciled"`
 	CreatedAt     time.Time       `gorm:"not null" json:"created_at"`
 	UpdatedAt     time.Time       `gorm:"not null" json:"updated_at"`
 	DeletedAt     gorm.DeletedAt  `gorm:"index" json:"-"`

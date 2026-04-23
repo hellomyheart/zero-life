@@ -8,13 +8,16 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/hellomyheart/zero-life/server/internal/config"
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
 	"github.com/hellomyheart/zero-life/server/internal/model"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/email"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -178,7 +181,17 @@ func (s *AuthService) ForgotPassword(email string) error {
 		return errcode.ErrInternal
 	}
 
-	// TODO: Send email with reset link
+	// Send email with reset link
+	frontendURL := config.C.App.FrontendURL
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, token)
+	if err := email.SendPasswordReset(user.Email, resetURL); err != nil {
+		zap.L().Error("failed to send password reset email", zap.Error(err), zap.String("email", user.Email))
+		// Don't fail the request - token is still stored in Redis
+	}
+
 	return nil
 }
 

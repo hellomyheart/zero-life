@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"github.com/hellomyheart/zero-life/server/internal/dto/request"
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
-	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"gorm.io/gorm"
@@ -19,14 +19,14 @@ import (
 const importDir = "tmp/imports"
 
 type ImportService struct {
-	txnRepo    *repository.TransactionRepository
+	txnService *TransactionService
 	accountRepo *repository.AccountRepository
 	db         *gorm.DB
 }
 
-func NewImportService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB) *ImportService {
+func NewImportService(txnService *TransactionService, accountRepo *repository.AccountRepository, db *gorm.DB) *ImportService {
 	return &ImportService{
-		txnRepo:    txnRepo,
+		txnService: txnService,
 		accountRepo: accountRepo,
 		db:         db,
 	}
@@ -176,14 +176,14 @@ func (s *ImportService) Execute(userID uint64, fileID string, mapping map[string
 			continue
 		}
 
-		date, err := time.Parse("2006-01-02", dateStr)
+		_, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
 			result.Failed++
 			continue
 		}
 
-		amount, err := decimal.NewFromString(amountStr)
-		if err != nil || amount.LessThanOrEqual(decimal.Zero) {
+		amountVal, err := decimal.NewFromString(amountStr)
+		if err != nil || amountVal.LessThanOrEqual(decimal.Zero) {
 			result.Failed++
 			continue
 		}
@@ -199,16 +199,15 @@ func (s *ImportService) Execute(userID uint64, fileID string, mapping map[string
 			continue
 		}
 
-		txn := &model.Transaction{
-			UserID:      userID,
-			Type:        model.TransactionType(txnType),
-			Date:        date,
+		txn := &request.CreateTransactionReq{
+			Type:        txnType,
+			Date:        dateStr,
 			Description: description,
-			Amount:      amount,
+			Amount:      amountStr,
 			SourceID:    accounts[0].ID,
 		}
 
-		if err := s.txnRepo.Create(txn, nil); err != nil {
+		if _, err := s.txnService.Create(userID, txn); err != nil {
 			result.Failed++
 			continue
 		}

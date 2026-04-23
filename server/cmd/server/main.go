@@ -77,6 +77,7 @@ func main() {
 		&model.Bill{},
 		&model.Currency{},
 		&model.ExchangeRate{},
+		&model.RuleGroup{},
 		&model.Rule{},
 		&model.RuleCondition{},
 		&model.RuleAction{},
@@ -116,6 +117,7 @@ func main() {
 	billRepo := repository.NewBillRepository(db)
 	currencyRepo := repository.NewCurrencyRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
+	ruleGroupRepo := repository.NewRuleGroupRepository(db)
 	piggyBankRepo := repository.NewPiggyBankRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
 
@@ -129,9 +131,10 @@ func main() {
 	billService := service.NewBillService(billRepo)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
 	ruleService := service.NewRuleService(ruleRepo, txnRepo)
+	ruleGroupService := service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo)
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo)
-	importService := service.NewImportService(txnRepo, accountRepo, db)
+	importService := service.NewImportService(txnService, accountRepo, db)
 	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo)
@@ -151,6 +154,7 @@ func main() {
 	billCtrl := controller.NewBillController(billService)
 	currencyCtrl := controller.NewCurrencyController(currencyService)
 	ruleCtrl := controller.NewRuleController(ruleService)
+	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
 	reportCtrl := controller.NewReportController(reportService)
 	dashboardCtrl := controller.NewDashboardController(dashboardService)
 	importCtrl := controller.NewImportController(importService)
@@ -178,6 +182,7 @@ func main() {
 		billCtrl,
 		currencyCtrl,
 		ruleCtrl,
+		ruleGroupCtrl,
 		reportCtrl,
 		dashboardCtrl,
 		importCtrl,

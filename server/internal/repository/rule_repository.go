@@ -120,3 +120,14 @@ func (r *RuleRepository) GetEnabledRules(userID uint64) ([]model.Rule, error) {
 	}
 	return rules, nil
 }
+
+func (r *RuleRepository) GetEnabledRulesByGroupID(groupID, userID uint64) ([]model.Rule, error) {
+	var rules []model.Rule
+	if err := r.db.Where("group_id = ? AND user_id = ? AND is_enabled = ?", groupID, userID, true).
+		Preload("Conditions").
+		Preload("Actions").
+		Order("priority ASC, id ASC").Find(&rules).Error; err != nil {
+		return nil, err
+	}
+	return rules, nil
+}

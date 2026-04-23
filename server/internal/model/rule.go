@@ -23,6 +23,7 @@ const (
 type Rule struct {
 	ID        uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID    uint64         `gorm:"not null;index" json:"user_id"`
+	GroupID   uint64         `gorm:"index" json:"group_id"`
 	Name      string         `gorm:"not null;size:100" json:"name"`
 	Priority  int            `gorm:"default:0" json:"priority"`
 	IsEnabled bool           `gorm:"default:true" json:"is_enabled"`
@@ -32,6 +33,7 @@ type Rule struct {
 	UpdatedAt time.Time      `gorm:"not null" json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
+	Group      RuleGroup      `gorm:"foreignKey:GroupID" json:"group,omitempty"`
 	Conditions []RuleCondition `gorm:"foreignKey:RuleID" json:"conditions,omitempty"`
 	Actions    []RuleAction    `gorm:"foreignKey:RuleID" json:"actions,omitempty"`
 }

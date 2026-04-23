@@ -10,22 +10,23 @@ import (
 type Router struct {
 	engine *gin.Engine
 
-	authCtrl        *controller.AuthController
-	accountCtrl     *controller.AccountController
-	txnCtrl         *controller.TransactionController
-	categoryCtrl    *controller.CategoryController
-	tagCtrl         *controller.TagController
-	budgetCtrl      *controller.BudgetController
-	billCtrl        *controller.BillController
-	currencyCtrl    *controller.CurrencyController
-	ruleCtrl        *controller.RuleController
-	reportCtrl      *controller.ReportController
-	dashboardCtrl   *controller.DashboardController
-	importCtrl      *controller.ImportController
-	piggyBankCtrl   *controller.PiggyBankController
-	attachmentCtrl  *controller.AttachmentController
+	authCtrl         *controller.AuthController
+	accountCtrl      *controller.AccountController
+	txnCtrl          *controller.TransactionController
+	categoryCtrl     *controller.CategoryController
+	tagCtrl          *controller.TagController
+	budgetCtrl       *controller.BudgetController
+	billCtrl         *controller.BillController
+	currencyCtrl     *controller.CurrencyController
+	ruleCtrl         *controller.RuleController
+	ruleGroupCtrl    *controller.RuleGroupController
+	reportCtrl       *controller.ReportController
+	dashboardCtrl    *controller.DashboardController
+	importCtrl       *controller.ImportController
+	piggyBankCtrl    *controller.PiggyBankController
+	attachmentCtrl   *controller.AttachmentController
 	autocompleteCtrl *controller.AutocompleteController
-	exportCtrl      *controller.ExportController
+	exportCtrl       *controller.ExportController
 }
 
 func NewRouter(
@@ -39,6 +40,7 @@ func NewRouter(
 	billCtrl *controller.BillController,
 	currencyCtrl *controller.CurrencyController,
 	ruleCtrl *controller.RuleController,
+	ruleGroupCtrl *controller.RuleGroupController,
 	reportCtrl *controller.ReportController,
 	dashboardCtrl *controller.DashboardController,
 	importCtrl *controller.ImportController,
@@ -58,6 +60,7 @@ func NewRouter(
 		billCtrl:         billCtrl,
 		currencyCtrl:     currencyCtrl,
 		ruleCtrl:         ruleCtrl,
+		ruleGroupCtrl:    ruleGroupCtrl,
 		reportCtrl:       reportCtrl,
 		dashboardCtrl:    dashboardCtrl,
 		importCtrl:       importCtrl,
@@ -177,6 +180,17 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			rules.DELETE("/:id", r.ruleCtrl.Delete)
 			rules.PUT("/:id/toggle", r.ruleCtrl.ToggleStatus)
 			rules.POST("/:id/execute", r.ruleCtrl.Execute)
+		}
+
+		// Rule Groups
+		ruleGroups := authenticated.Group("/rule-groups")
+		{
+			ruleGroups.POST("", r.ruleGroupCtrl.Create)
+			ruleGroups.GET("", r.ruleGroupCtrl.List)
+			ruleGroups.GET("/:id", r.ruleGroupCtrl.Get)
+			ruleGroups.PUT("/:id", r.ruleGroupCtrl.Update)
+			ruleGroups.DELETE("/:id", r.ruleGroupCtrl.Delete)
+			ruleGroups.POST("/:id/execute", r.ruleGroupCtrl.ExecuteGroup)
 		}
 
 		// Reports
