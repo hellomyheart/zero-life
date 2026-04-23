@@ -68,3 +68,18 @@ func (r *PiggyBankRepository) ListEvents(piggyBankID uint64) ([]model.PiggyEvent
 	}
 	return events, nil
 }
+
+func (r *PiggyBankRepository) Reorder(userID uint64, orders map[uint64]int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for id, order := range orders {
+			if err := tx.Model(&model.PiggyBank{}).Where("id = ? AND user_id = ?", id, userID).Update("order", order).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *PiggyBankRepository) DeleteEvents(piggyBankID uint64) error {
+	return r.db.Where("piggy_bank_id = ?", piggyBankID).Delete(&model.PiggyEvent{}).Error
+}

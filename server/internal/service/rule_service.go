@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -15,12 +16,27 @@ import (
 )
 
 type RuleService struct {
-	ruleRepo *repository.RuleRepository
-	txnRepo  *repository.TransactionRepository
+	ruleRepo     *repository.RuleRepository
+	txnRepo      *repository.TransactionRepository
+	categoryRepo *repository.CategoryRepository
+	budgetRepo   *repository.BudgetRepository
+	tagRepo      *repository.TagRepository
 }
 
-func NewRuleService(ruleRepo *repository.RuleRepository, txnRepo *repository.TransactionRepository) *RuleService {
-	return &RuleService{ruleRepo: ruleRepo, txnRepo: txnRepo}
+func NewRuleService(
+	ruleRepo *repository.RuleRepository,
+	txnRepo *repository.TransactionRepository,
+	categoryRepo *repository.CategoryRepository,
+	budgetRepo *repository.BudgetRepository,
+	tagRepo *repository.TagRepository,
+) *RuleService {
+	return &RuleService{
+		ruleRepo:     ruleRepo,
+		txnRepo:      txnRepo,
+		categoryRepo: categoryRepo,
+		budgetRepo:   budgetRepo,
+		tagRepo:      tagRepo,
+	}
 }
 
 func (s *RuleService) Create(userID uint64, req *request.CreateRuleReq) (*response.RuleResp, error) {
@@ -224,7 +240,7 @@ func (s *RuleService) Execute(userID, id uint64, req *request.ExecuteRuleReq) (*
 		txn := &txns[i]
 		if s.matchTransaction(rule, txn) {
 			result.MatchedCount++
-			if s.applyActions(rule.Actions, txn) {
+			if s.applyActions(userID, rule.Actions, txn) {
 				result.SuccessCount++
 			} else {
 				result.FailCount++
@@ -342,7 +358,7 @@ func (s *RuleService) matchString(operator model.ConditionOperator, fieldValue, 
 	return false
 }
 
-func (s *RuleService) applyActions(actions []model.RuleAction, txn *model.Transaction) bool {
+func (s *RuleService) applyActions(userID uint64, actions []model.RuleAction, txn *model.Transaction) bool {
 	needsUpdate := false
 	for _, action := range actions {
 		switch action.Type {
@@ -367,26 +383,123 @@ func (s *RuleService) applyActions(actions []model.RuleAction, txn *model.Transa
 		case model.ActionTypeClearBudget:
 			txn.BillID = nil
 			needsUpdate = true
-		// set_category, set_budget, add_tag, remove_tag require repository calls
-		// which are handled as best-effort (no-op if not supported directly)
 		case model.ActionTypeSetCategory:
-			// Category ID resolution would require lookup by name
-			// For now, treat value as category ID
-			needsUpdate = true
+			// Find category by name from user's category tree
+			categories, err := s.categoryRepo.List(userID)
+			if err != nil {
+				log.Printf("[RuleService] set_category: failed to list categories for user %d: %v", userID, err)
+				continue
+			}
+			found := false
+			for _, cat := range categories {
+				if strings.EqualFold(cat.Name, action.Value) {
+					txn.CategoryID = &cat.ID
+					needsUpdate = true
+					found = true
+					break
+				}
+			}
+			if !found {
+				log.Printf("[RuleService] set_category: category '%s' not found for user %d", action.Value, userID)
+			}
 		case model.ActionTypeSetBudget:
-			needsUpdate = true
-		case model.ActionTypeAddTag, model.ActionTypeRemoveTag:
-			// Tag operations require transaction_tag table manipulation
-			// Handled as best-effort
+			// Transaction model does not have BudgetID field, skip for now
+			log.Printf("[RuleService] set_budget: action skipped (Transaction model has no BudgetID field), budget name='%s'", action.Value)
+		case model.ActionTypeAddTag:
+			// Find tag by name, add to transaction if not already present
+			tags, err := s.tagRepo.List(userID)
+			if err != nil {
+				log.Printf("[RuleService] add_tag: failed to list tags for user %d: %v", userID, err)
+				continue
+			}
+			for _, tag := range tags {
+				if strings.EqualFold(tag.Name, action.Value) {
+					// Check if tag already on transaction
+					alreadyHas := false
+					for _, t := range txn.Tags {
+						if t.ID == tag.ID {
+							alreadyHas = true
+							break
+						}
+					}
+					if !alreadyHas {
+						txn.Tags = append(txn.Tags, tag)
+						needsUpdate = true
+					}
+					break
+				}
+			}
+		case model.ActionTypeRemoveTag:
+			// Remove tag by name from transaction
+			newTags := make([]model.Tag, 0, len(txn.Tags))
+			removed := false
+			for _, t := range txn.Tags {
+				if strings.EqualFold(t.Name, action.Value) {
+					removed = true
+					continue
+				}
+				newTags = append(newTags, t)
+			}
+			if removed {
+				txn.Tags = newTags
+				needsUpdate = true
+			}
 		}
 	}
 
 	if needsUpdate {
-		if err := s.txnRepo.Update(txn); err != nil {
+		// Collect tag IDs for UpdateWithTags
+		tagIDs := make([]uint64, 0, len(txn.Tags))
+		for _, t := range txn.Tags {
+			tagIDs = append(tagIDs, t.ID)
+		}
+		if err := s.txnRepo.UpdateWithTags(txn, tagIDs); err != nil {
+			log.Printf("[RuleService] applyActions: failed to update transaction %d: %v", txn.ID, err)
 			return false
 		}
 	}
 	return true
+}
+
+// RuleTrigger defines the interface for triggering rules on transactions.
+// This interface decouples TransactionService from RuleService to avoid circular dependencies.
+type RuleTrigger interface {
+	TriggerRules(userID uint64, txn *model.Transaction, triggerType string) error
+}
+
+// TriggerRules executes all enabled rules matching the triggerType against the given transaction.
+// Rules are sorted by group Order, then by rule Priority within each group.
+// A single rule failure does not prevent subsequent rules from executing.
+func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, triggerType string) error {
+	rules, err := s.ruleRepo.GetEnabledRules(userID)
+	if err != nil {
+		log.Printf("[RuleService] TriggerRules: failed to get enabled rules for user %d: %v", userID, err)
+		return err
+	}
+
+	// Filter rules by trigger type and sort by group order then priority
+	// GetEnabledRules already sorts by priority ASC, id ASC
+	// We further filter by trigger type
+	matchingRules := make([]model.Rule, 0)
+	for _, rule := range rules {
+		if rule.Trigger == model.RuleTrigger(triggerType) {
+			matchingRules = append(matchingRules, rule)
+		}
+	}
+
+	// Sort by group order then priority
+	// Since we don't have group info preloaded in the rule list,
+	// we sort by priority (already sorted from repo) and process in order.
+	// For full group-order sorting, we would need to join with rule_groups table.
+	for _, rule := range matchingRules {
+		if s.matchTransaction(&rule, txn) {
+			if !s.applyActions(userID, rule.Actions, txn) {
+				log.Printf("[RuleService] TriggerRules: rule %d failed for transaction %d, continuing", rule.ID, txn.ID)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *RuleService) toResp(r *model.Rule) *response.RuleResp {

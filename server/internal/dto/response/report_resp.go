@@ -1,5 +1,7 @@
 package response
 
+import "time"
+
 type IncomeExpenseResp struct {
 	TotalIncome  string              `json:"total_income"`
 	TotalExpense string              `json:"total_expense"`
@@ -71,4 +73,26 @@ type TagReportItemResp struct {
 	TagName string `json:"tag_name"`
 	Income  string `json:"income"`
 	Expense string `json:"expense"`
+}
+
+// Audit report
+type AuditReportResp struct {
+	AccountID      uint64                `json:"account_id"`
+	AccountName    string                `json:"account_name"`
+	InitialBalance string                `json:"initial_balance"`
+	FinalBalance   string                `json:"final_balance"`
+	StartDate      string                `json:"start_date"`
+	EndDate        string                `json:"end_date"`
+	Items          []AuditReportItemResp `json:"items"`
+}
+
+type AuditReportItemResp struct {
+	TransactionID  uint64    `json:"transaction_id"`
+	Date           time.Time `json:"date"`
+	Description    string    `json:"description"`
+	Type           string    `json:"type"`
+	Amount         string    `json:"amount"`
+	RunningBalance string    `json:"running_balance"`
+	CategoryName   string    `json:"category_name,omitempty"`
+	IsReconciled   bool      `json:"is_reconciled"`
 }

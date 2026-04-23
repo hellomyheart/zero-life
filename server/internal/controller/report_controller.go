@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
@@ -117,6 +118,40 @@ func (ctrl *ReportController) Tag(c *gin.Context) {
 	}
 
 	result, err := ctrl.reportService.Tag(userID, &req)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
+func (ctrl *ReportController) Audit(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+
+	accountIDStr := c.Query("account_id")
+	if accountIDStr == "" {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+	accountID, err := strconv.ParseUint(accountIDStr, 10, 64)
+	if err != nil {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+
+	var reconciled *bool
+	if r := c.Query("reconciled"); r != "" {
+		val, err := strconv.ParseBool(r)
+		if err == nil {
+			reconciled = &val
+		}
+	}
+
+	result, err := ctrl.reportService.AuditReport(userID, accountID, startDate, endDate, reconciled)
 	if err != nil {
 		handleError(c, err)
 		return

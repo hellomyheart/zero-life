@@ -62,6 +62,29 @@ var (
 	// 导入错误 9xxxx
 	ErrImportFileInvalid = &Error{Code: 90001, Message: "invalid import file"}
 	ErrImportParseFail   = &Error{Code: 90002, Message: "failed to parse import file"}
+
+	// 循环交易错误 10xxxx
+	ErrRecurrenceAmountInvalid = &Error{Code: 100001, Message: "recurrence amount must be greater than zero"}
+	ErrRecurrenceInactive      = &Error{Code: 100002, Message: "recurrence is inactive"}
+
+	// Webhook错误 11xxxx
+	ErrWebhookURLInvalid = &Error{Code: 110001, Message: "webhook URL must start with https://"}
+	ErrWebhookNotFound   = &Error{Code: 110002, Message: "webhook not found"}
+
+	// 对账错误 12xxxx
+	ErrReconciliationInvalidDate = &Error{Code: 120001, Message: "reconciliation date range is invalid"}
+	ErrReconciliationBalanceInvalid = &Error{Code: 120002, Message: "submitted balance is invalid"}
+
+	// 批量操作错误 13xxxx
+	ErrBulkEmptyIDs    = &Error{Code: 130001, Message: "transaction IDs list cannot be empty"}
+	ErrBulkConvertFail = &Error{Code: 130002, Message: "failed to convert transaction type"}
+
+	// 交易链接错误 14xxxx
+	ErrTxnLinkDuplicate = &Error{Code: 140001, Message: "transaction link already exists"}
+	ErrLinkTypeNameExists = &Error{Code: 140002, Message: "link type name already exists"}
+
+	// 偏好设置错误 15xxxx
+	ErrPreferenceNameInvalid = &Error{Code: 150001, Message: "preference name is invalid"}
 )
 
 func WithMessage(e *Error, msg string) *Error {

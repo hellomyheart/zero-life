@@ -12,12 +12,36 @@ import (
 )
 
 type ExportService struct {
-	txnRepo     *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
+	txnRepo      *repository.TransactionRepository
+	accountRepo  *repository.AccountRepository
+	billRepo     *repository.BillRepository
+	budgetRepo   *repository.BudgetRepository
+	categoryRepo *repository.CategoryRepository
+	tagRepo      *repository.TagRepository
+	piggyBankRepo *repository.PiggyBankRepository
+	ruleRepo     *repository.RuleRepository
 }
 
-func NewExportService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository) *ExportService {
-	return &ExportService{txnRepo: txnRepo, accountRepo: accountRepo}
+func NewExportService(
+	txnRepo *repository.TransactionRepository,
+	accountRepo *repository.AccountRepository,
+	billRepo *repository.BillRepository,
+	budgetRepo *repository.BudgetRepository,
+	categoryRepo *repository.CategoryRepository,
+	tagRepo *repository.TagRepository,
+	piggyBankRepo *repository.PiggyBankRepository,
+	ruleRepo *repository.RuleRepository,
+) *ExportService {
+	return &ExportService{
+		txnRepo:      txnRepo,
+		accountRepo:  accountRepo,
+		billRepo:     billRepo,
+		budgetRepo:   budgetRepo,
+		categoryRepo: categoryRepo,
+		tagRepo:      tagRepo,
+		piggyBankRepo: piggyBankRepo,
+		ruleRepo:     ruleRepo,
+	}
 }
 
 func (s *ExportService) ExportTransactions(userID uint64, startDate, endDate, format string) ([]byte, string, error) {
@@ -223,4 +247,261 @@ func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, st
 	}
 	filename := fmt.Sprintf("accounts_%s.json", time.Now().Format("20060102"))
 	return data, filename, nil
+}
+
+func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, string, error) {
+	bills, err := s.billRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportBillsCSV(bills)
+	case "json":
+		return s.exportBillsJSON(bills)
+	default:
+		return s.exportBillsCSV(bills)
+	}
+}
+
+func (s *ExportService) ExportBudgets(userID uint64, format string) ([]byte, string, error) {
+	budgets, err := s.budgetRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportBudgetsCSV(budgets)
+	case "json":
+		return s.exportBudgetsJSON(budgets)
+	default:
+		return s.exportBudgetsCSV(budgets)
+	}
+}
+
+func (s *ExportService) ExportCategories(userID uint64, format string) ([]byte, string, error) {
+	categories, err := s.categoryRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportCategoriesCSV(categories)
+	case "json":
+		return s.exportCategoriesJSON(categories)
+	default:
+		return s.exportCategoriesCSV(categories)
+	}
+}
+
+func (s *ExportService) ExportTags(userID uint64, format string) ([]byte, string, error) {
+	tags, err := s.tagRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportTagsCSV(tags)
+	case "json":
+		return s.exportTagsJSON(tags)
+	default:
+		return s.exportTagsCSV(tags)
+	}
+}
+
+func (s *ExportService) ExportPiggyBanks(userID uint64, format string) ([]byte, string, error) {
+	piggyBanks, err := s.piggyBankRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportPiggyBanksCSV(piggyBanks)
+	case "json":
+		return s.exportPiggyBanksJSON(piggyBanks)
+	default:
+		return s.exportPiggyBanksCSV(piggyBanks)
+	}
+}
+
+func (s *ExportService) ExportRules(userID uint64, format string) ([]byte, string, error) {
+	rules, err := s.ruleRepo.List(userID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch format {
+	case "csv":
+		return s.exportRulesCSV(rules)
+	case "json":
+		return s.exportRulesJSON(rules)
+	default:
+		return s.exportRulesCSV(rules)
+	}
+}
+
+// Bills export helpers
+func (s *ExportService) exportBillsCSV(bills []model.Bill) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "amount", "repeat_rule", "next_due", "notes"})
+	for _, b := range bills {
+		writer.Write([]string{b.Name, b.Amount.StringFixed(4), string(b.RepeatRule), b.NextDue.Format("2006-01-02"), b.Notes})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("bills_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportBillsJSON(bills []model.Bill) ([]byte, string, error) {
+	type billExport struct {
+		Name       string `json:"name"`
+		Amount     string `json:"amount"`
+		RepeatRule string `json:"repeat_rule"`
+		NextDue    string `json:"next_due"`
+		Notes      string `json:"notes"`
+	}
+	items := make([]billExport, 0, len(bills))
+	for _, b := range bills {
+		items = append(items, billExport{Name: b.Name, Amount: b.Amount.StringFixed(4), RepeatRule: string(b.RepeatRule), NextDue: b.NextDue.Format("2006-01-02"), Notes: b.Notes})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("bills_%s.json", time.Now().Format("20060102")), nil
+}
+
+// Budgets export helpers
+func (s *ExportService) exportBudgetsCSV(budgets []model.Budget) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "amount", "period", "is_enabled"})
+	for _, b := range budgets {
+		writer.Write([]string{b.Name, b.Amount.StringFixed(4), string(b.Period), fmt.Sprintf("%v", b.IsEnabled)})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("budgets_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportBudgetsJSON(budgets []model.Budget) ([]byte, string, error) {
+	type budgetExport struct {
+		Name      string `json:"name"`
+		Amount    string `json:"amount"`
+		Period    string `json:"period"`
+		IsEnabled bool   `json:"is_enabled"`
+	}
+	items := make([]budgetExport, 0, len(budgets))
+	for _, b := range budgets {
+		items = append(items, budgetExport{Name: b.Name, Amount: b.Amount.StringFixed(4), Period: string(b.Period), IsEnabled: b.IsEnabled})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("budgets_%s.json", time.Now().Format("20060102")), nil
+}
+
+// Categories export helpers
+func (s *ExportService) exportCategoriesCSV(categories []model.Category) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "icon", "notes"})
+	for _, c := range categories {
+		writer.Write([]string{c.Name, c.Icon, c.Notes})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("categories_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportCategoriesJSON(categories []model.Category) ([]byte, string, error) {
+	type categoryExport struct {
+		Name  string `json:"name"`
+		Icon  string `json:"icon"`
+		Notes string `json:"notes"`
+	}
+	items := make([]categoryExport, 0, len(categories))
+	for _, c := range categories {
+		items = append(items, categoryExport{Name: c.Name, Icon: c.Icon, Notes: c.Notes})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("categories_%s.json", time.Now().Format("20060102")), nil
+}
+
+// Tags export helpers
+func (s *ExportService) exportTagsCSV(tags []model.Tag) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "color"})
+	for _, t := range tags {
+		writer.Write([]string{t.Name, t.Color})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("tags_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportTagsJSON(tags []model.Tag) ([]byte, string, error) {
+	type tagExport struct {
+		Name  string `json:"name"`
+		Color string `json:"color"`
+	}
+	items := make([]tagExport, 0, len(tags))
+	for _, t := range tags {
+		items = append(items, tagExport{Name: t.Name, Color: t.Color})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("tags_%s.json", time.Now().Format("20060102")), nil
+}
+
+// Piggy Banks export helpers
+func (s *ExportService) exportPiggyBanksCSV(piggyBanks []model.PiggyBank) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "target_amount", "current_amount", "notes"})
+	for _, p := range piggyBanks {
+		writer.Write([]string{p.Name, p.TargetAmount.StringFixed(4), p.CurrentAmount.StringFixed(4), p.Notes})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("piggy_banks_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportPiggyBanksJSON(piggyBanks []model.PiggyBank) ([]byte, string, error) {
+	type piggyBankExport struct {
+		Name          string `json:"name"`
+		TargetAmount  string `json:"target_amount"`
+		CurrentAmount string `json:"current_amount"`
+		Notes         string `json:"notes"`
+	}
+	items := make([]piggyBankExport, 0, len(piggyBanks))
+	for _, p := range piggyBanks {
+		items = append(items, piggyBankExport{Name: p.Name, TargetAmount: p.TargetAmount.StringFixed(4), CurrentAmount: p.CurrentAmount.StringFixed(4), Notes: p.Notes})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("piggy_banks_%s.json", time.Now().Format("20060102")), nil
+}
+
+// Rules export helpers
+func (s *ExportService) exportRulesCSV(rules []model.Rule) ([]byte, string, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	writer.Write([]string{"name", "priority", "is_enabled", "logic_type", "trigger"})
+	for _, r := range rules {
+		writer.Write([]string{r.Name, fmt.Sprintf("%d", r.Priority), fmt.Sprintf("%v", r.IsEnabled), string(r.LogicType), string(r.Trigger)})
+	}
+	writer.Flush()
+	return buf.Bytes(), fmt.Sprintf("rules_%s.csv", time.Now().Format("20060102")), nil
+}
+
+func (s *ExportService) exportRulesJSON(rules []model.Rule) ([]byte, string, error) {
+	type ruleExport struct {
+		Name      string `json:"name"`
+		Priority  int    `json:"priority"`
+		IsEnabled bool   `json:"is_enabled"`
+		LogicType string `json:"logic_type"`
+		Trigger   string `json:"trigger"`
+	}
+	items := make([]ruleExport, 0, len(rules))
+	for _, r := range rules {
+		items = append(items, ruleExport{Name: r.Name, Priority: r.Priority, IsEnabled: r.IsEnabled, LogicType: string(r.LogicType), Trigger: string(r.Trigger)})
+	}
+	data, _ := json.MarshalIndent(items, "", "  ")
+	return data, fmt.Sprintf("rules_%s.json", time.Now().Format("20060102")), nil
 }

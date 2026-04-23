@@ -10,6 +10,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
+	"gorm.io/gorm"
 )
 
 type ReportService struct {
@@ -399,6 +400,71 @@ func (s *ReportService) Tag(userID uint64, req *request.ReportReq) (*response.Ta
 	}
 
 	return &response.TagReportResp{Items: items}, nil
+}
+
+func (s *ReportService) AuditReport(userID uint64, accountID uint64, startDate, endDate string, reconciled *bool) (*response.AuditReportResp, error) {
+	// Verify account belongs to user
+	account, err := s.accountRepo.GetByID(accountID, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	txns, err := s.txnRepo.GetForAudit(accountID, startDate, endDate, reconciled)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	runningBalance := account.InitialBalance
+	items := make([]response.AuditReportItemResp, 0, len(txns))
+
+	for _, txn := range txns {
+		switch txn.Type {
+		case model.TransactionTypeDeposit:
+			if txn.DestinationID != nil && *txn.DestinationID == accountID {
+				runningBalance = runningBalance.Add(txn.Amount)
+			}
+		case model.TransactionTypeWithdrawal:
+			if txn.SourceID == accountID {
+				runningBalance = runningBalance.Sub(txn.Amount)
+			}
+		case model.TransactionTypeTransfer:
+			if txn.SourceID == accountID {
+				runningBalance = runningBalance.Sub(txn.Amount)
+			}
+			if txn.DestinationID != nil && *txn.DestinationID == accountID {
+				runningBalance = runningBalance.Add(txn.Amount)
+			}
+		}
+
+		item := response.AuditReportItemResp{
+			TransactionID: txn.ID,
+			Date:          txn.Date,
+			Description:   txn.Description,
+			Type:          string(txn.Type),
+			Amount:        txn.Amount.StringFixed(4),
+			RunningBalance: runningBalance.StringFixed(4),
+			IsReconciled:  txn.IsReconciled,
+		}
+
+		if txn.Category != nil {
+			item.CategoryName = txn.Category.Name
+		}
+
+		items = append(items, item)
+	}
+
+	return &response.AuditReportResp{
+		AccountID:      accountID,
+		AccountName:    account.Name,
+		InitialBalance: account.InitialBalance.StringFixed(4),
+		FinalBalance:   runningBalance.StringFixed(4),
+		StartDate:      startDate,
+		EndDate:        endDate,
+		Items:          items,
+	}, nil
 }
 
 func (s *ReportService) parseDateRange(req *request.ReportReq) (time.Time, time.Time, error) {

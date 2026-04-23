@@ -146,3 +146,50 @@ func (s *BillService) toResp(b *model.Bill) *response.BillResp {
 		UpdatedAt:  b.UpdatedAt,
 	}
 }
+
+// CreateTransactionFromBill creates a transaction from a bill and advances the bill's next due date.
+func (s *BillService) CreateTransactionFromBill(userID, billID uint64) (*response.BillResp, error) {
+	bill, err := s.billRepo.GetByID(billID, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	// Advance the next due date based on repeat rule
+	switch bill.RepeatRule {
+	case model.RepeatRuleDaily:
+		bill.NextDue = bill.NextDue.AddDate(0, 0, 1)
+	case model.RepeatRuleWeekly:
+		bill.NextDue = bill.NextDue.AddDate(0, 0, 7)
+	case model.RepeatRuleMonthly:
+		bill.NextDue = bill.NextDue.AddDate(0, 1, 0)
+	case model.RepeatRuleYearly:
+		bill.NextDue = bill.NextDue.AddDate(1, 0, 0)
+	}
+
+	if err := s.billRepo.Update(bill); err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return s.toResp(bill), nil
+}
+
+// GetDueBills returns bills that are due within the specified number of days.
+func (s *BillService) GetDueBills(userID uint64, days int) ([]response.BillResp, error) {
+	if days <= 0 {
+		days = 7
+	}
+
+	bills, err := s.billRepo.GetUpcoming(userID, days)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	items := make([]response.BillResp, 0, len(bills))
+	for _, b := range bills {
+		items = append(items, *s.toResp(&b))
+	}
+	return items, nil
+}

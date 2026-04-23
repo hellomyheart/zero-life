@@ -14,16 +14,20 @@ import (
 )
 
 type TransactionService struct {
-	txnRepo    *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	db         *gorm.DB
+	txnRepo        *repository.TransactionRepository
+	accountRepo    *repository.AccountRepository
+	db             *gorm.DB
+	ruleTrigger    RuleTrigger
+	webhookNotifier WebhookNotifier
 }
 
-func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB) *TransactionService {
+func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB, ruleTrigger RuleTrigger, webhookNotifier WebhookNotifier) *TransactionService {
 	return &TransactionService{
-		txnRepo:    txnRepo,
-		accountRepo: accountRepo,
-		db:         db,
+		txnRepo:        txnRepo,
+		accountRepo:    accountRepo,
+		db:             db,
+		ruleTrigger:    ruleTrigger,
+		webhookNotifier: webhookNotifier,
 	}
 }
 
@@ -116,6 +120,16 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 	created, err := s.txnRepo.GetByID(txn.ID, userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
+	}
+
+	// Trigger on_create rules (async, don't block the response)
+	if s.ruleTrigger != nil {
+		go s.ruleTrigger.TriggerRules(userID, created, "on_create")
+	}
+
+	// Trigger webhooks (async)
+	if s.webhookNotifier != nil {
+		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionCreate, created)
 	}
 
 	return s.toResp(created), nil
@@ -237,6 +251,16 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 		return nil, errcode.ErrInternal
 	}
 
+	// Trigger on_update rules (async, don't block the response)
+	if s.ruleTrigger != nil {
+		go s.ruleTrigger.TriggerRules(userID, updated, "on_update")
+	}
+
+	// Trigger webhooks (async)
+	if s.webhookNotifier != nil {
+		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionUpdate, updated)
+	}
+
 	return s.toResp(updated), nil
 }
 
@@ -247,6 +271,11 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 			return errcode.ErrNotFound
 		}
 		return errcode.ErrInternal
+	}
+
+	// Trigger webhooks before delete (async)
+	if s.webhookNotifier != nil {
+		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionDelete, txn)
 	}
 
 	// Rollback balance changes

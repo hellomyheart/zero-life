@@ -157,6 +157,31 @@ func (r *TransactionRepository) SearchCount(userID uint64, keyword string) (int6
 	return count, nil
 }
 
+func (r *TransactionRepository) GetForAudit(accountID uint64, startDate, endDate string, reconciled *bool) ([]model.Transaction, error) {
+	var txns []model.Transaction
+	query := r.db.Where("source_id = ? OR destination_id = ?", accountID, accountID)
+
+	if startDate != "" {
+		if t, err := time.Parse("2006-01-02", startDate); err == nil {
+			query = query.Where("date >= ?", t)
+		}
+	}
+	if endDate != "" {
+		if t, err := time.Parse("2006-01-02", endDate); err == nil {
+			query = query.Where("date <= ?", t)
+		}
+	}
+	if reconciled != nil {
+		query = query.Where("is_reconciled = ?", *reconciled)
+	}
+
+	if err := query.Preload("Source").Preload("Destination").Preload("Category").Preload("Tags").
+		Order("date ASC, id ASC").Find(&txns).Error; err != nil {
+		return nil, err
+	}
+	return txns, nil
+}
+
 func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFilter) *gorm.DB {
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)

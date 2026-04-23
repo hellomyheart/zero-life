@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
@@ -119,4 +120,36 @@ func (c *PiggyBankController) GetEvents(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, resp)
+}
+
+func (c *PiggyBankController) Reorder(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	var req struct {
+		Orders map[uint64]int `json:"orders" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	if err := c.service.Reorder(userID, req.Orders); err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	Success(ctx, nil)
+}
+
+func (c *PiggyBankController) ResetHistory(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	id := parseIDParam(ctx, "id")
+
+	resp, err := c.service.ResetHistory(userID, id)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	Success(ctx, resp)
 }

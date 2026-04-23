@@ -14,6 +14,7 @@ type PiggyBank struct {
 	TargetAmount  decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"target_amount"`
 	CurrentAmount decimal.Decimal `gorm:"type:decimal(19,4);not null;default:0" json:"current_amount"`
 	AccountID     uint64          `gorm:"not null" json:"account_id"`
+	Order         int             `gorm:"default:0" json:"order"`
 	TargetDate    *time.Time      `json:"target_date,omitempty"`
 	Notes         string          `gorm:"type:text" json:"notes"`
 	CreatedAt     time.Time       `gorm:"not null" json:"created_at"`

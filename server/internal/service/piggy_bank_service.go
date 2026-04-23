@@ -262,3 +262,36 @@ func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 		UpdatedAt:     pb.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }
+
+// Reorder updates the order of multiple piggy banks.
+func (s *PiggyBankService) Reorder(userID uint64, orders map[uint64]int) error {
+	return s.piggyBankRepo.Reorder(userID, orders)
+}
+
+// ResetHistory deletes all events for a piggy bank and resets current amount to zero.
+func (s *PiggyBankService) ResetHistory(userID, id uint64) (*response.PiggyBankResp, error) {
+	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	// Delete all events
+	if err := s.piggyBankRepo.DeleteEvents(id); err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	// Reset current amount to zero
+	piggyBank.CurrentAmount = decimal.Zero
+	if err := s.piggyBankRepo.Update(piggyBank); err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	updated, err := s.piggyBankRepo.GetByID(id, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	return s.toResp(updated), nil
+}

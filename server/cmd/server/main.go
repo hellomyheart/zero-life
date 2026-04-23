@@ -84,6 +84,13 @@ func main() {
 		&model.PiggyBank{},
 		&model.PiggyEvent{},
 		&model.Attachment{},
+		&model.Recurrence{},
+		&model.Webhook{},
+		&model.WebhookMessage{},
+		&model.Reconciliation{},
+		&model.LinkType{},
+		&model.TransactionLink{},
+		&model.Preference{},
 	); err != nil {
 		logger.Fatal("Failed to auto migrate", zap.Error(err))
 	}
@@ -120,17 +127,24 @@ func main() {
 	ruleGroupRepo := repository.NewRuleGroupRepository(db)
 	piggyBankRepo := repository.NewPiggyBankRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
+	recurrenceRepo := repository.NewRecurrenceRepository(db)
+	webhookRepo := repository.NewWebhookRepository(db)
+	reconRepo := repository.NewReconciliationRepository(db)
+	linkTypeRepo := repository.NewLinkTypeRepository(db)
+	txnLinkRepo := repository.NewTransactionLinkRepository(db)
+	prefRepo := repository.NewPreferenceRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(authRepo, jwtService, rdb)
 	accountService := service.NewAccountService(accountRepo)
-	txnService := service.NewTransactionService(txnRepo, accountRepo, db)
+	ruleService := service.NewRuleService(ruleRepo, txnRepo, categoryRepo, budgetRepo, tagRepo)
+	webhookService := service.NewWebhookService(webhookRepo)
+	txnService := service.NewTransactionService(txnRepo, accountRepo, db, ruleService, webhookService)
 	categoryService := service.NewCategoryService(categoryRepo, db)
 	tagService := service.NewTagService(tagRepo)
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo)
 	billService := service.NewBillService(billRepo)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
-	ruleService := service.NewRuleService(ruleRepo, txnRepo)
 	ruleGroupService := service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo)
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo)
@@ -138,6 +152,13 @@ func main() {
 	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo)
+	recurrenceService := service.NewRecurrenceService(recurrenceRepo, txnService, accountRepo)
+	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService)
+	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo, db)
+	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
+	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
+	txnLinkService := service.NewTransactionLinkService(txnLinkRepo)
+	prefService := service.NewPreferenceService(prefRepo)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -162,6 +183,14 @@ func main() {
 	attachmentCtrl := controller.NewAttachmentController(attachmentService)
 	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo)
 	exportCtrl := controller.NewExportController(exportService)
+	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
+	cronCtrl := controller.NewCronController(cronService)
+	webhookCtrl := controller.NewWebhookController(webhookService)
+	reconCtrl := controller.NewReconciliationController(reconService)
+	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
+	linkTypeCtrl := controller.NewLinkTypeController(linkTypeService)
+	txnLinkCtrl := controller.NewTransactionLinkController(txnLinkService)
+	prefCtrl := controller.NewPreferenceController(prefService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -190,8 +219,16 @@ func main() {
 		attachmentCtrl,
 		autocompleteCtrl,
 		exportCtrl,
+		recurrenceCtrl,
+		cronCtrl,
+		webhookCtrl,
+		reconCtrl,
+		txnBulkCtrl,
+		linkTypeCtrl,
+		txnLinkCtrl,
+		prefCtrl,
 	)
-	r.Setup(jwtService)
+	r.Setup(jwtService, db)
 
 	// Start server
 	addr := ":" + config.C.App.Port

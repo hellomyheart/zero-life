@@ -5,6 +5,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/controller"
 	"github.com/hellomyheart/zero-life/server/internal/middleware"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
+	"gorm.io/gorm"
 )
 
 type Router struct {
@@ -27,6 +28,14 @@ type Router struct {
 	attachmentCtrl   *controller.AttachmentController
 	autocompleteCtrl *controller.AutocompleteController
 	exportCtrl       *controller.ExportController
+	recurrenceCtrl   *controller.RecurrenceController
+	cronCtrl         *controller.CronController
+	webhookCtrl      *controller.WebhookController
+	reconCtrl        *controller.ReconciliationController
+	txnBulkCtrl      *controller.TransactionBulkController
+	linkTypeCtrl     *controller.LinkTypeController
+	txnLinkCtrl      *controller.TransactionLinkController
+	prefCtrl         *controller.PreferenceController
 }
 
 func NewRouter(
@@ -48,6 +57,14 @@ func NewRouter(
 	attachmentCtrl *controller.AttachmentController,
 	autocompleteCtrl *controller.AutocompleteController,
 	exportCtrl *controller.ExportController,
+	recurrenceCtrl *controller.RecurrenceController,
+	cronCtrl *controller.CronController,
+	webhookCtrl *controller.WebhookController,
+	reconCtrl *controller.ReconciliationController,
+	txnBulkCtrl *controller.TransactionBulkController,
+	linkTypeCtrl *controller.LinkTypeController,
+	txnLinkCtrl *controller.TransactionLinkController,
+	prefCtrl *controller.PreferenceController,
 ) *Router {
 	return &Router{
 		engine:           engine,
@@ -68,10 +85,18 @@ func NewRouter(
 		attachmentCtrl:   attachmentCtrl,
 		autocompleteCtrl: autocompleteCtrl,
 		exportCtrl:       exportCtrl,
+		recurrenceCtrl:   recurrenceCtrl,
+		cronCtrl:         cronCtrl,
+		webhookCtrl:      webhookCtrl,
+		reconCtrl:        reconCtrl,
+		txnBulkCtrl:      txnBulkCtrl,
+		linkTypeCtrl:     linkTypeCtrl,
+		txnLinkCtrl:      txnLinkCtrl,
+		prefCtrl:         prefCtrl,
 	}
 }
 
-func (r *Router) Setup(jwtService *jwt.Service) {
+func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 	// Global middleware
 	r.engine.Use(middleware.CORS())
 
@@ -255,5 +280,70 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			exports.GET("/transactions", r.exportCtrl.ExportTransactions)
 			exports.GET("/accounts", r.exportCtrl.ExportAccounts)
 		}
+
+		// Recurrences
+		recurrences := authenticated.Group("/recurrences")
+		{
+			recurrences.POST("", r.recurrenceCtrl.Create)
+			recurrences.GET("", r.recurrenceCtrl.List)
+			recurrences.GET("/:id", r.recurrenceCtrl.Get)
+			recurrences.PUT("/:id", r.recurrenceCtrl.Update)
+			recurrences.DELETE("/:id", r.recurrenceCtrl.Delete)
+			recurrences.POST("/:id/trigger", r.recurrenceCtrl.Trigger)
+		}
+
+		// Webhooks
+		webhooks := authenticated.Group("/webhooks")
+		{
+			webhooks.POST("", r.webhookCtrl.Create)
+			webhooks.GET("", r.webhookCtrl.List)
+			webhooks.GET("/:id", r.webhookCtrl.Get)
+			webhooks.PUT("/:id", r.webhookCtrl.Update)
+			webhooks.DELETE("/:id", r.webhookCtrl.Delete)
+			webhooks.GET("/:id/messages", r.webhookCtrl.GetMessages)
+		}
+
+		// Reconciliation (nested under accounts)
+		accounts.GET("/:id/reconcile", r.reconCtrl.GetReconciliation)
+		accounts.POST("/:id/reconcile", r.reconCtrl.SubmitReconciliation)
+
+		// Transaction bulk operations
+		transactions.POST("/bulk/edit", r.txnBulkCtrl.BulkEdit)
+		transactions.POST("/bulk/delete", r.txnBulkCtrl.BulkDelete)
+		transactions.POST("/:id/convert", r.txnBulkCtrl.ConvertType)
+		transactions.POST("/:id/clone", r.txnBulkCtrl.Clone)
+
+		// Link Types (admin only)
+		linkTypes := authenticated.Group("/link-types")
+		linkTypes.Use(middleware.Admin(db))
+		{
+			linkTypes.POST("", r.linkTypeCtrl.Create)
+			linkTypes.GET("", r.linkTypeCtrl.List)
+			linkTypes.GET("/:id", r.linkTypeCtrl.Get)
+			linkTypes.PUT("/:id", r.linkTypeCtrl.Update)
+			linkTypes.DELETE("/:id", r.linkTypeCtrl.Delete)
+		}
+
+		// Transaction Links
+		txnLinks := authenticated.Group("/transaction-links")
+		{
+			txnLinks.POST("", r.txnLinkCtrl.Create)
+			txnLinks.GET("", r.txnLinkCtrl.List)
+			txnLinks.DELETE("/:id", r.txnLinkCtrl.Delete)
+		}
+
+		// Preferences
+		preferences := authenticated.Group("/preferences")
+		{
+			preferences.GET("", r.prefCtrl.List)
+			preferences.GET("/:name", r.prefCtrl.Get)
+			preferences.PUT("/:name", r.prefCtrl.Update)
+		}
+
+		// Audit report
+		reports.GET("/audit", r.reportCtrl.Audit)
 	}
+
+	// Cron (public, token-protected)
+	v1.GET("/cron/:token", r.cronCtrl.Run)
 }
