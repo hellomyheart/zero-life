@@ -177,6 +177,8 @@ func main() {
 	insightService := service.NewInsightService(txnRepo, accountRepo, categoryRepo)
 	// 新增MFA服务
 	mfaService := service.NewMFAService(userRepo, db)
+	// 新增用户管理服务
+	userService := service.NewUserService(userRepo, db)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -216,6 +218,8 @@ func main() {
 	insightCtrl := controller.NewInsightController(insightService)
 	// 新增MFA控制器
 	mfaCtrl := controller.NewMFAController(mfaService)
+	// 新增用户管理控制器
+	userCtrl := controller.NewUserController(userService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -252,6 +256,7 @@ func main() {
 		chartCtrl,
 		insightCtrl,
 		mfaCtrl,
+		userCtrl,
 	)
 	r.Setup(jwtService)
 

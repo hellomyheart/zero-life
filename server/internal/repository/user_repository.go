@@ -59,3 +59,10 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 func (r *UserRepository) Create(user *model.User) error {
 	return r.db.Create(user).Error
 }
+
+// Count 获取用户总数
+func (r *UserRepository) Count() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.User{}).Count(&count).Error
+	return count, err
+}

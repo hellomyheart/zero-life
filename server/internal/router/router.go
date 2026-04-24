@@ -35,6 +35,7 @@ type Router struct {
 	chartCtrl             *controller.ChartController
 	insightCtrl           *controller.InsightController
 	mfaCtrl               *controller.MFAController
+	userCtrl              *controller.UserController
 }
 
 func NewRouter(
@@ -64,6 +65,7 @@ func NewRouter(
 	chartCtrl *controller.ChartController,
 	insightCtrl *controller.InsightController,
 	mfaCtrl *controller.MFAController,
+	userCtrl *controller.UserController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -92,6 +94,7 @@ func NewRouter(
 		chartCtrl:            chartCtrl,
 		insightCtrl:          insightCtrl,
 		mfaCtrl:              mfaCtrl,
+		userCtrl:             userCtrl,
 	}
 }
 
@@ -338,6 +341,18 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			mfa.POST("/disable", r.mfaCtrl.Disable)
 			mfa.POST("/verify", r.mfaCtrl.Verify)
 			mfa.GET("/status", r.mfaCtrl.Status)
+		}
+
+		// User management routes - 用户管理API（管理员）
+		users := authenticated.Group("/users")
+		{
+			users.GET("", r.userCtrl.List)
+			users.GET("/:id", r.userCtrl.Get)
+			users.PUT("/:id", r.userCtrl.Update)
+			users.DELETE("/:id", r.userCtrl.Delete)
+			users.PUT("/:id/role", r.userCtrl.ChangeRole)
+			users.POST("/:id/lock", r.userCtrl.Lock)
+			users.POST("/:id/unlock", r.userCtrl.Unlock)
 		}
 
 		// Health check (public within authenticated group)
