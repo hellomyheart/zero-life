@@ -14,15 +14,27 @@ import (
 	"gorm.io/gorm"
 )
 
+// PiggyBankService 存钱罐服务
+// 负责处理储蓄目标的创建、存取款、进度计算和事件记录
+// 依赖piggyBankRepo进行存钱罐数据访问，依赖accountRepo验证关联账户
 type PiggyBankService struct {
-	piggyBankRepo *repository.PiggyBankRepository
-	accountRepo   *repository.AccountRepository
+	piggyBankRepo *repository.PiggyBankRepository // 存钱罐数据访问对象
+	accountRepo   *repository.AccountRepository   // 账户数据访问对象
 }
 
+// NewPiggyBankService 创建存钱罐服务实例
 func NewPiggyBankService(piggyBankRepo *repository.PiggyBankRepository, accountRepo *repository.AccountRepository) *PiggyBankService {
 	return &PiggyBankService{piggyBankRepo: piggyBankRepo, accountRepo: accountRepo}
 }
 
+// Create 创建存钱罐
+// 设置目标金额和可选的目标日期，初始当前金额为0
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建请求参数（名称、目标金额、目标日期、关联账户、备注）
+// 返回：
+//   - *response.PiggyBankResp: 创建成功的存钱罐信息（含完成百分比）
+//   - error: 错误信息
 func (s *PiggyBankService) Create(userID uint64, req *request.CreatePiggyBankReq) (*response.PiggyBankResp, error) {
 	targetAmount, err := decimal.NewFromString(req.TargetAmount)
 	if err != nil || !targetAmount.IsPositive() {
@@ -58,6 +70,13 @@ func (s *PiggyBankService) Create(userID uint64, req *request.CreatePiggyBankReq
 	return s.toResp(created), nil
 }
 
+// Get 获取单个存钱罐详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+// 返回：
+//   - *response.PiggyBankResp: 存钱罐信息（含完成百分比）
+//   - error: 错误信息
 func (s *PiggyBankService) Get(userID, id uint64) (*response.PiggyBankResp, error) {
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
@@ -69,6 +88,12 @@ func (s *PiggyBankService) Get(userID, id uint64) (*response.PiggyBankResp, erro
 	return s.toResp(piggyBank), nil
 }
 
+// List 获取用户所有存钱罐列表
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - []response.PiggyBankResp: 存钱罐列表
+//   - error: 错误信息
 func (s *PiggyBankService) List(userID uint64) ([]response.PiggyBankResp, error) {
 	piggyBanks, err := s.piggyBankRepo.List(userID)
 	if err != nil {
@@ -82,6 +107,15 @@ func (s *PiggyBankService) List(userID uint64) ([]response.PiggyBankResp, error)
 	return items, nil
 }
 
+// Update 更新存钱罐信息
+// 支持更新名称、目标金额、目标日期、备注
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.PiggyBankResp: 更新后的存钱罐信息
+//   - error: 错误信息
 func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBankReq) (*response.PiggyBankResp, error) {
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
@@ -123,6 +157,12 @@ func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBan
 	return s.toResp(updated), nil
 }
 
+// Delete 删除存钱罐
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+// 返回：
+//   - error: 错误信息
 func (s *PiggyBankService) Delete(userID, id uint64) error {
 	_, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
@@ -134,6 +174,16 @@ func (s *PiggyBankService) Delete(userID, id uint64) error {
 	return s.piggyBankRepo.Delete(id, userID)
 }
 
+// AddAmount 向存钱罐存入金额
+// 业务规则：存入后当前金额不能超过目标金额
+// 同时创建一条存入事件记录
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+//   - req: 存入请求参数（金额、备注）
+// 返回：
+//   - *response.PiggyBankResp: 更新后的存钱罐信息
+//   - error: 错误信息
 func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountReq) (*response.PiggyBankResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || !amount.IsPositive() {
@@ -171,6 +221,16 @@ func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountRe
 	return s.toResp(updated), nil
 }
 
+// RemoveAmount 从存钱罐取出金额
+// 业务规则：取出金额不能超过当前已存金额
+// 同时创建一条取出事件记录（金额为负值）
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+//   - req: 取出请求参数（金额、备注）
+// 返回：
+//   - *response.PiggyBankResp: 更新后的存钱罐信息
+//   - error: 错误信息
 func (s *PiggyBankService) RemoveAmount(userID, id uint64, req *request.RemoveAmountReq) (*response.PiggyBankResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || !amount.IsPositive() {
@@ -207,6 +267,13 @@ func (s *PiggyBankService) RemoveAmount(userID, id uint64, req *request.RemoveAm
 	return s.toResp(updated), nil
 }
 
+// GetEvents 获取存钱罐的事件记录列表（存入/取出历史）
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+// 返回：
+//   - []response.PiggyEventResp: 事件列表
+//   - error: 错误信息
 func (s *PiggyBankService) GetEvents(userID, id uint64) ([]response.PiggyEventResp, error) {
 	_, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
@@ -235,6 +302,8 @@ func (s *PiggyBankService) GetEvents(userID, id uint64) ([]response.PiggyEventRe
 	return items, nil
 }
 
+// toResp 将存钱罐模型转换为响应对象
+// 自动计算完成百分比（当前金额/目标金额*100，上限100%）
 func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 	percentage := decimal.Zero
 	if pb.TargetAmount.IsPositive() {
@@ -265,12 +334,24 @@ func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 	}
 }
 
-// Reorder updates the order of multiple piggy banks.
+// Reorder 批量更新存钱罐的排序顺序
+// 参数：
+//   - userID: 用户ID
+//   - orders: 存钱罐ID到排序值的映射
+// 返回：
+//   - error: 错误信息
 func (s *PiggyBankService) Reorder(userID uint64, orders map[uint64]int) error {
 	return s.piggyBankRepo.Reorder(userID, orders)
 }
 
-// ResetHistory deletes all events for a piggy bank and resets current amount to zero.
+// ResetHistory 重置存钱罐历史
+// 删除所有存取事件记录，将当前金额重置为0
+// 参数：
+//   - userID: 用户ID
+//   - id: 存钱罐ID
+// 返回：
+//   - *response.PiggyBankResp: 重置后的存钱罐信息
+//   - error: 错误信息
 func (s *PiggyBankService) ResetHistory(userID, id uint64) (*response.PiggyBankResp, error) {
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {

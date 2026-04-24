@@ -5,9 +5,12 @@ import { useI18n } from 'vue-i18n'
 import { list, create, update, remove, addAmount, removeAmount } from '@/api/piggyBank'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAccountStore } from '@/stores/account'
 import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq } from '@/types/piggyBank'
 
 const { t } = useI18n()
+// 账户状态管理 - 用于获取账户下拉选项
+const accountStore = useAccountStore()
 
 const piggyBanks = ref<PiggyBank[]>([])
 const loading = ref(false)
@@ -121,7 +124,11 @@ async function handleAmountSubmit() {
   }
 }
 
-onMounted(fetchPiggyBanks)
+onMounted(async () => {
+  // 打开页面时加载账户列表，供下拉选择使用
+  await accountStore.fetchAccounts()
+  await fetchPiggyBanks()
+})
 </script>
 
 <template>
@@ -161,6 +168,12 @@ onMounted(fetchPiggyBanks)
       <el-form :model="form" label-width="100px">
         <el-form-item :label="t('piggyBank.name')">
           <el-input v-model="form.name" />
+        </el-form-item>
+        <!-- 账户选择下拉框 - 选择存钱罐关联的账户 -->
+        <el-form-item :label="t('transaction.sourceAccount')">
+          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('piggyBank.targetAmount')">
           <el-input v-model="form.target_amount" />

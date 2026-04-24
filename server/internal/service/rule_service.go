@@ -17,14 +17,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// RuleService 规则服务
+// 负责处理规则的增删改查、条件匹配、动作执行和规则触发
+// 规则由条件（conditions）和动作（actions）组成，支持AND/OR逻辑组合
+// 依赖ruleRepo进行规则数据访问，依赖txnRepo查询和更新交易
+// 依赖categoryRepo按名称查找分类，依赖tagRepo按名称查找标签，依赖budgetRepo按名称查找预算
 type RuleService struct {
-	ruleRepo     *repository.RuleRepository
-	txnRepo      *repository.TransactionRepository
-	categoryRepo *repository.CategoryRepository
-	budgetRepo   *repository.BudgetRepository
-	tagRepo      *repository.TagRepository
+	ruleRepo     *repository.RuleRepository         // 规则数据访问对象
+	txnRepo      *repository.TransactionRepository  // 交易数据访问对象
+	categoryRepo *repository.CategoryRepository     // 分类数据访问对象
+	tagRepo      *repository.TagRepository          // 标签数据访问对象
+	budgetRepo   *repository.BudgetRepository       // 预算数据访问对象
 }
 
+// NewRuleService 创建规则服务实例
 func NewRuleService(
 	ruleRepo *repository.RuleRepository,
 	txnRepo *repository.TransactionRepository,
@@ -41,6 +47,14 @@ func NewRuleService(
 	}
 }
 
+// Create 创建规则
+// 同时创建规则的条件列表和动作列表
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建请求参数（名称、优先级、启用状态、逻辑类型、触发类型、条件列表、动作列表）
+// 返回：
+//   - *response.RuleResp: 创建成功的规则信息
+//   - error: 错误信息
 func (s *RuleService) Create(userID uint64, req *request.CreateRuleReq) (*response.RuleResp, error) {
 	rule := &model.Rule{
 		UserID:    userID,
@@ -80,6 +94,13 @@ func (s *RuleService) Create(userID uint64, req *request.CreateRuleReq) (*respon
 	return s.toResp(created), nil
 }
 
+// Get 获取单个规则详情（含条件和动作）
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则ID
+// 返回：
+//   - *response.RuleResp: 规则信息
+//   - error: 错误信息
 func (s *RuleService) Get(userID, id uint64) (*response.RuleResp, error) {
 	rule, err := s.ruleRepo.GetByID(id, userID)
 	if err != nil {
@@ -91,6 +112,12 @@ func (s *RuleService) Get(userID, id uint64) (*response.RuleResp, error) {
 	return s.toResp(rule), nil
 }
 
+// List 获取用户所有规则列表
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - []response.RuleResp: 规则列表
+//   - error: 错误信息
 func (s *RuleService) List(userID uint64) ([]response.RuleResp, error) {
 	rules, err := s.ruleRepo.List(userID)
 	if err != nil {
@@ -105,6 +132,14 @@ func (s *RuleService) List(userID uint64) ([]response.RuleResp, error) {
 	return items, nil
 }
 
+// Update 更新规则（同时替换条件和动作列表）
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.RuleResp: 更新后的规则信息
+//   - error: 错误信息
 func (s *RuleService) Update(userID, id uint64, req *request.UpdateRuleReq) (*response.RuleResp, error) {
 	rule, err := s.ruleRepo.GetByID(id, userID)
 	if err != nil {
@@ -159,6 +194,12 @@ func (s *RuleService) Update(userID, id uint64, req *request.UpdateRuleReq) (*re
 	return s.toResp(updated), nil
 }
 
+// Delete 删除规则
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则ID
+// 返回：
+//   - error: 错误信息
 func (s *RuleService) Delete(userID, id uint64) error {
 	_, err := s.ruleRepo.GetByID(id, userID)
 	if err != nil {
@@ -171,6 +212,13 @@ func (s *RuleService) Delete(userID, id uint64) error {
 	return s.ruleRepo.Delete(id, userID)
 }
 
+// ToggleStatus 切换规则的启用/禁用状态
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则ID
+// 返回：
+//   - *response.RuleResp: 更新后的规则信息
+//   - error: 错误信息
 func (s *RuleService) ToggleStatus(userID, id uint64) (*response.RuleResp, error) {
 	rule, err := s.ruleRepo.GetByID(id, userID)
 	if err != nil {
@@ -206,6 +254,15 @@ func (s *RuleService) ToggleStatus(userID, id uint64) (*response.RuleResp, error
 	return s.toResp(rule), nil
 }
 
+// Execute 手动执行规则
+// 在指定时间范围内查找匹配条件的交易，对匹配的交易应用规则动作
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则ID
+//   - req: 执行请求参数（含日期范围，默认最近一个月）
+// 返回：
+//   - *response.RuleExecuteResultResp: 执行结果（匹配数、成功数、失败数）
+//   - error: 错误信息
 func (s *RuleService) Execute(userID, id uint64, req *request.ExecuteRuleReq) (*response.RuleExecuteResultResp, error) {
 	rule, err := s.ruleRepo.GetByID(id, userID)
 	if err != nil {
@@ -254,6 +311,8 @@ func (s *RuleService) Execute(userID, id uint64, req *request.ExecuteRuleReq) (*
 	return result, nil
 }
 
+// matchTransaction 判断交易是否匹配规则的所有条件
+// AND逻辑：所有条件都满足才匹配；OR逻辑：任一条件满足即匹配
 func (s *RuleService) matchTransaction(rule *model.Rule, txn *model.Transaction) bool {
 	if rule.LogicType == model.LogicTypeAnd {
 		for _, cond := range rule.Conditions {
@@ -272,6 +331,8 @@ func (s *RuleService) matchTransaction(rule *model.Rule, txn *model.Transaction)
 	return len(rule.Conditions) == 0
 }
 
+// matchCondition 判断交易是否匹配单个条件
+// 根据条件字段（描述、金额、账户、分类、标签等）提取交易字段值，再用运算符比较
 func (s *RuleService) matchCondition(condition model.RuleCondition, txn *model.Transaction) bool {
 	var fieldValue string
 
@@ -320,6 +381,9 @@ func (s *RuleService) matchCondition(condition model.RuleCondition, txn *model.T
 	return s.matchString(condition.Operator, fieldValue, condition.Value)
 }
 
+// matchString 根据运算符比较字段值和条件值
+// 支持：包含、等于、开头是、结尾是、不包含、不等于、小于、大于、为空、不为空
+// 字符串比较不区分大小写，数值比较使用decimal精确计算
 func (s *RuleService) matchString(operator model.ConditionOperator, fieldValue, conditionValue string) bool {
 	fv := strings.ToLower(fieldValue)
 	cv := strings.ToLower(conditionValue)
@@ -360,6 +424,9 @@ func (s *RuleService) matchString(operator model.ConditionOperator, fieldValue, 
 	return false
 }
 
+// applyActions 对交易应用规则动作列表
+// 支持的动作：设置描述、设置/追加/前置/清空备注、清空/设置分类、清空预算、添加/移除标签
+// 如果有任何变更，使用UpdateWithTags同时更新交易和标签关联
 func (s *RuleService) applyActions(userID uint64, actions []model.RuleAction, txn *model.Transaction) bool {
 	needsUpdate := false
 	for _, action := range actions {
@@ -463,15 +530,21 @@ func (s *RuleService) applyActions(userID uint64, actions []model.RuleAction, tx
 	return true
 }
 
-// RuleTrigger defines the interface for triggering rules on transactions.
-// This interface decouples TransactionService from RuleService to avoid circular dependencies.
+// RuleTrigger 规则触发器接口
+// 定义了在交易变更后触发规则的方法，用于解耦TransactionService和RuleService避免循环依赖
 type RuleTrigger interface {
 	TriggerRules(userID uint64, txn *model.Transaction, triggerType string) error
 }
 
-// TriggerRules executes all enabled rules matching the triggerType against the given transaction.
-// Rules are sorted by group Order, then by rule Priority within each group.
-// A single rule failure does not prevent subsequent rules from executing.
+// TriggerRules 触发规则引擎
+// 获取用户所有启用的规则，按触发类型过滤，逐条匹配交易并执行动作
+// 单条规则失败不会阻止后续规则执行
+// 参数：
+//   - userID: 用户ID
+//   - txn: 触发规则的目标交易
+//   - triggerType: 触发类型（on_create/on_update）
+// 返回：
+//   - error: 错误信息
 func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, triggerType string) error {
 	rules, err := s.ruleRepo.GetEnabledRules(userID)
 	if err != nil {
@@ -504,6 +577,7 @@ func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, trigge
 	return nil
 }
 
+// toResp 将规则模型转换为响应对象（含条件和动作列表）
 func (s *RuleService) toResp(r *model.Rule) *response.RuleResp {
 	conditions := make([]response.RuleConditionResp, 0, len(r.Conditions))
 	for _, c := range r.Conditions {

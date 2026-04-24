@@ -14,11 +14,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// BudgetService 预算服务
+// 负责处理预算相关的业务逻辑，包括预算的创建、查询、更新、删除及使用率计算
+// 依赖budgetRepo进行预算数据访问，依赖txnRepo查询交易以计算预算已花费金额
 type BudgetService struct {
-	budgetRepo *repository.BudgetRepository
-	txnRepo    *repository.TransactionRepository
+	budgetRepo *repository.BudgetRepository // 预算数据访问对象
+	txnRepo    *repository.TransactionRepository // 交易数据访问对象，用于计算预算周期内的支出
 }
 
+// NewBudgetService 创建预算服务实例
+// 参数：
+//   - budgetRepo: 预算数据访问对象
+//   - txnRepo: 交易数据访问对象
+// 返回：
+//   - *BudgetService: 预算服务实例
 func NewBudgetService(budgetRepo *repository.BudgetRepository, txnRepo *repository.TransactionRepository) *BudgetService {
 	return &BudgetService{
 		budgetRepo: budgetRepo,
@@ -26,6 +35,14 @@ func NewBudgetService(budgetRepo *repository.BudgetRepository, txnRepo *reposito
 	}
 }
 
+// Create 创建预算
+// 解析并验证金额，创建预算记录并关联分类，返回带使用率的预算信息
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建预算请求参数（名称、金额、周期、分类ID列表）
+// 返回：
+//   - *response.BudgetResp: 创建成功的预算信息（含已花费金额、剩余金额、使用率、状态）
+//   - error: 错误信息
 func (s *BudgetService) Create(userID uint64, req *request.CreateBudgetReq) (*response.BudgetResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
@@ -52,6 +69,13 @@ func (s *BudgetService) Create(userID uint64, req *request.CreateBudgetReq) (*re
 	return s.toRespWithUsage(created, userID)
 }
 
+// Get 获取单个预算详情（含使用率计算）
+// 参数：
+//   - userID: 用户ID
+//   - id: 预算ID
+// 返回：
+//   - *response.BudgetResp: 预算信息（含已花费金额、剩余金额、使用率、状态）
+//   - error: 错误信息
 func (s *BudgetService) Get(userID, id uint64) (*response.BudgetResp, error) {
 	budget, err := s.budgetRepo.GetByID(id, userID)
 	if err != nil {
@@ -64,6 +88,12 @@ func (s *BudgetService) Get(userID, id uint64) (*response.BudgetResp, error) {
 	return s.toRespWithUsage(budget, userID)
 }
 
+// List 获取用户所有预算列表（每个预算含使用率计算）
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - []response.BudgetResp: 预算列表
+//   - error: 错误信息
 func (s *BudgetService) List(userID uint64) ([]response.BudgetResp, error) {
 	budgets, err := s.budgetRepo.List(userID)
 	if err != nil {
@@ -82,6 +112,16 @@ func (s *BudgetService) List(userID uint64) ([]response.BudgetResp, error) {
 	return items, nil
 }
 
+// Update 更新预算信息
+// 支持部分更新：名称、金额、周期、启用状态、关联分类
+// 如果未提供分类ID列表，则保留现有分类关联
+// 参数：
+//   - userID: 用户ID
+//   - id: 预算ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.BudgetResp: 更新后的预算信息（含使用率）
+//   - error: 错误信息
 func (s *BudgetService) Update(userID, id uint64, req *request.UpdateBudgetReq) (*response.BudgetResp, error) {
 	budget, err := s.budgetRepo.GetByID(id, userID)
 	if err != nil {
@@ -130,6 +170,12 @@ func (s *BudgetService) Update(userID, id uint64, req *request.UpdateBudgetReq) 
 	return s.toRespWithUsage(updated, userID)
 }
 
+// Delete 删除预算
+// 参数：
+//   - userID: 用户ID
+//   - id: 预算ID
+// 返回：
+//   - error: 错误信息
 func (s *BudgetService) Delete(userID, id uint64) error {
 	_, err := s.budgetRepo.GetByID(id, userID)
 	if err != nil {
@@ -142,6 +188,14 @@ func (s *BudgetService) Delete(userID, id uint64) error {
 	return s.budgetRepo.Delete(id, userID)
 }
 
+// GetHistory 获取预算的历史记录
+// 返回每个历史周期的金额、已花费金额和使用率
+// 参数：
+//   - userID: 用户ID
+//   - id: 预算ID
+// 返回：
+//   - []response.BudgetHistoryResp: 预算历史列表
+//   - error: 错误信息
 func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryResp, error) {
 	_, err := s.budgetRepo.GetByID(id, userID)
 	if err != nil {
@@ -173,10 +227,13 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 	return items, nil
 }
 
+// calculateSpent 计算预算在当前周期内已花费金额
+// 修复：添加交易类型过滤，只统计支出类型(withdrawal)交易，避免将收入交易计入预算支出
 func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) decimal.Decimal {
 	now := time.Now()
 	var start, end time.Time
 
+	// 根据预算周期计算时间范围
 	if budget.Period == model.BudgetPeriodMonthly {
 		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 		end = start.AddDate(0, 1, 0).Add(-time.Second)
@@ -185,10 +242,12 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 		end = start.AddDate(1, 0, 0).Add(-time.Second)
 	}
 
-	// Sum transactions for the budget's categories in the period
+	// 只统计支出类型交易，预算追踪的是支出而非收入
+	withdrawalType := string(model.TransactionTypeWithdrawal)
 	var total decimal.Decimal
 	for _, cat := range budget.Categories {
 		filter := repository.TransactionFilter{
+			Type:       withdrawalType,
 			StartDate:  start.Format("2006-01-02"),
 			EndDate:    end.Format("2006-01-02"),
 			CategoryID: &cat.ID,
@@ -205,6 +264,14 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 	return total
 }
 
+// toRespWithUsage 将预算模型转换为带使用率的响应对象
+// 自动计算已花费金额、剩余金额、使用率和状态（normal/warning/overspent）
+// 参数：
+//   - budget: 预算模型
+//   - userID: 用户ID（用于计算已花费金额）
+// 返回：
+//   - *response.BudgetResp: 预算响应对象
+//   - error: 错误信息
 func (s *BudgetService) toRespWithUsage(budget *model.Budget, userID uint64) (*response.BudgetResp, error) {
 	spent := s.calculateSpent(budget, userID)
 	remaining := budget.Amount.Sub(spent)

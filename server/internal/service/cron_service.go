@@ -10,6 +10,9 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
+// CronService 定时任务服务
+// 依赖recurrenceService执行循环交易，依赖billService/billRepo处理到期账单
+// 依赖recurrenceRepo获取到期循环交易，依赖txnService创建交易
 type CronService struct {
 	recurrenceService *RecurrenceService
 	billService       *BillService
@@ -18,6 +21,7 @@ type CronService struct {
 	txnService        *TransactionService
 }
 
+// NewCronService 创建定时任务服务实例
 func NewCronService(
 	recurrenceService *RecurrenceService,
 	billService *BillService,
@@ -34,6 +38,7 @@ func NewCronService(
 	}
 }
 
+// CronResult 定时任务执行结果
 type CronResult struct {
 	RecurrencesExecuted int      `json:"recurrences_executed"`
 	RecurrenceErrors    []string `json:"recurrence_errors,omitempty"`
@@ -41,14 +46,15 @@ type CronResult struct {
 	BillErrors          []string `json:"bill_errors,omitempty"`
 }
 
-// CronRun executes all due recurrences and bills.
+// CronRun 执行所有到期的循环交易和账单
+// 修复：使用GetAllDueBills()替代GetUpcoming(0,0)，避免userID=0导致的数据隔离问题
 func (s *CronService) CronRun() (*CronResult, error) {
 	result := &CronResult{
 		RecurrenceErrors: make([]string, 0),
 		BillErrors:       make([]string, 0),
 	}
 
-	// Execute due recurrences
+	// 执行到期的循环交易
 	today := time.Now()
 	dueRecurrences, err := s.recurrenceRepo.GetDueRecurrences(today)
 	if err != nil {
@@ -63,8 +69,10 @@ func (s *CronService) CronRun() (*CronResult, error) {
 		}
 	}
 
-	// Execute due bills (get bills due within 0 days = today)
-	dueBills, err := s.billRepo.GetUpcoming(0, 0)
+	// 执行到期的账单：使用GetAllDueBills获取所有用户的到期账单
+	// 原代码使用GetUpcoming(0,0)传入userID=0，由于repo的WHERE条件会过滤user_id=0，
+	// 导致无法获取任何用户的账单。GetAllDueBills不按用户过滤，适合定时任务批量处理
+	dueBills, err := s.billRepo.GetAllDueBills()
 	if err != nil {
 		result.BillErrors = append(result.BillErrors, err.Error())
 	} else {
@@ -80,14 +88,16 @@ func (s *CronService) CronRun() (*CronResult, error) {
 	return result, nil
 }
 
-// createTransactionFromBill creates a transaction from a bill and updates the bill's next due date.
+// createTransactionFromBill 从账单创建交易并更新账单的下次到期日期
+// 只处理到期日期在今天或之前的账单，通过txnService.Create()确保账户余额更新
 func (s *CronService) createTransactionFromBill(bill *model.Bill) error {
-	// Only process bills that are due today or earlier
+	// 只处理到期日期在今天或之前的账单
 	if bill.NextDue.After(time.Now()) {
 		return nil
 	}
 
-	// Create transaction from bill
+	// 如果账单指定了支出账户，创建对应的支出交易
+	// 通过txnService.Create()确保：1)账户余额正确更新 2)规则触发 3)Webhook通知
 	if bill.SourceID != nil {
 		txnReq := &request.CreateTransactionReq{
 			Type:        string(model.TransactionTypeWithdrawal),
@@ -105,13 +115,14 @@ func (s *CronService) createTransactionFromBill(bill *model.Bill) error {
 		}
 	}
 
-	// Update bill's next due date
+	// 根据重复规则更新下次到期日期
 	nextDue := s.calculateBillNextDue(bill.NextDue, bill.RepeatRule)
 	bill.NextDue = nextDue
 
 	return s.billRepo.Update(bill)
 }
 
+// calculateBillNextDue 根据重复规则计算账单的下次到期日期
 func (s *CronService) calculateBillNextDue(currentDue time.Time, rule model.RepeatRule) time.Time {
 	switch rule {
 	case model.RepeatRuleDaily:

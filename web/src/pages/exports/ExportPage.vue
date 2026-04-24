@@ -12,21 +12,36 @@ const dateRange = ref<[string, string] | null>(null)
 const format = ref<'csv' | 'json'>('csv')
 
 const exportItems = [
-  { key: 'transactions', fn: exportTransactions },
-  { key: 'accounts', fn: exportAccounts },
-  { key: 'budgets', fn: exportBudgets },
-  { key: 'categories', fn: exportCategories },
-  { key: 'tags', fn: exportTags },
+  { key: 'transactions', fn: exportTransactions, ext: 'csv' },
+  { key: 'accounts', fn: exportAccounts, ext: 'csv' },
+  { key: 'budgets', fn: exportBudgets, ext: 'csv' },
+  { key: 'categories', fn: exportCategories, ext: 'csv' },
+  { key: 'tags', fn: exportTags, ext: 'csv' },
 ]
 
-async function handleExport(fn: (params: ExportReq) => Promise<unknown>, _key: string) {
+// 触发浏览器下载Blob文件 - 创建临时链接并自动点击
+function triggerDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+async function handleExport(fn: (params: ExportReq) => Promise<unknown>, key: string) {
   try {
     const params: ExportReq = { format: format.value }
     if (dateRange.value) {
       params.start_date = dateRange.value[0]
       params.end_date = dateRange.value[1]
     }
-    await fn(params)
+    const res = await fn(params) as unknown as Blob
+    const blob = res instanceof Blob ? res : new Blob([res as BlobPart])
+    const filename = `${key}_${new Date().toISOString().slice(0, 10)}.${format.value}`
+    triggerDownload(blob, filename)
     ElMessage.success(t('common.success'))
   } catch (err) {
     ElMessage.error((err as Error).message || t('common.failed'))

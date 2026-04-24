@@ -7,23 +7,38 @@ import (
 	"gorm.io/gorm"
 )
 
+// TransactionFilter 交易列表的基础过滤器，用于 List 和 Count 方法。
+// 各字段为空或 nil 时表示不过滤该条件。
 type TransactionFilter struct {
-	Type       string
-	StartDate  string
-	EndDate    string
-	AccountID  *uint64
-	CategoryID *uint64
-	TagID      *uint64
+	Type       string  // 交易类型过滤，如 "withdrawal"（支出）、"deposit"（收入）、"transfer"（转账）
+	StartDate  string  // 开始日期过滤，格式 "2006-01-02"
+	EndDate    string  // 结束日期过滤，格式 "2006-01-02"
+	AccountID  *uint64 // 账户 ID 过滤，匹配源账户或目标账户
+	CategoryID *uint64 // 分类 ID 过滤
+	TagID      *uint64 // 标签 ID 过滤，通过 JOIN transaction_tags 表实现
 }
 
+// TransactionRepository 交易仓库，负责交易记录的数据访问。
+// 交易（Transaction）是系统的核心实体，记录每一笔收入、支出和转账。
+// 交易可以关联标签（多对多）、拆分为子交易（parent_id）、预加载关联数据。
 type TransactionRepository struct {
 	db *gorm.DB
 }
 
+// NewTransactionRepository 创建交易仓库实例。
+// 参数 db: GORM 数据库连接实例。
 func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
+// Create 创建交易及其关联的标签。使用数据库事务确保原子性。
+// 先创建交易记录，再批量创建交易-标签关联记录。
+// 执行 SQL（事务内）:
+//   1. INSERT INTO transactions (...)
+//   2. INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?), (?, ?), ...
+// 参数 txn: 要创建的交易对象，创建后 GORM 会自动填充 ID。
+// 参数 tagIDs: 要关联的标签 ID 列表，可以为空。
+// 返回: 创建失败时返回错误，事务回滚。
 func (r *TransactionRepository) Create(txn *model.Transaction, tagIDs []uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(txn).Error; err != nil {
@@ -45,6 +60,19 @@ func (r *TransactionRepository) Create(txn *model.Transaction, tagIDs []uint64) 
 	})
 }
 
+// GetByID 根据 ID 和用户 ID 获取单条交易，并预加载所有关联数据。
+// 预加载包括：源账户、目标账户、分类、标签、拆分子交易及其标签和分类。
+// Preload 会在主查询之后自动发起额外的 SELECT 查询来加载关联数据。
+// 执行 SQL:
+//   主查询: SELECT * FROM transactions WHERE id = ? AND user_id = ? LIMIT 1
+//   预加载: SELECT * FROM accounts WHERE id IN (...)  (Source, Destination)
+//           SELECT * FROM categories WHERE id IN (...)  (Category)
+//           SELECT * FROM tags JOIN transaction_tags ...  (Tags)
+//           SELECT * FROM transactions WHERE parent_id = ?  (Splits)
+//           ... 以及 Splits 的 Category 和 Tags
+// 参数 id: 交易 ID。
+// 参数 userID: 当前登录用户 ID，用于权限校验。
+// 返回: 包含完整关联数据的交易对象。
 func (r *TransactionRepository) GetByID(id, userID uint64) (*model.Transaction, error) {
 	var txn model.Transaction
 	if err := r.db.Where("id = ? AND user_id = ?", id, userID).
@@ -61,6 +89,14 @@ func (r *TransactionRepository) GetByID(id, userID uint64) (*model.Transaction, 
 	return &txn, nil
 }
 
+// List 分页获取指定用户的交易列表（仅顶级交易，不含拆分子交易）。
+// parent_id IS NULL 过滤条件确保只返回顶级交易，拆分子交易通过 Preload 加载。
+// 执行 SQL: SELECT * FROM transactions WHERE user_id = ? AND parent_id IS NULL [AND 过滤条件] ORDER BY date DESC, id DESC LIMIT ? OFFSET ?
+// 参数 userID: 用户 ID。
+// 参数 filter: 交易过滤器，各字段为空时不过滤。
+// 参数 offset: 分页偏移量。
+// 参数 limit: 每页记录数。
+// 返回: 交易列表（含预加载的源账户、目标账户、分类、标签）。
 func (r *TransactionRepository) List(userID uint64, filter TransactionFilter, offset, limit int) ([]model.Transaction, error) {
 	var txns []model.Transaction
 	query := r.db.Where("user_id = ? AND parent_id IS NULL", userID)
@@ -74,6 +110,8 @@ func (r *TransactionRepository) List(userID uint64, filter TransactionFilter, of
 	return txns, nil
 }
 
+// Count 统计指定用户符合过滤条件的交易总数，用于分页计算。
+// 执行 SQL: SELECT COUNT(*) FROM transactions WHERE user_id = ? AND parent_id IS NULL [AND 过滤条件]
 func (r *TransactionRepository) Count(userID uint64, filter TransactionFilter) (int64, error) {
 	var count int64
 	query := r.db.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
@@ -86,16 +124,28 @@ func (r *TransactionRepository) Count(userID uint64, filter TransactionFilter) (
 	return count, nil
 }
 
+// Update 更新交易记录（不含标签）。
+// 执行 SQL: UPDATE transactions SET ... WHERE id = ?
+// 参数 txn: 要更新的交易对象（必须包含 ID 字段）。
+// 返回: 更新失败时返回错误。
 func (r *TransactionRepository) Update(txn *model.Transaction) error {
 	return r.db.Save(txn).Error
 }
 
+// UpdateWithTags 更新交易记录及其关联标签。使用数据库事务确保原子性。
+// 策略：先更新交易本身，再删除旧的标签关联，最后插入新的标签关联（全量替换）。
+// 执行 SQL（事务内）:
+//   1. UPDATE transactions SET ... WHERE id = ?
+//   2. DELETE FROM transaction_tags WHERE transaction_id = ?
+//   3. INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?), ...
+// 参数 txn: 要更新的交易对象。
+// 参数 tagIDs: 新的标签 ID 列表，替换原有标签。
+// 返回: 更新失败时返回错误，事务回滚。
 func (r *TransactionRepository) UpdateWithTags(txn *model.Transaction, tagIDs []uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(txn).Error; err != nil {
 			return err
 		}
-		// Replace tags: delete old, insert new
 		if err := tx.Where("transaction_id = ?", txn.ID).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
@@ -115,17 +165,23 @@ func (r *TransactionRepository) UpdateWithTags(txn *model.Transaction, tagIDs []
 	})
 }
 
+// Delete 删除交易及其关联的标签和拆分子交易。使用数据库事务确保原子性。
+// 删除顺序：1.交易标签关联 → 2.拆分子交易 → 3.交易本身
+// 执行 SQL（事务内）:
+//   1. DELETE FROM transaction_tags WHERE transaction_id = ?
+//   2. DELETE FROM transactions WHERE parent_id = ?
+//   3. DELETE FROM transactions WHERE id = ? AND user_id = ?
+// 参数 id: 交易 ID。
+// 参数 userID: 当前登录用户 ID，确保只能删除自己的交易。
+// 返回: 删除失败时返回错误，事务回滚。
 func (r *TransactionRepository) Delete(id, userID uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Delete transaction tags
 		if err := tx.Where("transaction_id = ?", id).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
-		// Delete splits (child transactions)
 		if err := tx.Where("parent_id = ?", id).Delete(&model.Transaction{}).Error; err != nil {
 			return err
 		}
-		// Delete the transaction itself
 		if err := tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error; err != nil {
 			return err
 		}
@@ -133,6 +189,14 @@ func (r *TransactionRepository) Delete(id, userID uint64) error {
 	})
 }
 
+// Search 根据关键词搜索交易，匹配描述（description）或备注（notes）字段。
+// 使用 LIKE 模糊匹配，仅返回顶级交易（不含拆分子交易）。
+// 执行 SQL: SELECT * FROM transactions WHERE user_id = ? AND parent_id IS NULL AND (description LIKE ? OR notes LIKE ?) ORDER BY date DESC, id DESC LIMIT ? OFFSET ?
+// 参数 userID: 用户 ID。
+// 参数 keyword: 搜索关键词。
+// 参数 offset: 分页偏移量。
+// 参数 limit: 每页记录数。
+// 返回: 匹配的交易列表（含预加载的关联数据）。
 func (r *TransactionRepository) Search(userID uint64, keyword string, offset, limit int) ([]model.Transaction, error) {
 	var txns []model.Transaction
 	like := "%" + keyword + "%"
@@ -145,6 +209,8 @@ func (r *TransactionRepository) Search(userID uint64, keyword string, offset, li
 	return txns, nil
 }
 
+// SearchCount 统计关键词搜索结果的交易总数，用于分页计算。
+// 执行 SQL: SELECT COUNT(*) FROM transactions WHERE user_id = ? AND parent_id IS NULL AND (description LIKE ? OR notes LIKE ?)
 func (r *TransactionRepository) SearchCount(userID uint64, keyword string) (int64, error) {
 	var count int64
 	like := "%" + keyword + "%"
@@ -157,6 +223,14 @@ func (r *TransactionRepository) SearchCount(userID uint64, keyword string) (int6
 	return count, nil
 }
 
+// GetForAudit 获取指定账户在时间范围内的交易，用于对账审计。
+// 匹配源账户或目标账户，可选按日期范围和是否已对账过滤。
+// 执行 SQL: SELECT * FROM transactions WHERE source_id = ? OR destination_id = ? [AND date >= ?] [AND date <= ?] [AND is_reconciled = ?] ORDER BY date ASC, id ASC
+// 参数 accountID: 账户 ID。
+// 参数 startDate: 开始日期字符串，格式 "2006-01-02"，为空不过滤。
+// 参数 endDate: 结束日期字符串，格式 "2006-01-02"，为空不过滤。
+// 参数 reconciled: 是否已对账过滤，为 nil 不过滤。
+// 返回: 符合条件的交易列表（含预加载的关联数据）。
 func (r *TransactionRepository) GetForAudit(accountID uint64, startDate, endDate string, reconciled *bool) ([]model.Transaction, error) {
 	var txns []model.Transaction
 	query := r.db.Where("source_id = ? OR destination_id = ?", accountID, accountID)
@@ -182,6 +256,12 @@ func (r *TransactionRepository) GetForAudit(accountID uint64, startDate, endDate
 	return txns, nil
 }
 
+// applyFilter 将 TransactionFilter 中的过滤条件应用到 GORM 查询上。
+// 这是一个内部辅助方法，根据过滤器的非空字段动态添加 WHERE 条件。
+// 标签过滤通过 JOIN transaction_tags 关联表实现。
+// 参数 query: 要添加条件的 GORM 查询对象。
+// 参数 filter: 过滤器。
+// 返回: 添加了过滤条件后的查询对象。
 func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFilter) *gorm.DB {
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
@@ -262,12 +342,10 @@ func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
 
 // AttachTags 为交易添加标签
 func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error {
-	// 删除现有标签关联
 	if err := r.db.Where("transaction_id = ?", txnID).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
 	}
 
-	// 添加新标签关联
 	transactionTags := make([]model.TransactionTag, 0, len(tagIDs))
 	for _, tagID := range tagIDs {
 		transactionTags = append(transactionTags, model.TransactionTag{
@@ -297,18 +375,15 @@ type AdvancedSearchFilter struct {
 func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSearchFilter, offset, limit int) ([]model.Transaction, error) {
 	query := r.db.Model(&model.Transaction{}).Where("user_id = ?", userID)
 
-	// 关键词搜索（描述或备注）
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"
 		query = query.Where("description LIKE ? OR notes LIKE ?", keyword, keyword)
 	}
 
-	// 交易类型过滤
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
 
-	// 日期范围过滤
 	if filter.StartDate != "" {
 		query = query.Where("date >= ?", filter.StartDate)
 	}
@@ -316,7 +391,6 @@ func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSea
 		query = query.Where("date <= ?", filter.EndDate)
 	}
 
-	// 金额范围过滤
 	if filter.MinAmount != "" {
 		query = query.Where("amount >= ?", filter.MinAmount)
 	}
@@ -324,26 +398,21 @@ func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSea
 		query = query.Where("amount <= ?", filter.MaxAmount)
 	}
 
-	// 账户过滤
 	if filter.AccountID != nil {
 		query = query.Where("source_id = ? OR destination_id = ?", *filter.AccountID, *filter.AccountID)
 	}
 
-	// 分类过滤
 	if filter.CategoryID != nil {
 		query = query.Where("category_id = ?", *filter.CategoryID)
 	}
 
-	// 标签过滤
 	if filter.TagID != nil {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id").
 			Where("transaction_tags.tag_id = ?", *filter.TagID)
 	}
 
-	// 排序
 	orderClause := "date DESC"
 	if filter.Sort != "" {
-		// 支持的排序字段: date, -date, amount, -amount, created_at, -created_at
 		switch filter.Sort {
 		case "date":
 			orderClause = "date ASC"
@@ -377,18 +446,15 @@ func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSea
 func (r *TransactionRepository) AdvancedSearchCount(userID uint64, filter AdvancedSearchFilter) (int64, error) {
 	query := r.db.Model(&model.Transaction{}).Where("user_id = ?", userID)
 
-	// 关键词搜索
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"
 		query = query.Where("description LIKE ? OR notes LIKE ?", keyword, keyword)
 	}
 
-	// 交易类型过滤
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
 
-	// 日期范围过滤
 	if filter.StartDate != "" {
 		query = query.Where("date >= ?", filter.StartDate)
 	}
@@ -396,7 +462,6 @@ func (r *TransactionRepository) AdvancedSearchCount(userID uint64, filter Advanc
 		query = query.Where("date <= ?", filter.EndDate)
 	}
 
-	// 金额范围过滤
 	if filter.MinAmount != "" {
 		query = query.Where("amount >= ?", filter.MinAmount)
 	}
@@ -404,17 +469,14 @@ func (r *TransactionRepository) AdvancedSearchCount(userID uint64, filter Advanc
 		query = query.Where("amount <= ?", filter.MaxAmount)
 	}
 
-	// 账户过滤
 	if filter.AccountID != nil {
 		query = query.Where("source_id = ? OR destination_id = ?", *filter.AccountID, *filter.AccountID)
 	}
 
-	// 分类过滤
 	if filter.CategoryID != nil {
 		query = query.Where("category_id = ?", *filter.CategoryID)
 	}
 
-	// 标签过滤
 	if filter.TagID != nil {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id").
 			Where("transaction_tags.tag_id = ?", *filter.TagID)

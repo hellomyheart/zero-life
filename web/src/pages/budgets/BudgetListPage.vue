@@ -6,11 +6,14 @@ import { useRouter } from 'vue-router'
 import { list, remove } from '@/api/budget'
 import { formatAmount } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useCategoryStore } from '@/stores/category'
 import type { Budget } from '@/types/budget'
 import { BudgetPeriod } from '@/types/budget'
 
 const { t } = useI18n()
 const router = useRouter()
+// 分类状态管理 - 用于获取分类下拉选项
+const categoryStore = useCategoryStore()
 
 const budgets = ref<Budget[]>([])
 const loading = ref(false)
@@ -98,7 +101,11 @@ function getStatusType(status: string) {
   return 'success'
 }
 
-onMounted(fetchBudgets)
+onMounted(async () => {
+  // 打开页面时加载分类列表，供下拉选择使用
+  await categoryStore.fetchCategories()
+  await fetchBudgets()
+})
 </script>
 
 <template>
@@ -148,6 +155,12 @@ onMounted(fetchBudgets)
             <el-option label="Monthly" value="monthly" />
             <el-option label="Quarterly" value="quarterly" />
             <el-option label="Yearly" value="yearly" />
+          </el-select>
+        </el-form-item>
+        <!-- 分类多选下拉框 - 选择预算关联的多个分类 -->
+        <el-form-item :label="t('transaction.category')">
+          <el-select v-model="form.category_ids" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('budget.startDate')">

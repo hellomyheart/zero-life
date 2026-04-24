@@ -4,6 +4,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -16,24 +17,38 @@ import (
 	"gorm.io/gorm"
 )
 
+// RuleGroupService 规则组服务
+// 依赖ruleGroupRepo/ruleRepo进行规则数据访问，依赖txnRepo查询和更新交易
+// 依赖categoryRepo按名称查找分类，依赖tagRepo按名称查找标签，依赖budgetRepo按名称查找预算
 type RuleGroupService struct {
 	ruleGroupRepo *repository.RuleGroupRepository
 	ruleRepo      *repository.RuleRepository
 	txnRepo       *repository.TransactionRepository
+	categoryRepo  *repository.CategoryRepository
+	tagRepo       *repository.TagRepository
+	budgetRepo    *repository.BudgetRepository
 }
 
+// NewRuleGroupService 创建规则组服务实例
 func NewRuleGroupService(
 	ruleGroupRepo *repository.RuleGroupRepository,
 	ruleRepo *repository.RuleRepository,
 	txnRepo *repository.TransactionRepository,
+	categoryRepo *repository.CategoryRepository,
+	tagRepo *repository.TagRepository,
+	budgetRepo *repository.BudgetRepository,
 ) *RuleGroupService {
 	return &RuleGroupService{
 		ruleGroupRepo: ruleGroupRepo,
 		ruleRepo:      ruleRepo,
 		txnRepo:       txnRepo,
+		categoryRepo:  categoryRepo,
+		tagRepo:       tagRepo,
+		budgetRepo:    budgetRepo,
 	}
 }
 
+// Create 创建规则组
 func (s *RuleGroupService) Create(userID uint64, req *request.CreateRuleGroupReq) (*response.RuleGroupResp, error) {
 	isActive := true
 	if req.IsActive != nil {
@@ -54,6 +69,7 @@ func (s *RuleGroupService) Create(userID uint64, req *request.CreateRuleGroupReq
 	return s.toResp(group, 0), nil
 }
 
+// Get 获取单个规则组详情
 func (s *RuleGroupService) Get(userID, id uint64) (*response.RuleGroupResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -71,6 +87,7 @@ func (s *RuleGroupService) Get(userID, id uint64) (*response.RuleGroupResp, erro
 	return s.toResp(group, ruleCount), nil
 }
 
+// List 获取用户所有规则组列表
 func (s *RuleGroupService) List(userID uint64) ([]response.RuleGroupResp, error) {
 	groups, err := s.ruleGroupRepo.List(userID)
 	if err != nil {
@@ -89,6 +106,7 @@ func (s *RuleGroupService) List(userID uint64) ([]response.RuleGroupResp, error)
 	return items, nil
 }
 
+// Update 更新规则组信息
 func (s *RuleGroupService) Update(userID, id uint64, req *request.UpdateRuleGroupReq) (*response.RuleGroupResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -120,6 +138,7 @@ func (s *RuleGroupService) Update(userID, id uint64, req *request.UpdateRuleGrou
 	return s.toResp(group, ruleCount), nil
 }
 
+// Delete 删除规则组（仅当组内无规则时可删除）
 func (s *RuleGroupService) Delete(userID, id uint64) error {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -140,6 +159,7 @@ func (s *RuleGroupService) Delete(userID, id uint64) error {
 	return s.ruleGroupRepo.Delete(id, userID)
 }
 
+// ExecuteGroup 执行规则组：对匹配的交易应用规则操作
 func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteRuleGroupReq) (*response.RuleGroupExecuteResultResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -153,7 +173,7 @@ func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteR
 		return nil, errcode.ErrRuleGroupInactive
 	}
 
-	// Get all enabled rules in this group, sorted by priority
+	// 获取规则组内所有启用的规则，按优先级排序
 	rules, err := s.ruleRepo.GetEnabledRulesByGroupID(group.ID, userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -188,7 +208,7 @@ func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteR
 			txn := &txns[i]
 			if s.matchTransaction(&rule, txn) {
 				result.MatchedCount++
-				if s.applyActions(rule.Actions, txn) {
+				if s.applyActions(rule.Actions, txn, userID) {
 					result.SuccessCount++
 				} else {
 					result.FailCount++
@@ -201,6 +221,7 @@ func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteR
 	return result, nil
 }
 
+// matchTransaction 判断交易是否匹配规则的所有条件
 func (s *RuleGroupService) matchTransaction(rule *model.Rule, txn *model.Transaction) bool {
 	if rule.LogicType == model.LogicTypeAnd {
 		for _, cond := range rule.Conditions {
@@ -219,6 +240,7 @@ func (s *RuleGroupService) matchTransaction(rule *model.Rule, txn *model.Transac
 	return len(rule.Conditions) == 0
 }
 
+// matchCondition 判断交易是否匹配单个条件
 func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *model.Transaction) bool {
 	var fieldValue string
 
@@ -267,6 +289,7 @@ func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *mo
 	return s.matchString(condition.Operator, fieldValue, condition.Value)
 }
 
+// matchString 根据运算符比较字段值和条件值
 func (s *RuleGroupService) matchString(operator model.ConditionOperator, fieldValue, conditionValue string) bool {
 	fv := strings.ToLower(fieldValue)
 	cv := strings.ToLower(conditionValue)
@@ -307,8 +330,21 @@ func (s *RuleGroupService) matchString(operator model.ConditionOperator, fieldVa
 	return false
 }
 
-func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.Transaction) bool {
+// applyActions 对交易应用规则操作列表
+// 修复：实现SetCategory、SetBudget、AddTag、RemoveTag操作
+// - SetCategory: 按名称查找分类并设置CategoryID
+// - SetBudget: 交易模型无BudgetID字段，记录警告日志
+// - AddTag: 按名称查找标签并添加到交易
+// - RemoveTag: 按名称查找标签并从交易中移除
+func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.Transaction, userID uint64) bool {
 	needsUpdate := false
+	var tagIDs []uint64
+
+	// 收集当前交易的标签ID列表
+	for _, tag := range txn.Tags {
+		tagIDs = append(tagIDs, tag.ID)
+	}
+
 	for _, action := range actions {
 		switch action.Type {
 		case model.ActionTypeSetDescription:
@@ -333,22 +369,81 @@ func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.T
 			txn.BillID = nil
 			needsUpdate = true
 		case model.ActionTypeSetCategory:
-			needsUpdate = true
+			// 按名称查找分类并设置CategoryID
+			categories, err := s.categoryRepo.List(userID)
+			if err != nil {
+				continue
+			}
+			for _, cat := range categories {
+				if strings.EqualFold(cat.Name, action.Value) {
+					catID := cat.ID
+					txn.CategoryID = &catID
+					needsUpdate = true
+					break
+				}
+			}
 		case model.ActionTypeSetBudget:
-			needsUpdate = true
-		case model.ActionTypeAddTag, model.ActionTypeRemoveTag:
-			// Tag operations require transaction_tag table manipulation
+			// 交易模型没有BudgetID字段，无法直接设置预算关联
+			// 记录警告日志提示此操作暂不支持
+			log.Printf("[RuleGroupService] SetBudget action not supported: transaction model has no BudgetID field, value=%s", action.Value)
+		case model.ActionTypeAddTag:
+			// 按名称查找标签并添加到交易的标签列表
+			tags, err := s.tagRepo.List(userID)
+			if err != nil {
+				continue
+			}
+			for _, tag := range tags {
+				if strings.EqualFold(tag.Name, action.Value) {
+					// 检查标签是否已存在，避免重复添加
+					found := false
+					for _, existingID := range tagIDs {
+						if existingID == tag.ID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						tagIDs = append(tagIDs, tag.ID)
+						needsUpdate = true
+					}
+					break
+				}
+			}
+		case model.ActionTypeRemoveTag:
+			// 按名称查找标签并从交易的标签列表中移除
+			tags, err := s.tagRepo.List(userID)
+			if err != nil {
+				continue
+			}
+			for _, tag := range tags {
+				if strings.EqualFold(tag.Name, action.Value) {
+					// 从标签ID列表中移除匹配的标签
+					newTagIDs := make([]uint64, 0, len(tagIDs))
+					for _, existingID := range tagIDs {
+						if existingID != tag.ID {
+							newTagIDs = append(newTagIDs, existingID)
+						}
+					}
+					if len(newTagIDs) != len(tagIDs) {
+						tagIDs = newTagIDs
+						needsUpdate = true
+					}
+					break
+				}
+			}
 		}
 	}
 
 	if needsUpdate {
-		if err := s.txnRepo.Update(txn); err != nil {
+		// 如果涉及标签变更，使用UpdateWithTags同时更新交易和标签关联
+		if err := s.txnRepo.UpdateWithTags(txn, tagIDs); err != nil {
 			return false
 		}
 	}
 	return true
 }
 
+// toResp 将规则组模型转换为响应DTO
 func (s *RuleGroupService) toResp(g *model.RuleGroup, ruleCount int64) *response.RuleGroupResp {
 	return &response.RuleGroupResp{
 		ID:        g.ID,

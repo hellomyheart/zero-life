@@ -3,7 +3,6 @@
 package controller
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -63,7 +62,7 @@ func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 
 	accounts, err := c.accountRepo.List(userID, "", query, "name", 0, autocompleteLimit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -88,7 +87,7 @@ func (c *AutocompleteController) Categories(ctx *gin.Context) {
 
 	categories, err := c.categoryRepo.List(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -118,7 +117,7 @@ func (c *AutocompleteController) Tags(ctx *gin.Context) {
 
 	tags, err := c.tagRepo.List(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -148,7 +147,7 @@ func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 
 	currencies, err := c.currencyRepo.List()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -182,7 +181,7 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 
 	budgets, err := c.budgetRepo.List(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -212,7 +211,7 @@ func (c *AutocompleteController) Bills(ctx *gin.Context) {
 
 	bills, err := c.billRepo.List(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 

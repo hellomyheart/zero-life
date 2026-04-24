@@ -161,9 +161,9 @@ func main() {
 	categoryService := service.NewCategoryService(categoryRepo, db)
 	tagService := service.NewTagService(tagRepo)
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo)
-	billService := service.NewBillService(billRepo)
+	billService := service.NewBillService(billRepo, txnService)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
-	_ = service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo)
+	ruleGroupService := service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo, categoryRepo, tagRepo, budgetRepo)
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo)
 	importService := service.NewImportService(txnService, accountRepo, db)
@@ -177,7 +177,7 @@ func main() {
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
 	txnLinkService := service.NewTransactionLinkService(txnLinkRepo)
 	prefService := service.NewPreferenceService(prefRepo)
-	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, accountRepo, db)
+	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
 	ogService := service.NewObjectGroupService(ogRepo)
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
@@ -225,6 +225,8 @@ func main() {
 	adminUserCtrl := controller.NewAdminUserController(adminService)
 	cronCtrl := controller.NewCronController(cronService)
 	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
+	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
+	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
 
 	// 初始化Gin引擎，生产环境使用Release模式减少日志输出
 	if config.C.App.Env == "production" {
@@ -267,6 +269,8 @@ func main() {
 		adminUserCtrl,
 		cronCtrl,
 		txnBulkCtrl,
+		recurrenceCtrl,
+		ruleGroupCtrl,
 	)
 	r.Setup(jwtService)
 

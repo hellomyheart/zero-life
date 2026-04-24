@@ -43,6 +43,8 @@ type Router struct {
 	adminUserCtrl         *controller.AdminUserController
 	cronCtrl              *controller.CronController
 	txnBulkCtrl           *controller.TransactionBulkController
+	recurrenceCtrl        *controller.RecurrenceController
+	ruleGroupCtrl         *controller.RuleGroupController
 }
 
 // NewRouter 创建路由器实例，注入所有控制器依赖
@@ -79,6 +81,8 @@ func NewRouter(
 	adminUserCtrl *controller.AdminUserController,
 	cronCtrl *controller.CronController,
 	txnBulkCtrl *controller.TransactionBulkController,
+	recurrenceCtrl *controller.RecurrenceController,
+	ruleGroupCtrl *controller.RuleGroupController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -111,8 +115,10 @@ func NewRouter(
 		linkTypeCtrl:         linkTypeCtrl,
 		adminCtrl:            adminCtrl,
 		adminUserCtrl:        adminUserCtrl,
-		cronCtrl:             cronCtrl,
-		txnBulkCtrl:          txnBulkCtrl,
+		cronCtrl:            cronCtrl,
+		txnBulkCtrl:         txnBulkCtrl,
+		recurrenceCtrl:      recurrenceCtrl,
+		ruleGroupCtrl:       ruleGroupCtrl,
 	}
 }
 
@@ -233,6 +239,17 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			rules.POST("/:id/execute", r.ruleCtrl.Execute)
 		}
 
+		// 规则组管理路由
+		ruleGroups := authenticated.Group("/rule-groups")
+		{
+			ruleGroups.POST("", r.ruleGroupCtrl.Create)
+			ruleGroups.GET("", r.ruleGroupCtrl.List)
+			ruleGroups.GET("/:id", r.ruleGroupCtrl.Get)
+			ruleGroups.PUT("/:id", r.ruleGroupCtrl.Update)
+			ruleGroups.DELETE("/:id", r.ruleGroupCtrl.Delete)
+			ruleGroups.POST("/:id/execute", r.ruleGroupCtrl.ExecuteGroup)
+		}
+
 		// 报表路由
 		reports := authenticated.Group("/reports")
 		{
@@ -242,6 +259,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			reports.GET("/net-worth", r.reportCtrl.NetWorth)
 			reports.GET("/trend", r.reportCtrl.Trend)
 			reports.GET("/tag", r.reportCtrl.Tag)
+			reports.GET("/audit", r.reportCtrl.Audit)
 		}
 
 		imports := authenticated.Group("/imports")
@@ -266,6 +284,8 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			piggyBanks.POST("/:id/add", r.piggyBankCtrl.AddAmount)
 			piggyBanks.POST("/:id/remove", r.piggyBankCtrl.RemoveAmount)
 			piggyBanks.GET("/:id/events", r.piggyBankCtrl.GetEvents)
+			piggyBanks.PUT("/reorder", r.piggyBankCtrl.Reorder)
+			piggyBanks.POST("/:id/reset", r.piggyBankCtrl.ResetHistory)
 		}
 
 		attachments := authenticated.Group("/attachments")
@@ -304,6 +324,17 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			recurringTxns.PUT("/:id", r.recurringTxnCtrl.Update)
 			recurringTxns.DELETE("/:id", r.recurringTxnCtrl.Delete)
 			recurringTxns.POST("/process-due", r.recurringTxnCtrl.ProcessDue)
+		}
+
+		// 周期性交易管理路由（Recurrence模型，与RecurringTransaction不同）
+		recurrences := authenticated.Group("/recurrences")
+		{
+			recurrences.POST("", r.recurrenceCtrl.Create)
+			recurrences.GET("", r.recurrenceCtrl.List)
+			recurrences.GET("/:id", r.recurrenceCtrl.Get)
+			recurrences.PUT("/:id", r.recurrenceCtrl.Update)
+			recurrences.DELETE("/:id", r.recurrenceCtrl.Delete)
+			recurrences.POST("/:id/trigger", r.recurrenceCtrl.Trigger)
 		}
 
 		webhooks := authenticated.Group("/webhooks")

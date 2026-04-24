@@ -14,14 +14,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// BillService 账单服务
+// 依赖billRepo进行账单数据访问，依赖txnService创建关联交易
 type BillService struct {
-	billRepo *repository.BillRepository
+	billRepo  *repository.BillRepository
+	txnService *TransactionService
 }
 
-func NewBillService(billRepo *repository.BillRepository) *BillService {
-	return &BillService{billRepo: billRepo}
+// NewBillService 创建账单服务实例
+// billRepo: 账单数据访问层
+// txnService: 交易服务，用于从账单创建交易时更新账户余额、触发规则和Webhook
+func NewBillService(billRepo *repository.BillRepository, txnService *TransactionService) *BillService {
+	return &BillService{billRepo: billRepo, txnService: txnService}
 }
 
+// Create 创建账单
 func (s *BillService) Create(userID uint64, req *request.CreateBillReq) (*response.BillResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
@@ -51,6 +58,7 @@ func (s *BillService) Create(userID uint64, req *request.CreateBillReq) (*respon
 	return s.toResp(bill), nil
 }
 
+// Get 获取单个账单详情
 func (s *BillService) Get(userID, id uint64) (*response.BillResp, error) {
 	bill, err := s.billRepo.GetByID(id, userID)
 	if err != nil {
@@ -62,6 +70,7 @@ func (s *BillService) Get(userID, id uint64) (*response.BillResp, error) {
 	return s.toResp(bill), nil
 }
 
+// List 获取用户所有账单列表
 func (s *BillService) List(userID uint64) ([]response.BillResp, error) {
 	bills, err := s.billRepo.List(userID)
 	if err != nil {
@@ -76,6 +85,7 @@ func (s *BillService) List(userID uint64) ([]response.BillResp, error) {
 	return items, nil
 }
 
+// Update 更新账单信息
 func (s *BillService) Update(userID, id uint64, req *request.UpdateBillReq) (*response.BillResp, error) {
 	bill, err := s.billRepo.GetByID(id, userID)
 	if err != nil {
@@ -122,6 +132,7 @@ func (s *BillService) Update(userID, id uint64, req *request.UpdateBillReq) (*re
 	return s.toResp(bill), nil
 }
 
+// Delete 删除账单
 func (s *BillService) Delete(userID, id uint64) error {
 	_, err := s.billRepo.GetByID(id, userID)
 	if err != nil {
@@ -134,6 +145,7 @@ func (s *BillService) Delete(userID, id uint64) error {
 	return s.billRepo.Delete(id, userID)
 }
 
+// toResp 将账单模型转换为响应DTO
 func (s *BillService) toResp(b *model.Bill) *response.BillResp {
 	return &response.BillResp{
 		ID:         b.ID,
@@ -149,7 +161,9 @@ func (s *BillService) toResp(b *model.Bill) *response.BillResp {
 	}
 }
 
-// CreateTransactionFromBill creates a transaction from a bill and advances the bill's next due date.
+// CreateTransactionFromBill 从账单创建交易并推进下次到期日期
+// 修复：原方法只推进到期日期而不创建交易，现在通过txnService.Create()创建支出交易，
+// 确保账户余额更新、规则触发和Webhook通知正常执行
 func (s *BillService) CreateTransactionFromBill(userID, billID uint64) (*response.BillResp, error) {
 	bill, err := s.billRepo.GetByID(billID, userID)
 	if err != nil {
@@ -159,7 +173,25 @@ func (s *BillService) CreateTransactionFromBill(userID, billID uint64) (*respons
 		return nil, errcode.ErrInternal
 	}
 
-	// Advance the next due date based on repeat rule
+	// 如果账单指定了支出账户，则创建对应的支出交易
+	// 通过txnService.Create()确保：1)账户余额正确更新 2)规则触发 3)Webhook通知
+	if bill.SourceID != nil {
+		txnReq := &request.CreateTransactionReq{
+			Type:        string(model.TransactionTypeWithdrawal),
+			Date:        bill.NextDue.Format("2006-01-02"),
+			Description: bill.Name,
+			Amount:      bill.Amount.StringFixed(4),
+			SourceID:    *bill.SourceID,
+			CategoryID:  bill.CategoryID,
+			Notes:       bill.Notes,
+		}
+
+		if _, err := s.txnService.Create(bill.UserID, txnReq); err != nil {
+			return nil, errcode.ErrInternal
+		}
+	}
+
+	// 根据重复规则推进下次到期日期
 	switch bill.RepeatRule {
 	case model.RepeatRuleDaily:
 		bill.NextDue = bill.NextDue.AddDate(0, 0, 1)
@@ -178,7 +210,7 @@ func (s *BillService) CreateTransactionFromBill(userID, billID uint64) (*respons
 	return s.toResp(bill), nil
 }
 
-// GetDueBills returns bills that are due within the specified number of days.
+// GetDueBills 获取指定天数内到期的账单列表
 func (s *BillService) GetDueBills(userID uint64, days int) ([]response.BillResp, error) {
 	if days <= 0 {
 		days = 7

@@ -5,10 +5,16 @@ import { useI18n } from 'vue-i18n'
 import { list, create, update, remove, processDue } from '@/api/recurringTransaction'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAccountStore } from '@/stores/account'
+import { useCategoryStore } from '@/stores/category'
 import type { RecurringTransaction, CreateRecurringTransactionReq, UpdateRecurringTransactionReq } from '@/types/recurringTransaction'
 import { RecurrenceType } from '@/types/recurringTransaction'
 
 const { t } = useI18n()
+// 账户状态管理 - 用于获取账户下拉选项
+const accountStore = useAccountStore()
+// 分类状态管理 - 用于获取分类下拉选项
+const categoryStore = useCategoryStore()
 
 const items = ref<RecurringTransaction[]>([])
 const loading = ref(false)
@@ -28,6 +34,8 @@ const form = ref<CreateRecurringTransactionReq>({
   type: 'withdrawal',
   amount: '0',
   source_account_id: '',
+  destination_account_id: '',
+  category_id: '',
   recurrence_type: RecurrenceType.Monthly,
   repeat_interval: 1,
   start_date: '',
@@ -54,6 +62,8 @@ function handleCreate() {
     type: 'withdrawal',
     amount: '0',
     source_account_id: '',
+    destination_account_id: '',
+    category_id: '',
     recurrence_type: RecurrenceType.Monthly,
     repeat_interval: 1,
     start_date: '',
@@ -70,6 +80,8 @@ function handleEdit(row: RecurringTransaction) {
     type: row.type,
     amount: row.amount,
     source_account_id: row.source_account_id,
+    destination_account_id: row.destination_account_id,
+    category_id: row.category_id,
     recurrence_type: row.recurrence_type,
     repeat_interval: row.repeat_interval,
     start_date: row.start_date,
@@ -119,7 +131,11 @@ async function handleProcessDue() {
   }
 }
 
-onMounted(fetchList)
+onMounted(async () => {
+  // 打开页面时同时加载账户和分类列表，供下拉选择使用
+  await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
+  await fetchList()
+})
 </script>
 
 <template>
@@ -173,6 +189,24 @@ onMounted(fetchList)
         </el-form-item>
         <el-form-item :label="t('recurringTransaction.amount')">
           <el-input v-model="form.amount" />
+        </el-form-item>
+        <!-- 来源账户选择下拉框 - 选择交易扣款的账户 -->
+        <el-form-item :label="t('transaction.sourceAccount')">
+          <el-select v-model="form.source_account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
+        </el-form-item>
+        <!-- 目标账户选择下拉框 - 转账时选择收款账户 -->
+        <el-form-item v-if="form.type === 'transfer'" :label="t('transaction.destinationAccount')">
+          <el-select v-model="form.destination_account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
+        </el-form-item>
+        <!-- 分类选择下拉框 - 选择交易所属的分类 -->
+        <el-form-item :label="t('transaction.category')">
+          <el-select v-model="form.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('recurringTransaction.recurrenceType')">
           <el-select v-model="form.recurrence_type">

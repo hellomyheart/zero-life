@@ -12,11 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// CurrencyService 货币服务
+// 负责处理货币管理、默认货币设置和汇率转换
+// 依赖currencyRepo进行货币数据访问，依赖accountRepo验证货币使用情况
 type CurrencyService struct {
-	currencyRepo *repository.CurrencyRepository
-	accountRepo  *repository.AccountRepository
+	currencyRepo *repository.CurrencyRepository // 货币数据访问对象
+	accountRepo  *repository.AccountRepository  // 账户数据访问对象
 }
 
+// NewCurrencyService 创建货币服务实例
 func NewCurrencyService(currencyRepo *repository.CurrencyRepository, accountRepo *repository.AccountRepository) *CurrencyService {
 	return &CurrencyService{
 		currencyRepo: currencyRepo,
@@ -24,6 +28,10 @@ func NewCurrencyService(currencyRepo *repository.CurrencyRepository, accountRepo
 	}
 }
 
+// List 获取所有货币列表
+// 返回：
+//   - []response.CurrencyResp: 货币列表
+//   - error: 错误信息
 func (s *CurrencyService) List() ([]response.CurrencyResp, error) {
 	currencies, err := s.currencyRepo.List()
 	if err != nil {
@@ -38,6 +46,13 @@ func (s *CurrencyService) List() ([]response.CurrencyResp, error) {
 	return items, nil
 }
 
+// UpdateStatus 更新货币的启用状态
+// 业务规则：不能禁用默认货币
+// 参数：
+//   - id: 货币ID
+//   - isEnabled: 是否启用
+// 返回：
+//   - error: 错误信息
 func (s *CurrencyService) UpdateStatus(id uint64, isEnabled bool) error {
 	currency, err := s.currencyRepo.GetByID(id)
 	if err != nil {
@@ -59,6 +74,12 @@ func (s *CurrencyService) UpdateStatus(id uint64, isEnabled bool) error {
 	return s.currencyRepo.Update(currency)
 }
 
+// SetDefault 设置默认货币
+// 业务规则：只能将已启用的货币设为默认；会先取消当前默认货币的默认标记
+// 参数：
+//   - id: 货币ID
+// 返回：
+//   - error: 错误信息
 func (s *CurrencyService) SetDefault(id uint64) error {
 	currency, err := s.currencyRepo.GetByID(id)
 	if err != nil {
@@ -83,6 +104,10 @@ func (s *CurrencyService) SetDefault(id uint64) error {
 	return s.currencyRepo.Update(currency)
 }
 
+// GetExchangeRates 获取所有汇率列表
+// 返回：
+//   - []response.ExchangeRateResp: 汇率列表
+//   - error: 错误信息
 func (s *CurrencyService) GetExchangeRates() ([]response.ExchangeRateResp, error) {
 	rates, err := s.currencyRepo.ListExchangeRates()
 	if err != nil {
@@ -103,6 +128,11 @@ func (s *CurrencyService) GetExchangeRates() ([]response.ExchangeRateResp, error
 	return items, nil
 }
 
+// SetExchangeRate 设置汇率（不存在则创建，存在则更新）
+// 参数：
+//   - req: 设置汇率请求参数（源货币ID、目标货币ID、汇率值）
+// 返回：
+//   - error: 错误信息
 func (s *CurrencyService) SetExchangeRate(req *request.SetExchangeRateReq) error {
 	rate, err := decimal.NewFromString(req.Rate)
 	if err != nil || rate.LessThanOrEqual(decimal.Zero) {
@@ -118,6 +148,11 @@ func (s *CurrencyService) SetExchangeRate(req *request.SetExchangeRateReq) error
 	return s.currencyRepo.UpsertExchangeRate(exchangeRate)
 }
 
+// InitDefaultCurrencies 初始化默认货币
+// 创建CNY（人民币，默认）、USD、EUR、JPY、GBP五种货币
+// 如果货币已存在则跳过，不会重复创建
+// 返回：
+//   - error: 错误信息
 func (s *CurrencyService) InitDefaultCurrencies() error {
 	defaults := []model.Currency{
 		{Code: "CNY", Name: "Chinese Yuan", Symbol: "¥", DecimalPlaces: 2, IsEnabled: true, IsDefault: true},

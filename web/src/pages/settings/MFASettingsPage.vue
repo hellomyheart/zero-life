@@ -85,7 +85,12 @@ onMounted(fetchStatus)
           <el-button type="primary" @click="handleSetup" :loading="loading">{{ t('mfa.setup') }}</el-button>
           <div v-if="qrCodeUrl" style="margin-top: 16px;">
             <p>{{ t('mfa.scanQR') }}</p>
-            <p style="word-break: break-all; font-family: monospace; font-size: 12px;">{{ qrCodeUrl }}</p>
+            <!-- 使用QR码生成服务将URL渲染为二维码图片 -->
+            <img
+              :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`"
+              alt="QR Code"
+              style="margin: 8px 0;"
+            />
             <p>{{ t('mfa.secret') }}: <code>{{ secret }}</code></p>
             <el-input v-model="code" :placeholder="t('mfa.enterCode')" style="width: 200px; margin-top: 8px;" />
             <el-button type="success" @click="handleEnable" style="margin-left: 8px;">{{ t('mfa.enable') }}</el-button>

@@ -2,7 +2,7 @@
 // 附件管理页面 - 上传下载和删除附件文件
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { list, upload, remove } from '@/api/attachment'
+import { list, upload, download, remove } from '@/api/attachment'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Attachment } from '@/types/attachment'
@@ -55,6 +55,24 @@ async function handleDelete(id: string) {
   }
 }
 
+// 下载附件 - 调用API获取文件并触发浏览器下载
+async function handleDownload(row: Attachment) {
+  try {
+    const res = await download(row.id) as unknown as Blob
+    const blob = res instanceof Blob ? res : new Blob([res as BlobPart])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = row.filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    ElMessage.error((err as Error).message || t('common.failed'))
+  }
+}
+
 function handleFileChange(file: File) {
   fileList.value = [file]
 }
@@ -80,7 +98,7 @@ onMounted(fetchAttachments)
       </el-table-column>
       <el-table-column :label="t('common.edit')" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="">{{ t('attachment.download') }}</el-button>
+          <el-button link type="primary" @click="handleDownload(row)">{{ t('attachment.download') }}</el-button>
           <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>

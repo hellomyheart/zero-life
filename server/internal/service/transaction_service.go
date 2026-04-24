@@ -15,14 +15,29 @@ import (
 	"gorm.io/gorm"
 )
 
+// TransactionService 交易服务
+// 核心业务服务，处理交易的创建、查询、更新、删除、搜索、拆分和合并
+// 依赖txnRepo进行交易数据访问，依赖accountRepo验证账户归属
+// 依赖db执行数据库事务（确保交易创建和余额更新的一致性）
+// 依赖ruleTrigger在交易创建/更新后触发规则引擎（异步执行，不阻塞响应）
+// 依赖webhookNotifier在交易创建/更新/删除后触发Webhook通知
 type TransactionService struct {
-	txnRepo        *repository.TransactionRepository
-	accountRepo    *repository.AccountRepository
-	db             *gorm.DB
-	ruleTrigger    RuleTrigger
-	webhookNotifier WebhookNotifier
+	txnRepo        *repository.TransactionRepository // 交易数据访问对象
+	accountRepo    *repository.AccountRepository     // 账户数据访问对象，用于验证账户归属
+	db             *gorm.DB                          // 数据库连接，用于执行事务操作
+	ruleTrigger    RuleTrigger                       // 规则触发器接口，交易变更后触发规则引擎
+	webhookNotifier WebhookNotifier                  // Webhook通知接口，交易变更后发送通知
 }
 
+// NewTransactionService 创建交易服务实例
+// 参数：
+//   - txnRepo: 交易数据访问对象
+//   - accountRepo: 账户数据访问对象
+//   - db: 数据库连接
+//   - ruleTrigger: 规则触发器（可为nil，表示不触发规则）
+//   - webhookNotifier: Webhook通知器（可为nil，表示不发送通知）
+// 返回：
+//   - *TransactionService: 交易服务实例
 func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB, ruleTrigger RuleTrigger, webhookNotifier WebhookNotifier) *TransactionService {
 	return &TransactionService{
 		txnRepo:        txnRepo,
@@ -33,6 +48,18 @@ func NewTransactionService(txnRepo *repository.TransactionRepository, accountRep
 	}
 }
 
+// Create 创建交易
+// 业务流程：
+// 1. 解析并验证金额和日期
+// 2. 验证交易类型和账户归属（源账户必须属于用户，转账类型必须有目标账户）
+// 3. 在数据库事务中执行：创建交易记录、创建拆分（如有）、更新账户余额
+// 4. 创建成功后异步触发规则引擎和Webhook通知
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建交易请求参数
+// 返回：
+//   - *response.TransactionResp: 创建成功的交易信息
+//   - error: 错误信息
 func (s *TransactionService) Create(userID uint64, req *request.CreateTransactionReq) (*response.TransactionResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
@@ -137,6 +164,13 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 	return s.toResp(created), nil
 }
 
+// Get 获取单个交易详情
+// 参数：
+//   - userID: 用户ID，确保只能查看自己的交易
+//   - id: 交易ID
+// 返回：
+//   - *response.TransactionResp: 交易信息
+//   - error: 错误信息
 func (s *TransactionService) Get(userID, id uint64) (*response.TransactionResp, error) {
 	txn, err := s.txnRepo.GetByID(id, userID)
 	if err != nil {
@@ -148,6 +182,14 @@ func (s *TransactionService) Get(userID, id uint64) (*response.TransactionResp, 
 	return s.toResp(txn), nil
 }
 
+// List 获取交易分页列表
+// 支持按类型、日期范围、账户、分类、标签过滤
+// 参数：
+//   - userID: 用户ID
+//   - req: 列表查询参数（含分页、过滤条件）
+// 返回：
+//   - *pagination.Result: 分页结果
+//   - error: 错误信息
 func (s *TransactionService) List(userID uint64, req *request.TransactionListReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -179,6 +221,20 @@ func (s *TransactionService) List(userID uint64, req *request.TransactionListReq
 	return pagination.NewResult(items, total, params), nil
 }
 
+// Update 更新交易
+// 业务流程：
+// 1. 获取旧交易信息，计算旧余额变更
+// 2. 验证新交易类型和账户
+// 3. 计算净余额变更 = 新变更 - 旧变更
+// 4. 在数据库事务中执行：更新交易记录、更新账户余额
+// 5. 更新成功后异步触发规则引擎和Webhook通知
+// 参数：
+//   - userID: 用户ID
+//   - id: 交易ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.TransactionResp: 更新后的交易信息
+//   - error: 错误信息
 func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransactionReq) (*response.TransactionResp, error) {
 	oldTxn, err := s.txnRepo.GetByID(id, userID)
 	if err != nil {
@@ -266,6 +322,16 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 	return s.toResp(updated), nil
 }
 
+// Delete 删除交易
+// 业务流程：
+// 1. 获取交易信息，计算余额变更
+// 2. 先触发Webhook通知（删除前）
+// 3. 在数据库事务中执行：删除交易记录、回滚账户余额（变更取负值）
+// 参数：
+//   - userID: 用户ID
+//   - id: 交易ID
+// 返回：
+//   - error: 错误信息
 func (s *TransactionService) Delete(userID, id uint64) error {
 	txn, err := s.txnRepo.GetByID(id, userID)
 	if err != nil {
@@ -298,6 +364,14 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 	return err
 }
 
+// Search 高级搜索交易
+// 支持关键词搜索、金额范围、排序等高级过滤条件
+// 参数：
+//   - userID: 用户ID
+//   - req: 搜索请求参数（含关键词、金额范围、排序等）
+// 返回：
+//   - *pagination.Result: 分页搜索结果
+//   - error: 错误信息
 func (s *TransactionService) Search(userID uint64, req *request.TransactionSearchReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -334,6 +408,15 @@ func (s *TransactionService) Search(userID uint64, req *request.TransactionSearc
 	return pagination.NewResult(items, total, params), nil
 }
 
+// validateTransaction 验证交易类型和账户归属
+// 规则：源账户必须存在且属于用户；转账类型必须提供目标账户且目标账户也必须属于用户
+// 参数：
+//   - userID: 用户ID
+//   - txnType: 交易类型（deposit/withdrawal/transfer）
+//   - sourceID: 源账户ID
+//   - destID: 目标账户ID（转账时必填）
+// 返回：
+//   - error: 验证错误
 func (s *TransactionService) validateTransaction(userID uint64, txnType model.TransactionType, sourceID uint64, destID *uint64) error {
 	// Verify source account exists and belongs to user
 	_, err := s.accountRepo.GetByID(sourceID, userID)
@@ -355,6 +438,17 @@ func (s *TransactionService) validateTransaction(userID uint64, txnType model.Tr
 	return nil
 }
 
+// calculateBalanceChanges 根据交易类型计算各账户的余额变更
+// deposit（存款）：源账户余额增加
+// withdrawal（取款）：源账户余额减少
+// transfer（转账）：源账户余额减少，目标账户余额增加
+// 参数：
+//   - txnType: 交易类型
+//   - amount: 交易金额
+//   - sourceID: 源账户ID
+//   - destID: 目标账户ID
+// 返回：
+//   - map[uint64]decimal.Decimal: 各账户的余额变更映射（正数为增加，负数为减少）
 func (s *TransactionService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64) map[uint64]decimal.Decimal {
 	changes := make(map[uint64]decimal.Decimal)
 
@@ -376,11 +470,21 @@ func (s *TransactionService) calculateBalanceChanges(txnType model.TransactionTy
 	return changes
 }
 
+// updateAccountBalance 在数据库事务中更新账户余额
+// 使用SQL表达式 current_balance + change 进行原子更新，避免并发问题
+// 参数：
+//   - dbTx: 数据库事务对象
+//   - accountID: 账户ID
+//   - change: 余额变更值（正数增加，负数减少）
+// 返回：
+//   - error: 更新错误
 func (s *TransactionService) updateAccountBalance(dbTx *gorm.DB, accountID uint64, change decimal.Decimal) error {
 	return dbTx.Model(&model.Account{}).Where("id = ?", accountID).
 		Update("current_balance", gorm.Expr("current_balance + ?", change)).Error
 }
 
+// toResp 将交易模型转换为响应对象
+// 包含源账户、目标账户、分类、标签、拆分等关联信息
 func (s *TransactionService) toResp(t *model.Transaction) *response.TransactionResp {
 	resp := &response.TransactionResp{
 		ID:            t.ID,

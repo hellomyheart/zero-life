@@ -16,11 +16,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// AdminService 管理员服务
+// 负责系统管理功能，包括用户管理（列表、更新、删除、邀请）和系统配置管理
+// 依赖userRepo进行用户数据访问，依赖configRepo进行系统配置数据访问
 type AdminService struct {
-	userRepo  *repository.UserRepository
-	configRepo *repository.ConfigurationRepository
+	userRepo  *repository.UserRepository         // 用户数据访问对象
+	configRepo *repository.ConfigurationRepository // 系统配置数据访问对象
 }
 
+// NewAdminService 创建管理员服务实例
+// 参数：
+//   - userRepo: 用户数据访问对象
+//   - configRepo: 系统配置数据访问对象
+// 返回：
+//   - *AdminService: 管理员服务实例
 func NewAdminService(
 	userRepo *repository.UserRepository,
 	configRepo *repository.ConfigurationRepository,
@@ -31,7 +40,14 @@ func NewAdminService(
 	}
 }
 
-// ListUsers returns a paginated list of users.
+// ListUsers 获取用户列表（分页）
+// 支持关键词搜索，限制每页最多100条
+// 参数：
+//   - req: 列表查询参数（含搜索关键词、分页）
+// 返回：
+//   - []response.AdminUserResp: 用户列表
+//   - int64: 总数
+//   - error: 错误信息
 func (s *AdminService) ListUsers(req *request.AdminListUsersReq) ([]response.AdminUserResp, int64, error) {
 	page := req.Page
 	pageSize := req.PageSize
@@ -58,7 +74,14 @@ func (s *AdminService) ListUsers(req *request.AdminListUsersReq) ([]response.Adm
 	return items, total, nil
 }
 
-// UpdateUser updates a user's profile (admin operation).
+// UpdateUser 更新用户信息（管理员操作）
+// 支持更新昵称、角色、语言、时区
+// 参数：
+//   - userID: 用户ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.AdminUserResp: 更新后的用户信息
+//   - error: 错误信息
 func (s *AdminService) UpdateUser(userID uint64, req *request.AdminUpdateUserReq) (*response.AdminUserResp, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
@@ -98,7 +121,11 @@ func (s *AdminService) UpdateUser(userID uint64, req *request.AdminUpdateUserReq
 	}, nil
 }
 
-// DeleteUser soft-deletes a user.
+// DeleteUser 软删除用户
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - error: 错误信息
 func (s *AdminService) DeleteUser(userID uint64) error {
 	_, err := s.userRepo.GetByID(userID)
 	if err != nil {
@@ -110,7 +137,13 @@ func (s *AdminService) DeleteUser(userID uint64) error {
 	return s.userRepo.Delete(userID)
 }
 
-// InviteUser creates a new user with a random password (they must reset it).
+// InviteUser 邀请用户
+// 创建新用户并生成随机临时密码，用户首次登录后需重置密码
+// 参数：
+//   - req: 邀请请求参数（邮箱、昵称、角色）
+// 返回：
+//   - *response.AdminUserResp: 创建的用户信息
+//   - error: 错误信息（如邮箱已存在）
 func (s *AdminService) InviteUser(req *request.AdminInviteUserReq) (*response.AdminUserResp, error) {
 	// Check email uniqueness
 	existing, err := s.userRepo.FindByEmail(req.Email)
@@ -152,7 +185,12 @@ func (s *AdminService) InviteUser(req *request.AdminInviteUserReq) (*response.Ad
 	}, nil
 }
 
-// GetConfiguration returns a configuration value by name.
+// GetConfiguration 获取系统配置项
+// 参数：
+//   - name: 配置名称
+// 返回：
+//   - *response.AdminConfigurationResp: 配置信息
+//   - error: 错误信息
 func (s *AdminService) GetConfiguration(name string) (*response.AdminConfigurationResp, error) {
 	cfg, err := s.configRepo.Get(name)
 	if err != nil {
@@ -170,7 +208,10 @@ func (s *AdminService) GetConfiguration(name string) (*response.AdminConfigurati
 	}, nil
 }
 
-// ListConfigurations returns all configurations.
+// ListConfigurations 获取所有系统配置
+// 返回：
+//   - []response.AdminConfigurationResp: 配置列表
+//   - error: 错误信息
 func (s *AdminService) ListConfigurations() ([]response.AdminConfigurationResp, error) {
 	configs, err := s.configRepo.List()
 	if err != nil {
@@ -190,7 +231,13 @@ func (s *AdminService) ListConfigurations() ([]response.AdminConfigurationResp, 
 	return items, nil
 }
 
-// UpdateConfiguration sets a configuration value.
+// UpdateConfiguration 更新系统配置项（不存在则创建）
+// 参数：
+//   - name: 配置名称
+//   - req: 更新请求参数（含配置值）
+// 返回：
+//   - *response.AdminConfigurationResp: 更新后的配置信息
+//   - error: 错误信息
 func (s *AdminService) UpdateConfiguration(name string, req *request.AdminUpdateConfigurationReq) (*response.AdminConfigurationResp, error) {
 	cfg := &model.Configuration{
 		Name:  name,
@@ -203,7 +250,12 @@ func (s *AdminService) UpdateConfiguration(name string, req *request.AdminUpdate
 	return s.GetConfiguration(name)
 }
 
-// TestEmail sends a test email to verify SMTP configuration.
+// TestEmail 发送测试邮件，验证SMTP配置是否正确
+// 参数：
+//   - to: 收件人邮箱地址
+// 返回：
+//   - *response.AdminTestEmailResp: 测试结果（成功/失败及消息）
+//   - error: 错误信息
 func (s *AdminService) TestEmail(to string) (*response.AdminTestEmailResp, error) {
 	err := email.Send(to, "Test Email from ZeroLife", `
 	<html>
@@ -224,6 +276,7 @@ func (s *AdminService) TestEmail(to string) (*response.AdminTestEmailResp, error
 	}, nil
 }
 
+// toUserResp 将用户模型转换为管理员用户响应对象
 func (s *AdminService) toUserResp(u *model.User) response.AdminUserResp {
 	return response.AdminUserResp{
 		ID:        u.ID,
@@ -238,6 +291,7 @@ func (s *AdminService) toUserResp(u *model.User) response.AdminUserResp {
 	}
 }
 
+// randomHex 生成指定长度的随机十六进制字符串
 func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

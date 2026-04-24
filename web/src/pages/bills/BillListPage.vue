@@ -5,10 +5,16 @@ import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/bill'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAccountStore } from '@/stores/account'
+import { useCategoryStore } from '@/stores/category'
 import type { Bill, CreateBillReq } from '@/types/bill'
 import { RepeatRule } from '@/types/bill'
 
 const { t } = useI18n()
+// 账户状态管理 - 用于获取账户下拉选项
+const accountStore = useAccountStore()
+// 分类状态管理 - 用于获取分类下拉选项
+const categoryStore = useCategoryStore()
 
 const bills = ref<Bill[]>([])
 const loading = ref(false)
@@ -97,7 +103,11 @@ async function handleSubmit() {
   }
 }
 
-onMounted(fetchBills)
+onMounted(async () => {
+  // 打开页面时同时加载账户和分类列表，供下拉选择使用
+  await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
+  await fetchBills()
+})
 </script>
 
 <template>
@@ -148,6 +158,18 @@ onMounted(fetchBills)
         </el-form-item>
         <el-form-item :label="t('bill.nextDueDate')">
           <el-date-picker v-model="form.next_due_date" type="date" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <!-- 账户选择下拉框 - 选择账单关联的扣款账户 -->
+        <el-form-item :label="t('transaction.sourceAccount')">
+          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
+        </el-form-item>
+        <!-- 分类选择下拉框 - 选择账单所属的分类 -->
+        <el-form-item :label="t('transaction.category')">
+          <el-select v-model="form.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.description')">
           <el-input v-model="form.description" type="textarea" />

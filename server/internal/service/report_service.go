@@ -15,14 +15,19 @@ import (
 	"gorm.io/gorm"
 )
 
+// ReportService 报表服务
+// 负责生成各类报表数据，包括收支报表、分类报表、预算报表、净值报表、趋势报表、标签报表和审计报表
+// 依赖txnRepo查询交易数据，依赖accountRepo查询账户余额，依赖budgetRepo查询预算数据
+// 依赖categoryRepo查询分类信息，依赖tagRepo查询标签信息
 type ReportService struct {
-	txnRepo     *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	budgetRepo  *repository.BudgetRepository
-	categoryRepo *repository.CategoryRepository
-	tagRepo     *repository.TagRepository
+	txnRepo     *repository.TransactionRepository  // 交易数据访问对象
+	accountRepo *repository.AccountRepository      // 账户数据访问对象
+	budgetRepo  *repository.BudgetRepository       // 预算数据访问对象
+	categoryRepo *repository.CategoryRepository    // 分类数据访问对象
+	tagRepo     *repository.TagRepository          // 标签数据访问对象
 }
 
+// NewReportService 创建报表服务实例
 func NewReportService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -39,6 +44,14 @@ func NewReportService(
 	}
 }
 
+// IncomeExpense 生成收支报表
+// 统计指定时间范围内的总收入、总支出和净收入
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围）
+// 返回：
+//   - *response.IncomeExpenseResp: 收支报表数据
+//   - error: 错误信息
 func (s *ReportService) IncomeExpense(userID uint64, req *request.ReportReq) (*response.IncomeExpenseResp, error) {
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
@@ -74,6 +87,14 @@ func (s *ReportService) IncomeExpense(userID uint64, req *request.ReportReq) (*r
 	}, nil
 }
 
+// Category 生成分类报表
+// 按分类统计支出和收入金额及百分比
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围）
+// 返回：
+//   - *response.CategoryReportResp: 分类报表数据
+//   - error: 错误信息
 func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*response.CategoryReportResp, error) {
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
@@ -146,6 +167,14 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 	}, nil
 }
 
+// Budget 生成预算报表
+// 统计每个启用预算的已花费金额、剩余金额和使用率
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围）
+// 返回：
+//   - *response.BudgetReportResp: 预算报表数据
+//   - error: 错误信息
 func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response.BudgetReportResp, error) {
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
@@ -207,6 +236,15 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 	return &response.BudgetReportResp{Items: items}, nil
 }
 
+// NetWorth 生成净值报表
+// 计算总资产（资产账户余额之和）减去总负债（负债账户余额之和）
+// 支持按月生成净值趋势数据
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围）
+// 返回：
+//   - *response.NetWorthResp: 净值报表数据（含趋势）
+//   - error: 错误信息
 func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*response.NetWorthResp, error) {
 	accounts, err := s.accountRepo.List(userID, string(model.AccountTypeAsset), "", "name", 0, 1000)
 	if err != nil {
@@ -289,6 +327,14 @@ func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*respon
 	}, nil
 }
 
+// Trend 生成趋势报表
+// 按月统计收入和支出趋势，支持自定义粒度
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围、粒度）
+// 返回：
+//   - *response.TrendResp: 趋势报表数据
+//   - error: 错误信息
 func (s *ReportService) Trend(userID uint64, req *request.ReportReq) (*response.TrendResp, error) {
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
@@ -353,6 +399,14 @@ func (s *ReportService) Trend(userID uint64, req *request.ReportReq) (*response.
 	return &response.TrendResp{Items: items}, nil
 }
 
+// Tag 生成标签报表
+// 按标签统计收入和支出金额
+// 参数：
+//   - userID: 用户ID
+//   - req: 报表请求参数（含日期范围）
+// 返回：
+//   - *response.TagReportResp: 标签报表数据
+//   - error: 错误信息
 func (s *ReportService) Tag(userID uint64, req *request.ReportReq) (*response.TagReportResp, error) {
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
@@ -404,6 +458,17 @@ func (s *ReportService) Tag(userID uint64, req *request.ReportReq) (*response.Ta
 	return &response.TagReportResp{Items: items}, nil
 }
 
+// AuditReport 生成审计报表
+// 按账户生成交易流水，包含每笔交易后的运行余额（running balance）
+// 参数：
+//   - userID: 用户ID
+//   - accountID: 账户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+//   - reconciled: 是否只显示已对账的交易（nil表示不过滤）
+// 返回：
+//   - *response.AuditReportResp: 审计报表数据
+//   - error: 错误信息
 func (s *ReportService) AuditReport(userID uint64, accountID uint64, startDate, endDate string, reconciled *bool) (*response.AuditReportResp, error) {
 	// Verify account belongs to user
 	account, err := s.accountRepo.GetByID(accountID, userID)
@@ -469,6 +534,13 @@ func (s *ReportService) AuditReport(userID uint64, accountID uint64, startDate, 
 	}, nil
 }
 
+// parseDateRange 解析报表请求中的日期范围
+// 参数：
+//   - req: 报表请求参数
+// 返回：
+//   - time.Time: 开始日期
+//   - time.Time: 结束日期
+//   - error: 解析错误
 func (s *ReportService) parseDateRange(req *request.ReportReq) (time.Time, time.Time, error) {
 	startDate, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {

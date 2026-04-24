@@ -11,14 +11,26 @@ import (
 	"gorm.io/gorm"
 )
 
+// ObjectGroupService 对象分组服务
+// 管理实体的分组排序，支持将账户、分类等实体按自定义顺序排列
+// 依赖ogRepo进行对象分组数据访问
 type ObjectGroupService struct {
-	ogRepo *repository.ObjectGroupRepository
+	ogRepo *repository.ObjectGroupRepository // 对象分组数据访问对象
 }
 
+// NewObjectGroupService 创建对象分组服务实例
 func NewObjectGroupService(ogRepo *repository.ObjectGroupRepository) *ObjectGroupService {
 	return &ObjectGroupService{ogRepo: ogRepo}
 }
 
+// Create 创建对象分组
+// 将实体（如账户、分类）添加到分组中，用于自定义排序
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建请求参数（名称、实体类型、实体ID）
+// 返回：
+//   - *response.ObjectGroupResp: 创建成功的分组信息
+//   - error: 错误信息
 func (s *ObjectGroupService) Create(userID uint64, req *request.CreateObjectGroupReq) (*response.ObjectGroupResp, error) {
 	og := &model.ObjectGroup{
 		UserID:        userID,
@@ -39,6 +51,13 @@ func (s *ObjectGroupService) Create(userID uint64, req *request.CreateObjectGrou
 	return s.toResp(created), nil
 }
 
+// Get 获取单个对象分组详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 分组ID
+// 返回：
+//   - *response.ObjectGroupResp: 分组信息
+//   - error: 错误信息
 func (s *ObjectGroupService) Get(userID, id uint64) (*response.ObjectGroupResp, error) {
 	og, err := s.ogRepo.GetByID(id, userID)
 	if err != nil {
@@ -50,6 +69,13 @@ func (s *ObjectGroupService) Get(userID, id uint64) (*response.ObjectGroupResp, 
 	return s.toResp(og), nil
 }
 
+// List 获取指定实体类型的分组列表
+// 参数：
+//   - userID: 用户ID
+//   - groupableType: 实体类型（如"account"、"category"）
+// 返回：
+//   - []response.ObjectGroupResp: 分组列表
+//   - error: 错误信息
 func (s *ObjectGroupService) List(userID uint64, groupableType string) ([]response.ObjectGroupResp, error) {
 	groups, err := s.ogRepo.List(userID, groupableType)
 	if err != nil {
@@ -63,6 +89,14 @@ func (s *ObjectGroupService) List(userID uint64, groupableType string) ([]respon
 	return items, nil
 }
 
+// Update 更新对象分组（仅支持更新名称）
+// 参数：
+//   - userID: 用户ID
+//   - id: 分组ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.ObjectGroupResp: 更新后的分组信息
+//   - error: 错误信息
 func (s *ObjectGroupService) Update(userID, id uint64, req *request.UpdateObjectGroupReq) (*response.ObjectGroupResp, error) {
 	og, err := s.ogRepo.GetByID(id, userID)
 	if err != nil {
@@ -83,6 +117,12 @@ func (s *ObjectGroupService) Update(userID, id uint64, req *request.UpdateObject
 	return s.toResp(og), nil
 }
 
+// Delete 删除对象分组
+// 参数：
+//   - userID: 用户ID
+//   - id: 分组ID
+// 返回：
+//   - error: 错误信息
 func (s *ObjectGroupService) Delete(userID, id uint64) error {
 	_, err := s.ogRepo.GetByID(id, userID)
 	if err != nil {
@@ -94,6 +134,7 @@ func (s *ObjectGroupService) Delete(userID, id uint64) error {
 	return s.ogRepo.Delete(id, userID)
 }
 
+// toResp 将对象分组模型转换为响应对象
 func (s *ObjectGroupService) toResp(og *model.ObjectGroup) *response.ObjectGroupResp {
 	return &response.ObjectGroupResp{
 		ID:            og.ID,

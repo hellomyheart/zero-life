@@ -12,13 +12,17 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
+// DashboardService 仪表盘服务
+// 负责汇总首页展示数据，包括月度收支、总资产余额、预算预警、账单提醒和最近交易
+// 依赖txnRepo查询交易统计，依赖accountRepo查询资产余额，依赖budgetRepo查询预算使用率，依赖billRepo查询到期账单
 type DashboardService struct {
-	txnRepo    *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	budgetRepo *repository.BudgetRepository
-	billRepo   *repository.BillRepository
+	txnRepo    *repository.TransactionRepository  // 交易数据访问对象
+	accountRepo *repository.AccountRepository     // 账户数据访问对象
+	budgetRepo *repository.BudgetRepository       // 预算数据访问对象
+	billRepo   *repository.BillRepository         // 账单数据访问对象
 }
 
+// NewDashboardService 创建仪表盘服务实例
 func NewDashboardService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -33,6 +37,13 @@ func NewDashboardService(
 	}
 }
 
+// Get 获取仪表盘汇总数据
+// 返回内容：月度收入/支出/净收入、总资产余额、预算预警列表、7天内到期账单提醒、最近5笔交易
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - *response.DashboardResp: 仪表盘数据
+//   - error: 错误信息
 func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
@@ -151,6 +162,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	}, nil
 }
 
+// transactionModelToResp 将交易模型转换为响应对象（仪表盘专用，不含拆分信息）
 func transactionModelToResp(t *model.Transaction) *response.TransactionResp {
 	resp := &response.TransactionResp{
 		ID:            t.ID,

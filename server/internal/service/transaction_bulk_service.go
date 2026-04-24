@@ -14,12 +14,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// TransactionBulkService 交易批量操作服务
+// 负责处理交易的批量编辑、批量删除、类型转换和克隆操作
+// 所有批量操作都在数据库事务中执行，确保数据一致性
+// 依赖txnRepo进行交易数据访问，依赖accountRepo验证账户，依赖db执行事务
 type TransactionBulkService struct {
-	txnRepo     *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	db          *gorm.DB
+	txnRepo     *repository.TransactionRepository // 交易数据访问对象
+	accountRepo *repository.AccountRepository     // 账户数据访问对象
+	db          *gorm.DB                          // 数据库连接，用于事务操作
 }
 
+// NewTransactionBulkService 创建交易批量操作服务实例
 func NewTransactionBulkService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -32,7 +37,14 @@ func NewTransactionBulkService(
 	}
 }
 
-// BulkEdit updates category, notes, and/or tags for multiple transactions within a DB transaction.
+// BulkEdit 批量编辑交易
+// 在数据库事务中更新多笔交易的分类、备注和标签
+// 不存在的交易ID会被跳过
+// 参数：
+//   - userID: 用户ID
+//   - req: 批量编辑请求参数（交易ID列表、分类ID、备注、标签ID列表）
+// 返回：
+//   - error: 错误信息
 func (s *TransactionBulkService) BulkEdit(userID uint64, req *request.BulkEditReq) error {
 	return s.db.Transaction(func(dbTx *gorm.DB) error {
 		for _, id := range req.IDs {
@@ -59,7 +71,13 @@ func (s *TransactionBulkService) BulkEdit(userID uint64, req *request.BulkEditRe
 	})
 }
 
-// BulkDelete deletes multiple transactions within a DB transaction, rolling back balances for each.
+// BulkDelete 批量删除交易
+// 在数据库事务中逐笔删除交易并回滚对应的账户余额变更
+// 参数：
+//   - userID: 用户ID
+//   - req: 批量删除请求参数（交易ID列表）
+// 返回：
+//   - error: 错误信息
 func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDeleteReq) error {
 	return s.db.Transaction(func(dbTx *gorm.DB) error {
 		for _, id := range req.IDs {
@@ -88,9 +106,19 @@ func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDele
 	})
 }
 
-// ConvertType changes a transaction's type and swaps source/destination as needed.
-// For withdrawal <-> deposit: swap SourceID and DestinationID.
-// For transfer: the new SourceID/DestinationID must be provided.
+// ConvertType 转换交易类型
+// 支持以下转换：
+//   - 支出 <-> 收入：可指定新的源账户
+//   - 任意 -> 转账：必须提供源账户和目标账户
+//   - 转账 -> 支出/收入：移除目标账户
+// 转换后自动计算并更新账户余额的净变更
+// 参数：
+//   - userID: 用户ID
+//   - id: 交易ID
+//   - req: 类型转换请求参数（新类型、新源账户ID、新目标账户ID）
+// 返回：
+//   - *response.TransactionResp: 转换后的交易信息
+//   - error: 错误信息
 func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.ConvertReq) (*response.TransactionResp, error) {
 	txn, err := s.txnRepo.GetByID(id, userID)
 	if err != nil {
@@ -183,7 +211,15 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 	return s.toResp(updated), nil
 }
 
-// CloneTransaction duplicates a transaction with today's date.
+// CloneTransaction 克隆交易
+// 复制一笔交易，日期设为今天，同时复制标签和分类
+// 克隆后自动更新相关账户余额
+// 参数：
+//   - userID: 用户ID
+//   - id: 被克隆的交易ID
+// 返回：
+//   - *response.TransactionResp: 克隆后的新交易信息
+//   - error: 错误信息
 func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.TransactionResp, error) {
 	txn, err := s.txnRepo.GetByID(id, userID)
 	if err != nil {
@@ -239,6 +275,8 @@ func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.
 	return s.toResp(created), nil
 }
 
+// calculateBalanceChanges 根据交易类型计算各账户的余额变更
+// deposit：源账户余额增加；withdrawal：源账户余额减少；transfer：源账户减少，目标账户增加
 func (s *TransactionBulkService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64) map[uint64]decimal.Decimal {
 	changes := make(map[uint64]decimal.Decimal)
 
@@ -257,6 +295,7 @@ func (s *TransactionBulkService) calculateBalanceChanges(txnType model.Transacti
 	return changes
 }
 
+// toResp 将交易模型转换为响应对象
 func (s *TransactionBulkService) toResp(t *model.Transaction) *response.TransactionResp {
 	resp := &response.TransactionResp{
 		ID:            t.ID,

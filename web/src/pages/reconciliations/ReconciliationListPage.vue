@@ -5,9 +5,12 @@ import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/reconciliation'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAccountStore } from '@/stores/account'
 import type { Reconciliation, CreateReconciliationReq, UpdateReconciliationReq } from '@/types/reconciliation'
 
 const { t } = useI18n()
+// 账户状态管理 - 用于获取账户下拉选项
+const accountStore = useAccountStore()
 
 const items = ref<Reconciliation[]>([])
 const loading = ref(false)
@@ -83,7 +86,11 @@ async function handleSubmit() {
   }
 }
 
-onMounted(fetchList)
+onMounted(async () => {
+  // 打开页面时加载账户列表，供下拉选择使用
+  await accountStore.fetchAccounts()
+  await fetchList()
+})
 </script>
 
 <template>
@@ -120,6 +127,12 @@ onMounted(fetchList)
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
+        <!-- 账户选择下拉框 - 选择要对账的账户 -->
+        <el-form-item :label="t('transaction.sourceAccount')">
+          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="t('common.startDate')">
           <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>

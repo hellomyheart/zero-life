@@ -1,49 +1,75 @@
-// 存钱罐相关类型定义 - 存钱罐接口、存取款和事件记录
+/**
+ * 存钱罐相关类型定义
+ * 存钱罐用于设定储蓄目标，跟踪存款进度（如旅行基金、应急储备金等）
+ */
+
+/**
+ * 存钱罐信息接口
+ * 表示一个储蓄目标的完整信息
+ */
 export interface PiggyBank {
-  id: string
-  name: string
-  account_id: string
-  target_amount: string
-  current_amount: string
-  start_date: string
-  target_date: string
-  order: number
-  notes: string
-  percentage: number
-  created_at: string
-  updated_at: string
+  id: string                   // 存钱罐唯一标识
+  name: string                 // 存钱罐名称，如"旅行基金"
+  account_id: string           // 关联的资产账户ID（存取款从该账户操作）
+  target_amount: string        // 目标金额
+  current_amount: string       // 当前已存金额
+  start_date: string           // 开始存款日期
+  target_date: string          // 目标完成日期
+  order: number                // 排序序号
+  notes: string                // 备注说明
+  percentage: number           // 完成百分比（0-100）
+  created_at: string           // 创建时间
+  updated_at: string           // 最后更新时间
 }
 
+/**
+ * 存钱罐事件接口
+ * 记录存钱罐的每次存入或取出操作
+ */
 export interface PiggyEvent {
-  id: string
-  piggy_bank_id: string
-  amount: string
-  type: string
-  note: string
-  created_at: string
+  id: string                   // 事件唯一标识
+  piggy_bank_id: string        // 关联的存钱罐ID
+  amount: string               // 操作金额
+  type: string                 // 操作类型，如"add"（存入）、"remove"（取出）
+  note: string                 // 操作备注
+  created_at: string           // 操作时间
 }
 
+/**
+ * 创建存钱罐请求接口
+ */
 export interface CreatePiggyBankReq {
-  name: string
-  account_id: string
-  target_amount: string
-  target_date?: string
-  notes?: string
+  name: string                 // 存钱罐名称（必填）
+  account_id: string           // 关联账户ID（必填）
+  target_amount: string        // 目标金额（必填）
+  target_date?: string         // 目标完成日期（可选）
+  notes?: string               // 备注说明（可选）
 }
 
+/**
+ * 更新存钱罐请求接口
+ * 所有字段均为可选，只传需要修改的字段
+ */
 export interface UpdatePiggyBankReq {
-  name?: string
-  target_amount?: string
-  target_date?: string
-  notes?: string
+  name?: string                // 存钱罐名称
+  target_amount?: string       // 目标金额
+  target_date?: string         // 目标完成日期
+  notes?: string               // 备注说明
 }
 
+/**
+ * 存取款请求接口
+ * 存入和取出操作共用此接口
+ */
 export interface AddAmountReq {
-  amount: string
-  note?: string
+  amount: string               // 存入/取出金额（必填）
+  note?: string                // 操作备注（可选）
 }
 
+/**
+ * 存钱罐列表查询请求接口
+ */
 export interface PiggyBankListReq {
-  page?: number
-  page_size?: number
+  page?: number                // 页码（从1开始）
+  page_size?: number           // 每页数量
 }

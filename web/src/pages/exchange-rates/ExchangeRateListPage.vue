@@ -4,25 +4,36 @@
  * 功能：
  * - 展示汇率列表，支持分页
  * - 支持按货币对、日期范围筛选
- * - 支持创建、编辑、删除汇率
+ * - 支持创建、编辑、删除汇率（使用内联对话框）
  * - 支持货币转换计算
  */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { list, remove } from '@/api/exchange-rate'
+import { list, create, update, remove } from '@/api/exchange-rate'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ExchangeRate } from '@/types/exchange-rate'
 import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
-const router = useRouter()
 
 // 响应式数据
 const exchangeRates = ref<ExchangeRate[]>([])
 const total = ref(0)
 const loading = ref(false)
+
+// 对话框状态
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const editingId = ref<string | null>(null)
+
+// 表单数据 - 创建/编辑汇率时使用
+const form = ref({
+  from_currency_id: '',
+  to_currency_id: '',
+  date: '',
+  rate: '',
+})
 
 // 筛选条件
 const filter = reactive({
@@ -61,17 +72,50 @@ async function fetchExchangeRates() {
 }
 
 /**
- * 跳转到创建汇率页面
+ * 打开创建汇率对话框
  */
 function handleCreate() {
-  router.push('/exchange-rates/create')
+  dialogTitle.value = t('common.create')
+  editingId.value = null
+  form.value = { from_currency_id: '', to_currency_id: '', date: '', rate: '' }
+  dialogVisible.value = true
 }
 
 /**
- * 跳转到编辑汇率页面
+ * 打开编辑汇率对话框 - 将当前行数据填充到表单
  */
-function handleEdit(id: string) {
-  router.push(`/exchange-rates/${id}/edit`)
+function handleEdit(row: ExchangeRate) {
+  dialogTitle.value = t('common.edit')
+  editingId.value = String(row.id)
+  form.value = {
+    from_currency_id: String(row.from_currency_id),
+    to_currency_id: String(row.to_currency_id),
+    date: row.date,
+    rate: row.rate,
+  }
+  dialogVisible.value = true
+}
+
+/**
+ * 提交表单 - 根据editingId判断是创建还是编辑
+ */
+async function handleSubmit() {
+  if (!form.value.from_currency_id || !form.value.to_currency_id || !form.value.date || !form.value.rate) {
+    ElMessage.warning(t('common.required'))
+    return
+  }
+  try {
+    if (editingId.value) {
+      await update(editingId.value, form.value)
+    } else {
+      await create(form.value)
+    }
+    ElMessage.success(t('common.success'))
+    dialogVisible.value = false
+    await fetchExchangeRates()
+  } catch (err) {
+    ElMessage.error((err as Error).message || t('common.failed'))
+  }
 }
 
 /**
@@ -129,7 +173,7 @@ onMounted(() => {
         <el-table-column prop="rate" :label="t('exchangeRate.rate')" />
         <el-table-column :label="t('common.actions')" width="200">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row.id)">
+            <el-button size="small" @click="handleEdit(row)">
               {{ t('common.edit') }}
             </el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)">
@@ -147,6 +191,28 @@ onMounted(() => {
         @size-change="handleSizeChange"
       />
     </el-card>
+
+    <!-- 创建/编辑汇率对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+      <el-form :model="form" label-width="120px">
+        <el-form-item :label="t('exchangeRate.fromCurrency')">
+          <el-input v-model="form.from_currency_id" />
+        </el-form-item>
+        <el-form-item :label="t('exchangeRate.toCurrency')">
+          <el-input v-model="form.to_currency_id" />
+        </el-form-item>
+        <el-form-item :label="t('exchangeRate.date')">
+          <el-input v-model="form.date" type="date" />
+        </el-form-item>
+        <el-form-item :label="t('exchangeRate.rate')">
+          <el-input v-model="form.rate" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

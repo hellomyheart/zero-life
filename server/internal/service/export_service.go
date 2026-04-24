@@ -13,17 +13,21 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
+// ExportService 数据导出服务
+// 负责将各类数据导出为CSV或JSON格式，支持导出交易、账户、账单、预算、分类、标签、存钱罐和规则
+// 依赖各repository获取数据，不依赖service层避免循环依赖
 type ExportService struct {
-	txnRepo      *repository.TransactionRepository
-	accountRepo  *repository.AccountRepository
-	billRepo     *repository.BillRepository
-	budgetRepo   *repository.BudgetRepository
-	categoryRepo *repository.CategoryRepository
-	tagRepo      *repository.TagRepository
-	piggyBankRepo *repository.PiggyBankRepository
-	ruleRepo     *repository.RuleRepository
+	txnRepo      *repository.TransactionRepository  // 交易数据访问对象
+	accountRepo  *repository.AccountRepository      // 账户数据访问对象
+	billRepo     *repository.BillRepository         // 账单数据访问对象
+	budgetRepo   *repository.BudgetRepository       // 预算数据访问对象
+	categoryRepo *repository.CategoryRepository     // 分类数据访问对象
+	tagRepo      *repository.TagRepository          // 标签数据访问对象
+	piggyBankRepo *repository.PiggyBankRepository   // 存钱罐数据访问对象
+	ruleRepo     *repository.RuleRepository         // 规则数据访问对象
 }
 
+// NewExportService 创建数据导出服务实例
 func NewExportService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -46,6 +50,16 @@ func NewExportService(
 	}
 }
 
+// ExportTransactions 导出交易数据
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期（格式：2006-01-02）
+//   - endDate: 结束日期
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportTransactions(userID uint64, startDate, endDate, format string) ([]byte, string, error) {
 	filter := repository.TransactionFilter{
 		StartDate: startDate,
@@ -67,6 +81,14 @@ func (s *ExportService) ExportTransactions(userID uint64, startDate, endDate, fo
 	}
 }
 
+// ExportAccounts 导出账户数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportAccounts(userID uint64, format string) ([]byte, string, error) {
 	accounts, err := s.accountRepo.List(userID, "", "", "name", 0, 1000)
 	if err != nil {
@@ -83,6 +105,7 @@ func (s *ExportService) ExportAccounts(userID uint64, format string) ([]byte, st
 	}
 }
 
+// exportTransactionsCSV 将交易列表导出为CSV格式
 func (s *ExportService) exportTransactionsCSV(txns []model.Transaction) ([]byte, string, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
@@ -130,6 +153,7 @@ func (s *ExportService) exportTransactionsCSV(txns []model.Transaction) ([]byte,
 	return buf.Bytes(), filename, nil
 }
 
+// exportTransactionsJSON 将交易列表导出为JSON格式
 func (s *ExportService) exportTransactionsJSON(txns []model.Transaction) ([]byte, string, error) {
 	type txnExport struct {
 		Date              string `json:"date"`
@@ -186,6 +210,7 @@ func (s *ExportService) exportTransactionsJSON(txns []model.Transaction) ([]byte
 	return data, filename, nil
 }
 
+// exportAccountsCSV 将账户列表导出为CSV格式
 func (s *ExportService) exportAccountsCSV(accounts []model.Account) ([]byte, string, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
@@ -215,6 +240,7 @@ func (s *ExportService) exportAccountsCSV(accounts []model.Account) ([]byte, str
 	return buf.Bytes(), filename, nil
 }
 
+// exportAccountsJSON 将账户列表导出为JSON格式
 func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, string, error) {
 	type accountExport struct {
 		Name           string `json:"name"`
@@ -251,6 +277,14 @@ func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, st
 	return data, filename, nil
 }
 
+// ExportBills 导出账单数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, string, error) {
 	bills, err := s.billRepo.List(userID)
 	if err != nil {
@@ -267,6 +301,7 @@ func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, strin
 	}
 }
 
+// ExportBudgets 导出预算数据
 func (s *ExportService) ExportBudgets(userID uint64, format string) ([]byte, string, error) {
 	budgets, err := s.budgetRepo.List(userID)
 	if err != nil {
@@ -283,6 +318,7 @@ func (s *ExportService) ExportBudgets(userID uint64, format string) ([]byte, str
 	}
 }
 
+// ExportCategories 导出分类数据
 func (s *ExportService) ExportCategories(userID uint64, format string) ([]byte, string, error) {
 	categories, err := s.categoryRepo.List(userID)
 	if err != nil {
@@ -299,6 +335,7 @@ func (s *ExportService) ExportCategories(userID uint64, format string) ([]byte, 
 	}
 }
 
+// ExportTags 导出标签数据
 func (s *ExportService) ExportTags(userID uint64, format string) ([]byte, string, error) {
 	tags, err := s.tagRepo.List(userID)
 	if err != nil {
@@ -315,6 +352,7 @@ func (s *ExportService) ExportTags(userID uint64, format string) ([]byte, string
 	}
 }
 
+// ExportPiggyBanks 导出存钱罐数据
 func (s *ExportService) ExportPiggyBanks(userID uint64, format string) ([]byte, string, error) {
 	piggyBanks, err := s.piggyBankRepo.List(userID)
 	if err != nil {
@@ -331,6 +369,7 @@ func (s *ExportService) ExportPiggyBanks(userID uint64, format string) ([]byte, 
 	}
 }
 
+// ExportRules 导出规则数据
 func (s *ExportService) ExportRules(userID uint64, format string) ([]byte, string, error) {
 	rules, err := s.ruleRepo.List(userID)
 	if err != nil {

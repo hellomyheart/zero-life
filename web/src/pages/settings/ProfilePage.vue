@@ -9,6 +9,7 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getProfile, updateProfile, changePassword } from '@/api/profile'
 import { ElMessage } from 'element-plus'
+import type { FormRules } from 'element-plus'
 import type { User } from '@/types/user'
 
 const { t } = useI18n()
@@ -37,6 +38,29 @@ const passwordForm = ref({
 
 const loading = ref(false)
 
+// 表单引用 - 用于调用validate方法
+const profileFormRef = ref()
+const passwordFormRef = ref()
+
+// 个人资料表单验证规则 - 姓名必填、邮箱格式校验
+const profileRules: FormRules = {
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+  ],
+}
+
+// 密码表单验证规则 - 新密码最小长度6位
+const passwordRules: FormRules = {
+  old_password: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  new_password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+  ],
+  confirm_password: [{ required: true, message: '请确认新密码', trigger: 'blur' }],
+}
+
 /**
  * 获取用户资料
  */
@@ -55,6 +79,12 @@ async function fetchProfile() {
  * 更新用户资料
  */
 async function handleUpdateProfile() {
+  // 先进行表单验证，通过后才提交
+  try {
+    await profileFormRef.value?.validate()
+  } catch {
+    return
+  }
   loading.value = true
   try {
     await updateProfile(form.value)
@@ -71,6 +101,12 @@ async function handleUpdateProfile() {
  * 修改密码
  */
 async function handleChangePassword() {
+  // 先进行表单验证
+  try {
+    await passwordFormRef.value?.validate()
+  } catch {
+    return
+  }
   if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
     ElMessage.error(t('profile.passwordMismatch'))
     return
@@ -107,11 +143,11 @@ onMounted(() => {
         <h2>{{ t('profile.title') }}</h2>
       </template>
 
-      <el-form :model="form" label-width="120px">
-        <el-form-item :label="t('profile.name')">
+      <el-form ref="profileFormRef" :model="form" :rules="profileRules" label-width="120px">
+        <el-form-item :label="t('profile.name')" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item :label="t('profile.email')">
+        <el-form-item :label="t('profile.email')" prop="email">
           <el-input v-model="form.email" />
         </el-form-item>
         <el-form-item>
@@ -127,14 +163,14 @@ onMounted(() => {
         <h3>{{ t('profile.changePassword') }}</h3>
       </template>
 
-      <el-form :model="passwordForm" label-width="120px">
-        <el-form-item :label="t('profile.oldPassword')">
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="120px">
+        <el-form-item :label="t('profile.oldPassword')" prop="old_password">
           <el-input v-model="passwordForm.old_password" type="password" />
         </el-form-item>
-        <el-form-item :label="t('profile.newPassword')">
+        <el-form-item :label="t('profile.newPassword')" prop="new_password">
           <el-input v-model="passwordForm.new_password" type="password" />
         </el-form-item>
-        <el-form-item :label="t('profile.confirmPassword')">
+        <el-form-item :label="t('profile.confirmPassword')" prop="confirm_password">
           <el-input v-model="passwordForm.confirm_password" type="password" />
         </el-form-item>
         <el-form-item>

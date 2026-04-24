@@ -12,14 +12,25 @@ import (
 	"gorm.io/gorm"
 )
 
+// LinkTypeService 关联类型服务
+// 管理交易关联类型（如"相关"、"报销"等），关联类型定义了交易之间关系的语义
+// 关联类型包含正向（outward）和反向（inward）描述，以及是否为有方向关系
+// 依赖linkTypeRepo进行关联类型数据访问
 type LinkTypeService struct {
-	linkTypeRepo *repository.LinkTypeRepository
+	linkTypeRepo *repository.LinkTypeRepository // 关联类型数据访问对象
 }
 
+// NewLinkTypeService 创建关联类型服务实例
 func NewLinkTypeService(linkTypeRepo *repository.LinkTypeRepository) *LinkTypeService {
 	return &LinkTypeService{linkTypeRepo: linkTypeRepo}
 }
 
+// Create 创建关联类型
+// 参数：
+//   - req: 创建请求参数（名称、正向描述、反向描述、是否有方向）
+// 返回：
+//   - *response.LinkTypeResp: 创建成功的关联类型信息
+//   - error: 错误信息
 func (s *LinkTypeService) Create(req *request.CreateLinkTypeReq) (*response.LinkTypeResp, error) {
 	linkType := &model.LinkType{
 		Name:          req.Name,
@@ -35,6 +46,12 @@ func (s *LinkTypeService) Create(req *request.CreateLinkTypeReq) (*response.Link
 	return s.toResp(linkType), nil
 }
 
+// Get 获取单个关联类型详情
+// 参数：
+//   - id: 关联类型ID
+// 返回：
+//   - *response.LinkTypeResp: 关联类型信息
+//   - error: 错误信息
 func (s *LinkTypeService) Get(id uint64) (*response.LinkTypeResp, error) {
 	linkType, err := s.linkTypeRepo.GetByID(id)
 	if err != nil {
@@ -46,6 +63,12 @@ func (s *LinkTypeService) Get(id uint64) (*response.LinkTypeResp, error) {
 	return s.toResp(linkType), nil
 }
 
+// List 获取关联类型分页列表
+// 参数：
+//   - req: 列表查询参数（含分页）
+// 返回：
+//   - *pagination.Result: 分页结果
+//   - error: 错误信息
 func (s *LinkTypeService) List(req *request.LinkTypeListReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -68,6 +91,14 @@ func (s *LinkTypeService) List(req *request.LinkTypeListReq) (*pagination.Result
 	return pagination.NewResult(items, total, params), nil
 }
 
+// Update 更新关联类型信息
+// 支持部分更新：名称、正向描述、反向描述、是否有方向
+// 参数：
+//   - id: 关联类型ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.LinkTypeResp: 更新后的关联类型信息
+//   - error: 错误信息
 func (s *LinkTypeService) Update(id uint64, req *request.UpdateLinkTypeReq) (*response.LinkTypeResp, error) {
 	linkType, err := s.linkTypeRepo.GetByID(id)
 	if err != nil {
@@ -97,6 +128,11 @@ func (s *LinkTypeService) Update(id uint64, req *request.UpdateLinkTypeReq) (*re
 	return s.toResp(linkType), nil
 }
 
+// Delete 删除关联类型
+// 参数：
+//   - id: 关联类型ID
+// 返回：
+//   - error: 错误信息
 func (s *LinkTypeService) Delete(id uint64) error {
 	_, err := s.linkTypeRepo.GetByID(id)
 	if err != nil {
@@ -108,6 +144,7 @@ func (s *LinkTypeService) Delete(id uint64) error {
 	return s.linkTypeRepo.Delete(id)
 }
 
+// toResp 将关联类型模型转换为响应对象
 func (s *LinkTypeService) toResp(lt *model.LinkType) *response.LinkTypeResp {
 	return &response.LinkTypeResp{
 		ID:            lt.ID,
