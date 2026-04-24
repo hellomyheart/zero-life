@@ -1,3 +1,5 @@
+// Package service 业务逻辑层
+// 实现核心业务逻辑，包括认证、账户、交易等业务处理
 package service
 
 import (
@@ -22,20 +24,27 @@ import (
 )
 
 const (
-	loginFailKeyPrefix  = "login_fail:"
-	loginLockKeyPrefix  = "login_lock:"
-	resetTokenKeyPrefix = "reset_token:"
-	maxLoginFails       = 5
-	loginLockDuration   = 30 * time.Minute
-	resetTokenTTL       = 24 * time.Hour
+	loginFailKeyPrefix  = "login_fail:"   // 登录失败次数Redis键前缀
+	loginLockKeyPrefix  = "login_lock:"   // 登录锁定Redis键前缀
+	resetTokenKeyPrefix = "reset_token:"  // 密码重置令牌Redis键前缀
+	maxLoginFails       = 5               // 最大登录失败次数
+	loginLockDuration   = 30 * time.Minute // 登录锁定时长
+	resetTokenTTL       = 24 * time.Hour   // 密码重置令牌有效期
 )
 
+// AuthService 认证服务
+// 处理用户注册、登录、密码重置等认证相关业务逻辑
 type AuthService struct {
-	authRepo   *repository.AuthRepository
-	jwtService *jwt.Service
-	rdb        *redis.Client
+	authRepo   *repository.AuthRepository // 用户仓储
+	jwtService *jwt.Service               // JWT服务
+	rdb        *redis.Client              // Redis客户端（用于登录限制和令牌管理）
 }
 
+// NewAuthService 创建认证服务实例
+// 参数：
+//   authRepo: 用户仓储
+//   jwtService: JWT服务
+//   rdb: Redis客户端
 func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service, rdb *redis.Client) *AuthService {
 	return &AuthService{
 		authRepo:   authRepo,
@@ -44,6 +53,17 @@ func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service
 	}
 }
 
+// Register 用户注册
+// 流程：
+// 1. 检查邮箱是否已存在
+// 2. 加密密码
+// 3. 创建用户记录
+// 4. 生成JWT令牌对
+// 参数：
+//   req: 注册请求（邮箱、密码、昵称）
+// 返回：
+//   LoginResp: 登录响应（包含访问令牌和刷新令牌）
+//   error: 错误信息
 func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, error) {
 	// Check email uniqueness
 	existing, err := s.authRepo.FindByEmail(req.Email)
