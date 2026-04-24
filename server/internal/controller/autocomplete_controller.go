@@ -1,3 +1,5 @@
+// Package controller �ṩHTTP�����������
+// AutocompleteController �Զ���ȫ���������ṩ��������ӿ�
 package controller
 
 import (
