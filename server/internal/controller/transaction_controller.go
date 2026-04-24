@@ -114,3 +114,55 @@ func (ctrl *TransactionController) Search(c *gin.Context) {
 
 	SuccessPage(c, result)
 }
+
+// Split 拆分交易
+// POST /api/v1/transactions/:id/split
+// 将一笔交易拆分为多笔子交易
+func (ctrl *TransactionController) Split(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	parentID := parseIDParam(c, "id")
+
+	var req request.SplitTransactionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	result, err := ctrl.txnService.Split(userID, parentID, &req)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
+// GetSplits 获取拆分交易列表
+// GET /api/v1/transactions/:id/splits
+func (ctrl *TransactionController) GetSplits(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	parentID := parseIDParam(c, "id")
+
+	result, err := ctrl.txnService.GetSplits(userID, parentID)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
+// MergeSplits 合并拆分交易
+// POST /api/v1/transactions/:id/merge
+// 将拆分的子交易合并回父交易
+func (ctrl *TransactionController) MergeSplits(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	parentID := parseIDParam(c, "id")
+
+	if err := ctrl.txnService.MergeSplits(userID, parentID); err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, nil)
+}

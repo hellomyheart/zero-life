@@ -13,11 +13,13 @@ type CreateTransactionReq struct {
 	Splits        []CreateSplitReq  `json:"splits"`
 }
 
+// CreateSplitReq 创建拆分项请求
 type CreateSplitReq struct {
-	Amount     string   `json:"amount" binding:"required"`
-	CategoryID *uint64  `json:"category_id"`
-	Tags       []uint64 `json:"tags"`
-	Notes      string   `json:"notes"`
+	Amount      string   `json:"amount" binding:"required"`      // 拆分金额
+	Description string   `json:"description"`                   // 拆分描述（可选，默认使用父交易描述）
+	CategoryID  *uint64  `json:"category_id"`                   // 分类ID（可选）
+	Tags        []uint64 `json:"tags"`                          // 标签ID列表（可选）
+	Notes       string   `json:"notes"`                         // 备注（可选）
 }
 
 type UpdateTransactionReq struct {
@@ -49,4 +51,9 @@ type TransactionSearchReq struct {
 	Page     int    `form:"page,default=1"`
 	PageSize int    `form:"page_size,default=20"`
 	Keyword  string `form:"keyword" binding:"required"`
+}
+
+// SplitTransactionReq 拆分交易请求
+type SplitTransactionReq struct {
+	Splits []CreateSplitReq `json:"splits" binding:"required,min=2"` // 至少拆分为2笔
 }

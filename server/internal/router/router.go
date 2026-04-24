@@ -32,6 +32,8 @@ type Router struct {
 	transactionLinkCtrl   *controller.TransactionLinkController
 	preferenceCtrl        *controller.PreferenceController
 	reconciliationCtrl    *controller.ReconciliationController
+	chartCtrl             *controller.ChartController
+	insightCtrl           *controller.InsightController
 }
 
 func NewRouter(
@@ -58,6 +60,8 @@ func NewRouter(
 	transactionLinkCtrl *controller.TransactionLinkController,
 	preferenceCtrl *controller.PreferenceController,
 	reconciliationCtrl *controller.ReconciliationController,
+	chartCtrl *controller.ChartController,
+	insightCtrl *controller.InsightController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -83,6 +87,8 @@ func NewRouter(
 		transactionLinkCtrl:  transactionLinkCtrl,
 		preferenceCtrl:       preferenceCtrl,
 		reconciliationCtrl:   reconciliationCtrl,
+		chartCtrl:            chartCtrl,
+		insightCtrl:          insightCtrl,
 	}
 }
 
@@ -127,6 +133,10 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			transactions.GET("/:id", r.txnCtrl.Get)
 			transactions.PUT("/:id", r.txnCtrl.Update)
 			transactions.DELETE("/:id", r.txnCtrl.Delete)
+			// 交易拆分相关路由
+			transactions.POST("/:id/split", r.txnCtrl.Split)
+			transactions.GET("/:id/splits", r.txnCtrl.GetSplits)
+			transactions.POST("/:id/merge", r.txnCtrl.MergeSplits)
 		}
 
 		categories := authenticated.Group("/categories")
@@ -297,6 +307,24 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			reconciliations.GET("/:id", r.reconciliationCtrl.Get)
 			reconciliations.PUT("/:id", r.reconciliationCtrl.Update)
 			reconciliations.DELETE("/:id", r.reconciliationCtrl.Delete)
+		}
+
+		// Chart routes - 图表数据API
+		chart := authenticated.Group("/chart")
+		{
+			chart.GET("/account/:id", r.chartCtrl.Account)
+			chart.GET("/budget/:id", r.chartCtrl.Budget)
+			chart.GET("/category", r.chartCtrl.Category)
+			chart.GET("/tag", r.chartCtrl.Tag)
+			chart.GET("/transaction", r.chartCtrl.Transaction)
+		}
+
+		// Insight routes - 数据洞察API
+		insight := authenticated.Group("/insight")
+		{
+			insight.GET("/expense", r.insightCtrl.Expense)
+			insight.GET("/income", r.insightCtrl.Income)
+			insight.GET("/transfer", r.insightCtrl.Transfer)
 		}
 
 		// Health check (public within authenticated group)

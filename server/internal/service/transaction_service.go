@@ -458,3 +458,141 @@ func tagModelToResp(t *model.Tag) response.TagResp {
 		UpdatedAt: t.UpdatedAt,
 	}
 }
+
+// Split 拆分交易
+// 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
+func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTransactionReq) (*response.TransactionResp, error) {
+	// 获取父交易
+	parent, err := s.txnRepo.GetByID(parentID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查是否已经是拆分交易
+	if parent.ParentID != nil {
+		return nil, errcode.WithMessage(errcode.ErrBadRequest, "cannot split a child transaction")
+	}
+
+	// 检查是否已有拆分
+	splits, _ := s.txnRepo.GetSplits(parentID, userID)
+	if len(splits) > 0 {
+		return nil, errcode.WithMessage(errcode.ErrBadRequest, "transaction already has splits, merge them first")
+	}
+
+	// 验证拆分金额总和
+	totalSplitAmount := decimal.Zero
+	for _, split := range req.Splits {
+		amount, err := decimal.NewFromString(split.Amount)
+		if err != nil {
+			return nil, errcode.WithMessage(errcode.ErrBadRequest, "invalid split amount")
+		}
+		if amount.LessThanOrEqual(decimal.Zero) {
+			return nil, errcode.WithMessage(errcode.ErrBadRequest, "split amount must be positive")
+		}
+		totalSplitAmount = totalSplitAmount.Add(amount)
+	}
+
+	if !totalSplitAmount.Equal(parent.Amount) {
+		return nil, errcode.WithMessage(errcode.ErrBadRequest, "sum of split amounts must equal parent amount")
+	}
+
+	// 创建拆分交易
+	now := time.Now()
+	splitModels := make([]model.Transaction, 0, len(req.Splits))
+
+	for _, splitReq := range req.Splits {
+		amount, _ := decimal.NewFromString(splitReq.Amount)
+
+		description := splitReq.Description
+		if description == "" {
+			description = parent.Description
+		}
+
+		categoryID := splitReq.CategoryID
+		if categoryID == nil {
+			categoryID = parent.CategoryID
+		}
+
+		splitTxn := model.Transaction{
+			UserID:        userID,
+			Type:          parent.Type,
+			Date:          parent.Date,
+			Description:   description,
+			Amount:        amount,
+			SourceID:      parent.SourceID,
+			DestinationID: parent.DestinationID,
+			CategoryID:    categoryID,
+			Notes:         splitReq.Notes,
+			ParentID:      &parentID,
+			IsReconciled:  false,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		}
+
+		splitModels = append(splitModels, splitTxn)
+	}
+
+	// 保存拆分交易
+	if err := s.txnRepo.CreateBatch(splitModels); err != nil {
+		return nil, err
+	}
+
+	// 为拆分交易添加标签
+	for i, splitReq := range req.Splits {
+		if len(splitReq.Tags) > 0 {
+			if err := s.txnRepo.AttachTags(splitModels[i].ID, splitReq.Tags); err != nil {
+				// 记录错误但不回滚，标签不是关键数据
+			}
+		}
+	}
+
+	// 重新获取父交易（包含拆分）
+	return s.Get(userID, parentID)
+}
+
+// GetSplits 获取拆分交易列表
+func (s *TransactionService) GetSplits(userID, parentID uint64) ([]*response.TransactionResp, error) {
+	splits, err := s.txnRepo.GetSplits(parentID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*response.TransactionResp, 0, len(splits))
+	for _, split := range splits {
+		result = append(result, s.toResp(&split))
+	}
+
+	return result, nil
+}
+
+// MergeSplits 合并拆分交易
+// 删除所有子交易，保留父交易
+func (s *TransactionService) MergeSplits(userID, parentID uint64) error {
+	// 验证父交易存在
+	parent, err := s.txnRepo.GetByID(parentID, userID)
+	if err != nil {
+		return err
+	}
+
+	if parent.ParentID != nil {
+		return errcode.WithMessage(errcode.ErrBadRequest, "cannot merge a child transaction")
+	}
+
+	// 获取所有拆分
+	splits, err := s.txnRepo.GetSplits(parentID, userID)
+	if err != nil {
+		return err
+	}
+
+	if len(splits) == 0 {
+		return errcode.WithMessage(errcode.ErrBadRequest, "transaction has no splits to merge")
+	}
+
+	// 删除所有拆分交易
+	splitIDs := make([]uint64, 0, len(splits))
+	for _, split := range splits {
+		splitIDs = append(splitIDs, split.ID)
+	}
+
+	return s.txnRepo.DeleteBatch(splitIDs, userID)
+}

@@ -207,3 +207,74 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 	}
 	return query
 }
+
+// GetByAccountAndDateRange 获取指定账户在时间范围内的交易
+func (r *TransactionRepository) GetByAccountAndDateRange(userID, accountID uint64, startDate, endDate time.Time) ([]model.Transaction, error) {
+	var txns []model.Transaction
+	err := r.db.Where("user_id = ? AND (source_id = ? OR destination_id = ?) AND date >= ? AND date <= ?",
+		userID, accountID, accountID, startDate, endDate).
+		Order("date asc").
+		Find(&txns).Error
+	return txns, err
+}
+
+// GetByDateRange 获取指定时间范围内的所有交易
+func (r *TransactionRepository) GetByDateRange(userID uint64, startDate, endDate time.Time) ([]model.Transaction, error) {
+	var txns []model.Transaction
+	err := r.db.Where("user_id = ? AND date >= ? AND date <= ?", userID, startDate, endDate).
+		Preload("Tags").
+		Order("date asc").
+		Find(&txns).Error
+	return txns, err
+}
+
+// GetByTypeAndDateRange 获取指定类型和时间范围内的交易
+func (r *TransactionRepository) GetByTypeAndDateRange(userID uint64, txnType string, startDate, endDate time.Time) ([]model.Transaction, error) {
+	var txns []model.Transaction
+	err := r.db.Where("user_id = ? AND type = ? AND date >= ? AND date <= ?",
+		userID, txnType, startDate, endDate).
+		Preload("Tags").
+		Order("date asc").
+		Find(&txns).Error
+	return txns, err
+}
+
+// GetSplits 获取拆分交易列表
+func (r *TransactionRepository) GetSplits(parentID, userID uint64) ([]model.Transaction, error) {
+	var splits []model.Transaction
+	err := r.db.Where("parent_id = ? AND user_id = ?", parentID, userID).
+		Preload("Category").
+		Preload("Tags").
+		Order("id asc").
+		Find(&splits).Error
+	return splits, err
+}
+
+// CreateBatch 批量创建交易
+func (r *TransactionRepository) CreateBatch(txns []model.Transaction) error {
+	return r.db.Create(&txns).Error
+}
+
+// DeleteBatch 批量删除交易
+func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
+	return r.db.Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error
+}
+
+// AttachTags 为交易添加标签
+func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error {
+	// 删除现有标签关联
+	if err := r.db.Where("transaction_id = ?", txnID).Delete(&model.TransactionTag{}).Error; err != nil {
+		return err
+	}
+
+	// 添加新标签关联
+	transactionTags := make([]model.TransactionTag, 0, len(tagIDs))
+	for _, tagID := range tagIDs {
+		transactionTags = append(transactionTags, model.TransactionTag{
+			TransactionID: txnID,
+			TagID:         tagID,
+		})
+	}
+
+	return r.db.Create(&transactionTags).Error
+}

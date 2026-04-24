@@ -171,6 +171,9 @@ func main() {
 	prefService := service.NewPreferenceService(prefRepo)
 	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, accountRepo, db)
 	ogService := service.NewObjectGroupService(ogRepo)
+	// 新增图表和洞察服务
+	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
+	insightService := service.NewInsightService(txnRepo, accountRepo, categoryRepo)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -205,6 +208,9 @@ func main() {
 	prefCtrl := controller.NewPreferenceController(prefService)
 	rtCtrl := controller.NewRecurringTransactionController(rtService)
 	ogCtrl := controller.NewObjectGroupController(ogService)
+	// 新增图表和洞察控制器
+	chartCtrl := controller.NewChartController(chartService)
+	insightCtrl := controller.NewInsightController(insightService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -238,6 +244,8 @@ func main() {
 		txnLinkCtrl,
 		prefCtrl,
 		reconCtrl,
+		chartCtrl,
+		insightCtrl,
 	)
 	r.Setup(jwtService)
 
