@@ -124,6 +124,7 @@ func main() {
 
 	// Initialize repositories
 	authRepo := repository.NewAuthRepository(db)
+	userRepo := repository.NewUserRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
 	txnRepo := repository.NewTransactionRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
@@ -174,6 +175,8 @@ func main() {
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	insightService := service.NewInsightService(txnRepo, accountRepo, categoryRepo)
+	// 新增MFA服务
+	mfaService := service.NewMFAService(userRepo, db)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -211,6 +214,8 @@ func main() {
 	// 新增图表和洞察控制器
 	chartCtrl := controller.NewChartController(chartService)
 	insightCtrl := controller.NewInsightController(insightService)
+	// 新增MFA控制器
+	mfaCtrl := controller.NewMFAController(mfaService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -246,6 +251,7 @@ func main() {
 		reconCtrl,
 		chartCtrl,
 		insightCtrl,
+		mfaCtrl,
 	)
 	r.Setup(jwtService)
 

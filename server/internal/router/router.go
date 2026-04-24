@@ -34,6 +34,7 @@ type Router struct {
 	reconciliationCtrl    *controller.ReconciliationController
 	chartCtrl             *controller.ChartController
 	insightCtrl           *controller.InsightController
+	mfaCtrl               *controller.MFAController
 }
 
 func NewRouter(
@@ -62,6 +63,7 @@ func NewRouter(
 	reconciliationCtrl *controller.ReconciliationController,
 	chartCtrl *controller.ChartController,
 	insightCtrl *controller.InsightController,
+	mfaCtrl *controller.MFAController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -89,6 +91,7 @@ func NewRouter(
 		reconciliationCtrl:   reconciliationCtrl,
 		chartCtrl:            chartCtrl,
 		insightCtrl:          insightCtrl,
+		mfaCtrl:              mfaCtrl,
 	}
 }
 
@@ -325,6 +328,16 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			insight.GET("/expense", r.insightCtrl.Expense)
 			insight.GET("/income", r.insightCtrl.Income)
 			insight.GET("/transfer", r.insightCtrl.Transfer)
+		}
+
+		// MFA routes - 多因素认证API
+		mfa := authenticated.Group("/mfa")
+		{
+			mfa.POST("/setup", r.mfaCtrl.Setup)
+			mfa.POST("/enable", r.mfaCtrl.Enable)
+			mfa.POST("/disable", r.mfaCtrl.Disable)
+			mfa.POST("/verify", r.mfaCtrl.Verify)
+			mfa.GET("/status", r.mfaCtrl.Status)
 		}
 
 		// Health check (public within authenticated group)

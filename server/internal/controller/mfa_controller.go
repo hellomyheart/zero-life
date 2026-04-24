@@ -1,3 +1,5 @@
+// Package controller 控制器层
+// 处理HTTP请求，调用Service层业务逻辑
 package controller
 
 import (
@@ -9,102 +11,103 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// MFAController MFA控制器
+// 处理多因素认证相关请求
 type MFAController struct {
 	mfaService *service.MFAService
 }
 
+// NewMFAController 创建MFA控制器实例
 func NewMFAController(mfaService *service.MFAService) *MFAController {
 	return &MFAController{mfaService: mfaService}
 }
 
-func (ctrl *MFAController) Enable(c *gin.Context) {
-	userID := c.GetUint64("user_id")
+// Setup 初始化MFA设置
+// POST /api/v1/mfa/setup
+// 生成MFA密钥和二维码URL
+func (c *MFAController) Setup(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
 
-	result, err := ctrl.mfaService.Enable(userID)
+	result, err := c.mfaService.Setup(userID)
 	if err != nil {
-		handleError(c, err)
+		handleError(ctx, err)
 		return
 	}
 
-	Success(c, result)
+	Success(ctx, result)
 }
 
-func (ctrl *MFAController) Confirm(c *gin.Context) {
-	userID := c.GetUint64("user_id")
+// Enable 启用MFA
+// POST /api/v1/mfa/enable
+// 验证MFA代码并启用多因素认证
+func (c *MFAController) Enable(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
 
-	var req request.MFAConfirmReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
-		return
-	}
-
-	if err := ctrl.mfaService.Confirm(userID, req.Code); err != nil {
-		handleError(c, err)
-		return
-	}
-
-	Success(c, nil)
-}
-
-func (ctrl *MFAController) Disable(c *gin.Context) {
-	userID := c.GetUint64("user_id")
-
-	var req request.MFADisableReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
-		return
-	}
-
-	if err := ctrl.mfaService.Disable(userID, req.Code); err != nil {
-		handleError(c, err)
-		return
-	}
-
-	Success(c, nil)
-}
-
-func (ctrl *MFAController) Verify(c *gin.Context) {
 	var req request.MFAVerifyReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
-	result, err := ctrl.mfaService.VerifyMFA(req.MFAToken, req.Code)
-	if err != nil {
-		handleError(c, err)
+	if err := c.mfaService.Enable(userID, req.Code); err != nil {
+		handleError(ctx, err)
 		return
 	}
 
-	Success(c, result)
+	Success(ctx, nil)
 }
 
-func (ctrl *MFAController) GetBackupCodes(c *gin.Context) {
-	userID := c.GetUint64("user_id")
+// Disable 禁用MFA
+// POST /api/v1/mfa/disable
+// 验证MFA代码并禁用多因素认证
+func (c *MFAController) Disable(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
 
-	result, err := ctrl.mfaService.GetBackupCodes(userID)
-	if err != nil {
-		handleError(c, err)
+	var req request.MFAVerifyReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
-	Success(c, result)
+	if err := c.mfaService.Disable(userID, req.Code); err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	Success(ctx, nil)
 }
 
-func (ctrl *MFAController) RegenerateBackupCodes(c *gin.Context) {
-	userID := c.GetUint64("user_id")
+// Verify 验证MFA代码
+// POST /api/v1/mfa/verify
+// 用于登录后的MFA验证
+func (c *MFAController) Verify(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
 
-	var req request.MFACodeReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+	var req request.MFAVerifyReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
-	result, err := ctrl.mfaService.RegenerateBackupCodes(userID, req.Code)
+	result, err := c.mfaService.Verify(userID, req.Code)
 	if err != nil {
-		handleError(c, err)
+		handleError(ctx, err)
 		return
 	}
 
-	Success(c, result)
+	Success(ctx, result)
+}
+
+// Status 获取MFA状态
+// GET /api/v1/mfa/status
+func (c *MFAController) Status(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	result, err := c.mfaService.Status(userID)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	Success(ctx, result)
 }

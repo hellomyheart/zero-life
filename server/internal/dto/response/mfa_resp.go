@@ -1,20 +1,18 @@
 package response
 
-type MFAEnableResp struct {
-	Secret       string   `json:"secret"`
-	QRCodeURL    string   `json:"qr_code_url"`
-	BackupCodes  []string `json:"backup_codes"`
+// MFASetupResp MFA设置响应
+type MFASetupResp struct {
+	Secret string `json:"secret"` // MFA密钥
+	QRCode string `json:"qr_code"` // 二维码URL
 }
 
+// MFAVerifyResp MFA验证响应
 type MFAVerifyResp struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresAt    string `json:"expires_at"`
+	Verified bool   `json:"verified"` // 是否验证成功
+	Message  string `json:"message"`  // 消息
 }
 
-type MFABackupCodeResp struct {
-	ID        uint64  `json:"id"`
-	Code      string  `json:"code"`
-	UsedAt    *string `json:"used_at,omitempty"`
-	CreatedAt string  `json:"created_at"`
+// MFAStatusResp MFA状态响应
+type MFAStatusResp struct {
+	Enabled bool `json:"enabled"` // 是否已启用MFA
 }
