@@ -177,7 +177,23 @@ function handleSelect(index: string) {
           <el-icon><UserFilled /></el-icon>
           {{ t('setting.users') }}
         </el-menu-item>
+        <el-menu-item index="/settings/preferences">
+          <el-icon><Setting /></el-icon>
+          {{ t('preference.title') }}
+        </el-menu-item>
       </el-sub-menu>
+
+      <!-- 对象分组 -->
+      <el-menu-item index="/object-groups">
+        <el-icon><Menu /></el-icon>
+        <template #title>{{ t('objectGroup.title') }}</template>
+      </el-menu-item>
+
+      <!-- 交易关联 -->
+      <el-menu-item index="/transaction-links">
+        <el-icon><Link /></el-icon>
+        <template #title>{{ t('transactionLink.title') }}</template>
+      </el-menu-item>
     </el-menu>
   </el-aside>
 </template>

@@ -332,5 +332,35 @@
     "lock": "锁定",
     "unlock": "解锁",
     "deleteConfirm": "确定要删除该用户吗？"
+  },
+  "objectGroup": {
+    "title": "对象分组管理",
+    "create": "新建分组",
+    "edit": "编辑分组",
+    "delete": "删除分组",
+    "name": "分组名称",
+    "type": "关联类型",
+    "entityId": "实体 ID",
+    "namePlaceholder": "请输入分组名称",
+    "entityIdPlaceholder": "请输入关联实体 ID",
+    "deleteConfirm": "确定要删除该分组吗？"
+  },
+  "transactionLink": {
+    "title": "交易关联管理",
+    "create": "新建关联",
+    "transaction": "交易 ID",
+    "type": "关联类型",
+    "linkedJournal": "关联交易日志 ID",
+    "transactionPlaceholder": "请输入交易 ID",
+    "linkedJournalPlaceholder": "请输入关联交易日志 ID",
+    "deleteConfirm": "确定要删除该关联吗？"
+  },
+  "preference": {
+    "title": "偏好设置管理",
+    "key": "偏好键",
+    "value": "偏好值",
+    "keyPlaceholder": "请输入偏好键（如：list_page_size）",
+    "valuePlaceholder": "请输入偏好值",
+    "deleteConfirm": "确定要删除该偏好吗？"
   }
 }

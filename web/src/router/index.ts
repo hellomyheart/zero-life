@@ -207,6 +207,24 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: () => import('@/pages/settings/UserManagementPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/settings/preferences',
+    name: 'PreferenceSettings',
+    component: () => import('@/pages/settings/PreferencesPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/object-groups',
+    name: 'ObjectGroupList',
+    component: () => import('@/pages/objectGroups/ObjectGroupListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/transaction-links',
+    name: 'TransactionLinkList',
+    component: () => import('@/pages/transactionLinks/TransactionLinkListPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 // 创建路由实例，使用HTML5 History模式
