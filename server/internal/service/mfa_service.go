@@ -14,7 +14,6 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/totp"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
-	"gorm.io/gorm"
 )
 
 const (

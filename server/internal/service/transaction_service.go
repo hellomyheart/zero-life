@@ -129,7 +129,7 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 
 	// Trigger webhooks (async)
 	if s.webhookNotifier != nil {
-		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionCreate, created)
+		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionCreate), created)
 	}
 
 	return s.toResp(created), nil
@@ -258,7 +258,7 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 
 	// Trigger webhooks (async)
 	if s.webhookNotifier != nil {
-		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionUpdate, updated)
+		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionUpdate), updated)
 	}
 
 	return s.toResp(updated), nil
@@ -275,7 +275,7 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 
 	// Trigger webhooks before delete (async)
 	if s.webhookNotifier != nil {
-		s.webhookNotifier.TriggerWebhooks(userID, model.WebhookTriggerTransactionDelete, txn)
+		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionDelete), txn)
 	}
 
 	// Rollback balance changes
