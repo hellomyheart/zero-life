@@ -1,5 +1,6 @@
 // Package service 业务逻辑层，实现核心业务逻辑
 // TransactionService 交易业务逻辑，处理交易的增删改查、拆分、合并和搜索
+package service
 
 import (
 	"time"
@@ -477,7 +478,8 @@ func tagModelToResp(t *model.Tag) response.TagResp {
 // Split 拆分交易
 // 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
 func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTransactionReq) (*response.TransactionResp, error) {
-	// 获取父交易	parent, err := s.txnRepo.GetByID(parentID, userID)
+	// 获取父交易
+	parent, err := s.txnRepo.GetByID(parentID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +489,8 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "cannot split a child transaction")
 	}
 
-	// 检查是否已有拆分	splits, _ := s.txnRepo.GetSplits(parentID, userID)
+	// 检查是否已有拆分
+	splits, _ := s.txnRepo.GetSplits(parentID, userID)
 	if len(splits) > 0 {
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "transaction already has splits, merge them first")
 	}
@@ -545,14 +548,11 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		splitModels = append(splitModels, splitTxn)
 	}
 
-	// 淇濆瓨拆分交易
+	// 批量保存拆分交易
 	if err := s.txnRepo.CreateBatch(splitModels); err != nil {
 		return nil, err
 	}
 
-	
-		// 为拆分交易添加标签	for i, splitReq := range req.Splits {
-		if len(splitReq.Tags) > 0 {
 	// 为拆分交易添加标签
 	for i, splitReq := range req.Splits {
 		if len(splitReq.Tags) > 0 {
@@ -567,7 +567,7 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 }
 
 // GetSplits 获取拆分交易列表
-func (s *TransactionService) GetSplits(userID, parentID uint64) ([]*response.TransactionResp, error) {
+func (s *TransactionService) GetSplits(userID uint64, parentID uint64) ([]*response.TransactionResp, error) {
 	splits, err := s.txnRepo.GetSplits(parentID, userID)
 	if err != nil {
 		return nil, err
