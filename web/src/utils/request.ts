@@ -39,7 +39,7 @@ service.interceptors.response.use(
     if (res.code && res.code !== 0) {
       return Promise.reject(new Error(res.message || 'Request failed'))
     }
-    return res.data !== undefined ? res.data : res
+    return (res.data !== undefined ? res.data : res) as typeof response.data
   },
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }

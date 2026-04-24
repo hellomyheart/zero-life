@@ -159,9 +159,9 @@ func (s *AuthService) RefreshToken(refreshToken string) (*response.LoginResp, er
 	}, nil
 }
 
-func (s *AuthService) ForgotPassword(email string) error {
+func (s *AuthService) ForgotPassword(emailAddr string) error {
 	// Check user exists
-	user, err := s.authRepo.FindByEmail(email)
+	user, err := s.authRepo.FindByEmail(emailAddr)
 	if err != nil {
 		// Don't reveal whether email exists
 		return nil

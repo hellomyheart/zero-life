@@ -18,7 +18,7 @@ const total = ref(0)
 const loading = ref(false)
 
 const filter = reactive({
-  type: '' as string,
+  type: undefined as TransactionType | undefined,
   start_date: '',
   end_date: '',
   source_account_id: '',
@@ -39,7 +39,7 @@ async function fetchTransactions() {
     if (filter.category_id) params.category_id = filter.category_id
     if (filter.keyword) params.keyword = filter.keyword
 
-    const res = await list(params as typeof filter)
+    const res = await list(params as unknown as typeof filter)
     const data = res as unknown as { items: Transaction[]; total: number }
     transactions.value = data.items || []
     total.value = data.total || 0
@@ -86,7 +86,7 @@ function handleFilter() {
 }
 
 function resetFilter() {
-  filter.type = ''
+  filter.type = undefined
   filter.start_date = ''
   filter.end_date = ''
   filter.source_account_id = ''

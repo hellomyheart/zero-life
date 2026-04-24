@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 

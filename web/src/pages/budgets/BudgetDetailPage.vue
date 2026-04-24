@@ -47,7 +47,7 @@ onMounted(async () => {
         <el-col :span="8">
           <el-card shadow="hover">
             <template #header>{{ t('budget.usageRate') }}</template>
-            <div class="amount">{{ formatPercent(budget.spent / budget.amount) }}</div>
+            <div class="amount">{{ formatPercent(Number(budget.spent) / Number(budget.amount)) }}</div>
           </el-card>
         </el-col>
       </el-row>

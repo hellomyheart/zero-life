@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/glebarez/sqlite"
 	"github.com/hellomyheart/zero-life/server/internal/config"
 	"github.com/hellomyheart/zero-life/server/internal/controller"
 	"github.com/hellomyheart/zero-life/server/internal/model"
@@ -16,7 +17,6 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/router"
 	"github.com/hellomyheart/zero-life/server/internal/service"
 	"go.uber.org/zap"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -141,6 +141,8 @@ func main() {
 	linkTypeRepo := repository.NewLinkTypeRepository(db)
 	txnLinkRepo := repository.NewTransactionLinkRepository(db)
 	prefRepo := repository.NewPreferenceRepository(db)
+	rtRepo := repository.NewRecurringTransactionRepository(db)
+	ogRepo := repository.NewObjectGroupRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(authRepo, jwtService, rdb)
@@ -159,14 +161,16 @@ func main() {
 	importService := service.NewImportService(txnService, accountRepo, db)
 	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
-	exportService := service.NewExportService(txnRepo, accountRepo)
+	exportService := service.NewExportService(txnRepo, accountRepo, billRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	recurrenceService := service.NewRecurrenceService(recurrenceRepo, txnService, accountRepo)
 	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService)
-	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo, db)
+	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
 	txnLinkService := service.NewTransactionLinkService(txnLinkRepo)
 	prefService := service.NewPreferenceService(prefRepo)
+	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, accountRepo, db)
+	ogService := service.NewObjectGroupService(ogRepo)
 
 	// Initialize default currencies
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
@@ -183,22 +187,24 @@ func main() {
 	billCtrl := controller.NewBillController(billService)
 	currencyCtrl := controller.NewCurrencyController(currencyService)
 	ruleCtrl := controller.NewRuleController(ruleService)
-	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
+	_ = controller.NewRuleGroupController(ruleGroupService) // Unused for now
 	reportCtrl := controller.NewReportController(reportService)
 	dashboardCtrl := controller.NewDashboardController(dashboardService)
 	importCtrl := controller.NewImportController(importService)
 	piggyBankCtrl := controller.NewPiggyBankController(piggyBankService)
 	attachmentCtrl := controller.NewAttachmentController(attachmentService)
-	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo)
+	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo, budgetRepo, billRepo)
 	exportCtrl := controller.NewExportController(exportService)
-	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
-	cronCtrl := controller.NewCronController(cronService)
+	_ = controller.NewRecurrenceController(recurrenceService) // Unused for now
+	_ = controller.NewCronController(cronService) // Unused for now
 	webhookCtrl := controller.NewWebhookController(webhookService)
 	reconCtrl := controller.NewReconciliationController(reconService)
-	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
-	linkTypeCtrl := controller.NewLinkTypeController(linkTypeService)
+	_ = controller.NewTransactionBulkController(txnBulkService) // Unused for now
+	_ = controller.NewLinkTypeController(linkTypeService) // Unused for now
 	txnLinkCtrl := controller.NewTransactionLinkController(txnLinkService)
 	prefCtrl := controller.NewPreferenceController(prefService)
+	rtCtrl := controller.NewRecurringTransactionController(rtService)
+	ogCtrl := controller.NewObjectGroupController(ogService)
 
 	// Initialize Gin engine
 	if config.C.App.Env == "production" {
@@ -219,7 +225,6 @@ func main() {
 		billCtrl,
 		currencyCtrl,
 		ruleCtrl,
-		ruleGroupCtrl,
 		reportCtrl,
 		dashboardCtrl,
 		importCtrl,
@@ -227,16 +232,14 @@ func main() {
 		attachmentCtrl,
 		autocompleteCtrl,
 		exportCtrl,
-		recurrenceCtrl,
-		cronCtrl,
+		rtCtrl,
 		webhookCtrl,
-		reconCtrl,
-		txnBulkCtrl,
-		linkTypeCtrl,
+		ogCtrl,
 		txnLinkCtrl,
 		prefCtrl,
+		reconCtrl,
 	)
-	r.Setup(jwtService, db)
+	r.Setup(jwtService)
 
 	// Start server
 	addr := ":" + config.C.App.Port

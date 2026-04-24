@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, remove, toggleStatus, execute } from '@/api/rule'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { Rule, CreateRuleReq, RuleConditionReq, RuleActionReq } from '@/types/rule'
+import type { Rule, CreateRuleReq } from '@/types/rule'
 
 const { t } = useI18n()
 

@@ -3,9 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { list, remove } from '@/api/budget'
-import { formatAmount, formatPercent } from '@/utils/format'
+import { formatAmount } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Budget } from '@/types/budget'
+import { BudgetPeriod } from '@/types/budget'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -19,7 +20,7 @@ const editingId = ref<string | null>(null)
 const form = ref({
   name: '',
   amount: '0',
-  period: 'monthly' as string,
+  period: 'monthly' as BudgetPeriod,
   category_ids: [] as string[],
   start_date: '',
 })
@@ -38,7 +39,7 @@ async function fetchBudgets() {
 function handleCreate() {
   dialogTitle.value = t('budget.create')
   editingId.value = null
-  form.value = { name: '', amount: '0', period: 'monthly', category_ids: [], start_date: '' }
+  form.value = { name: '', amount: '0', period: BudgetPeriod.Monthly, category_ids: [], start_date: '' }
   dialogVisible.value = true
 }
 

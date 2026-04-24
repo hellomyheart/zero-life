@@ -3,7 +3,6 @@ import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { upload, parse, execute } from '@/api/import'
 import { ElMessage } from 'element-plus'
-import type { UploadFile } from 'element-plus'
 
 const { t } = useI18n()
 
@@ -14,12 +13,6 @@ const parsedData = ref<Record<string, unknown>[]>([])
 const columnMapping = reactive<Record<string, string>>({})
 const availableColumns = ref<string[]>([])
 const targetFields = ['date', 'description', 'amount', 'source_account', 'category', 'tags']
-
-function handleUploadSuccess(response: unknown) {
-  const res = response as { file_id: string }
-  fileId.value = res.file_id
-  step.value = 2
-}
 
 async function handleUpload(options: { file: File }) {
   loading.value = true
