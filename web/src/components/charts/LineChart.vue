@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 折线图组件 - 基于ECharts封装，支持多系列折线图
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -11,15 +12,17 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 
+// 注册ECharts必需的组件（按需引入，减小打包体积）
 use([TitleComponent, TooltipComponent, LegendComponent, GridComponent, LineChart, CanvasRenderer])
 
 const props = defineProps<{
-  data: Record<string, unknown>[]
-  xField: string
-  yFields: { field: string; name: string }[]
-  title?: string
+  data: Record<string, unknown>[] // 数据源数组
+  xField: string // X轴字段名
+  yFields: { field: string; name: string }[] // Y轴字段配置，支持多条线
+  title?: string // 图表标题
 }>()
 
+// 根据props动态计算ECharts配置项
 const option = computed(() => ({
   title: {
     text: props.title || '',
@@ -49,7 +52,7 @@ const option = computed(() => ({
     name: y.name,
     type: 'line' as const,
     data: props.data.map((item) => item[y.field]),
-    smooth: true,
+    smooth: true, // 平滑曲线
   })),
 }))
 </script>

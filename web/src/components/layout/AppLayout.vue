@@ -1,15 +1,19 @@
 <script setup lang="ts">
+// 主布局组件 - 包含侧边栏、顶栏和内容区
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 </script>
 
 <template>
+  <!-- 整体布局：左侧侧边栏 + 右侧主内容区 -->
   <el-container class="app-layout">
     <AppSidebar />
     <el-container class="main-container">
+      <!-- 顶部导航栏 -->
       <el-header class="app-header">
         <AppHeader />
       </el-header>
+      <!-- 页面内容区，通过router-view渲染当前路由页面 -->
       <el-main class="app-main">
         <router-view />
       </el-main>

@@ -1,3 +1,4 @@
+// 认证相关API接口 - 登录、注册、Token刷新、密码重置、个人信息
 import { post, get, put } from '@/utils/request'
 import type { LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, UpdateProfileReq, ChangePasswordReq, LoginResp, ProfileResp } from '@/types/auth'
 

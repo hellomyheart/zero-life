@@ -1,3 +1,4 @@
+// 账户相关API接口 - 账户的增删改查
 import { get, post, put, del } from '@/utils/request'
 import type { Account, CreateAccountReq, UpdateAccountReq, AccountListReq } from '@/types/account'
 import type { PageResult } from '@/types/common'

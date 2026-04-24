@@ -11,9 +11,15 @@
     "tags": "标签",
     "budgets": "预算",
     "bills": "账单",
+    "piggyBanks": "储蓄罐",
+    "recurringTransactions": "定期交易",
     "reports": "报表",
     "imports": "数据导入",
+    "exports": "数据导出",
     "rules": "规则",
+    "webhooks": "Webhook",
+    "attachments": "附件",
+    "reconciliations": "对账",
     "settings": "设置"
   },
   "report": {
@@ -21,11 +27,14 @@
     "category": "分类报表",
     "budget": "预算报表",
     "netWorth": "净值报表",
-    "trend": "趋势报表"
+    "trend": "趋势报表",
+    "tag": "标签报表"
   },
   "setting": {
     "profile": "个人设置",
-    "currencies": "货币管理"
+    "currencies": "货币管理",
+    "mfa": "两步验证",
+    "users": "用户管理"
   },
   "auth": {
     "login": "登录",
@@ -229,5 +238,99 @@
     "oldPassword": "旧密码",
     "newPassword": "新密码",
     "confirmNewPassword": "确认新密码"
+  },
+  "piggyBank": {
+    "title": "储蓄罐管理",
+    "create": "新建储蓄罐",
+    "edit": "编辑储蓄罐",
+    "name": "名称",
+    "targetAmount": "目标金额",
+    "currentAmount": "当前金额",
+    "percentage": "完成进度",
+    "targetDate": "目标日期",
+    "notes": "备注",
+    "amount": "金额",
+    "addMoney": "存入",
+    "removeMoney": "取出",
+    "deleteConfirm": "确定要删除该储蓄罐吗？"
+  },
+  "recurringTransaction": {
+    "title": "定期交易",
+    "create": "新建定期交易",
+    "edit": "编辑定期交易",
+    "title_field": "标题",
+    "type": "交易类型",
+    "amount": "金额",
+    "recurrenceType": "重复类型",
+    "repeatInterval": "重复间隔",
+    "startDate": "开始日期",
+    "endDate": "结束日期",
+    "nextDate": "下次执行",
+    "active": "启用",
+    "processDue": "执行到期交易",
+    "daily": "每天",
+    "weekly": "每周",
+    "monthly": "每月",
+    "yearly": "每年",
+    "deleteConfirm": "确定要删除该定期交易吗？"
+  },
+  "webhook": {
+    "title": "Webhook 管理",
+    "create": "新建 Webhook",
+    "edit": "编辑 Webhook",
+    "name": "名称",
+    "url": "URL",
+    "trigger": "触发事件",
+    "active": "启用",
+    "lastDelivered": "最后推送",
+    "deleteConfirm": "确定要删除该 Webhook 吗？"
+  },
+  "export": {
+    "title": "数据导出",
+    "format": "格式",
+    "transactions": "交易记录",
+    "accounts": "账户数据",
+    "budgets": "预算数据",
+    "categories": "分类数据",
+    "tags": "标签数据"
+  },
+  "attachment": {
+    "title": "附件管理",
+    "upload": "上传附件",
+    "selectFile": "选择文件",
+    "filename": "文件名",
+    "mime": "类型",
+    "size": "大小",
+    "createdAt": "上传时间",
+    "download": "下载",
+    "deleteConfirm": "确定要删除该附件吗？"
+  },
+  "reconciliation": {
+    "title": "对账管理",
+    "create": "新建对账",
+    "edit": "编辑对账",
+    "startBalance": "起始余额",
+    "endBalance": "结束余额",
+    "difference": "差额",
+    "status": "状态",
+    "deleteConfirm": "确定要删除该对账记录吗？"
+  },
+  "mfa": {
+    "title": "两步验证设置",
+    "status": "当前状态",
+    "setup": "设置两步验证",
+    "enable": "启用",
+    "disable": "禁用",
+    "scanQR": "请使用验证器App扫描以下二维码",
+    "secret": "密钥",
+    "enterCode": "输入验证码"
+  },
+  "user": {
+    "title": "用户管理",
+    "role": "角色",
+    "locked": "已锁定",
+    "lock": "锁定",
+    "unlock": "解锁",
+    "deleteConfirm": "确定要删除该用户吗？"
   }
 }

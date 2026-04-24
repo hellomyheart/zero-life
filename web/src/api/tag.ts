@@ -1,3 +1,4 @@
+// 标签相关API接口 - 标签的增删改查
 import { get, post, put, del } from '@/utils/request'
 import type { Tag, CreateTagReq, UpdateTagReq } from '@/types/tag'
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 顶栏组件 - 包含侧边栏折叠按钮、语言切换、用户菜单
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
@@ -10,15 +11,18 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 const router = useRouter()
 
+// 切换语言并保存到本地存储
 function handleLanguageChange(lang: string) {
   locale.value = lang
   localStorage.setItem('locale', lang)
 }
 
+// 退出登录
 function handleLogout() {
   authStore.logout()
 }
 
+// 跳转到个人设置页
 function goToProfile() {
   router.push('/settings/profile')
 }
@@ -27,6 +31,7 @@ function goToProfile() {
 <template>
   <div class="header-container">
     <div class="header-left">
+      <!-- 侧边栏折叠/展开切换按钮 -->
       <el-icon class="collapse-btn" @click="appStore.toggleSidebar">
         <Fold v-if="!appStore.sidebarCollapsed" />
         <Expand v-else />
@@ -34,6 +39,7 @@ function goToProfile() {
       <span class="app-title">{{ t('app.title') }}</span>
     </div>
     <div class="header-right">
+      <!-- 语言切换下拉菜单 -->
       <el-dropdown trigger="click" @command="handleLanguageChange">
         <span class="dropdown-link">
           {{ locale === 'zh-CN' ? '中文' : 'English' }}
@@ -45,9 +51,11 @@ function goToProfile() {
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+      <!-- 用户信息下拉菜单 -->
       <el-dropdown trigger="click">
         <span class="dropdown-link">
           <el-icon><User /></el-icon>
+          <!-- 优先显示昵称，其次显示邮箱 -->
           {{ authStore.user?.nickname || authStore.user?.email || '' }}
         </span>
         <template #dropdown>

@@ -1,3 +1,6 @@
+// Package main 是服务器入口，负责初始化并启动HTTP服务
+// 启动流程：加载配置 → 初始化日志 → 连接数据库 → 数据库迁移 → 初始化Redis
+// → 创建JWT服务 → 创建Repository → 创建Service → 创建Controller → 设置路由 → 启动HTTP服务
 package main
 
 import (
@@ -20,13 +23,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// main 是程序入口，按顺序完成所有依赖初始化后启动HTTP服务
 func main() {
-	// Load config
+	// 加载配置文件（config.yaml）
 	if err := config.Load(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Initialize logger
+	// 根据环境初始化日志：生产环境用JSON格式，开发环境用控制台格式
 	var logger *zap.Logger
 	var err error
 	if config.C.App.Env == "production" {
@@ -39,7 +43,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	// Initialize database
+	// 初始化SQLite数据库，确保数据库目录存在
 	dbPath := config.C.DB.Path
 	dbDir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -51,19 +55,20 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
+	// 设置数据库连接池参数
 	sqlDB, err := db.DB()
 	if err != nil {
 		logger.Fatal("Failed to get database instance", zap.Error(err))
 	}
-	sqlDB.SetMaxIdleConns(config.C.DB.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(config.C.DB.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(config.C.DB.MaxLifetime)
+	sqlDB.SetMaxIdleConns(config.C.DB.MaxIdleConns) // 最大空闲连接数
+	sqlDB.SetMaxOpenConns(config.C.DB.MaxOpenConns) // 最大打开连接数
+	sqlDB.SetConnMaxLifetime(config.C.DB.MaxLifetime) // 连接最大存活时间
 
-	// SQLite PRAGMA settings
+	// SQLite优化设置：WAL模式提升并发读写性能，开启外键约束
 	db.Exec("PRAGMA journal_mode=WAL")
 	db.Exec("PRAGMA foreign_keys=ON")
 
-	// Auto migrate
+	// 自动迁移：根据模型定义自动创建/更新数据库表结构
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Account{},
@@ -103,7 +108,7 @@ func main() {
 		logger.Fatal("Failed to auto migrate", zap.Error(err))
 	}
 
-	// Initialize attachment storage directory
+	// 初始化附件存储目录
 	attachPath := config.C.Attach.Path
 	if attachPath == "" {
 		attachPath = "./data/attachments"
@@ -112,17 +117,17 @@ func main() {
 		logger.Fatal("Failed to create attachment directory", zap.Error(err))
 	}
 
-	// Initialize Redis
+	// 初始化Redis客户端，用于JWT令牌存储和缓存
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", config.C.Redis.Host, config.C.Redis.Port),
 		Password: config.C.Redis.Password,
 		DB:       config.C.Redis.DB,
 	})
 
-	// Initialize JWT service
+	// 初始化JWT服务，用于生成和验证访问令牌
 	jwtService := jwt.NewService()
 
-	// Initialize repositories
+	// 初始化数据访问层（Repository），每个Repository对应一个数据库表的操作
 	authRepo := repository.NewAuthRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
@@ -144,8 +149,10 @@ func main() {
 	prefRepo := repository.NewPreferenceRepository(db)
 	rtRepo := repository.NewRecurringTransactionRepository(db)
 	ogRepo := repository.NewObjectGroupRepository(db)
+	configRepo := repository.NewConfigurationRepository(db)
 
-	// Initialize services
+	// 初始化业务逻辑层（Service），Service组合Repository实现业务逻辑
+	// 依赖注入：Service通过构造函数接收所需的Repository和其他Service
 	authService := service.NewAuthService(authRepo, jwtService, rdb)
 	accountService := service.NewAccountService(accountRepo)
 	ruleService := service.NewRuleService(ruleRepo, txnRepo, categoryRepo, budgetRepo, tagRepo)
@@ -156,7 +163,7 @@ func main() {
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo)
 	billService := service.NewBillService(billRepo)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
-	ruleGroupService := service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo)
+	_ = service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo)
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo)
 	importService := service.NewImportService(txnService, accountRepo, db)
@@ -180,12 +187,12 @@ func main() {
 	// 新增用户管理服务
 	userService := service.NewUserService(userRepo, db)
 
-	// Initialize default currencies
+	// 初始化默认货币数据（如CNY、USD等）
 	if err := currencyService.InitDefaultCurrencies(); err != nil {
 		logger.Warn("Failed to initialize default currencies", zap.Error(err))
 	}
 
-	// Initialize controllers
+	// 初始化控制器层（Controller），Controller接收HTTP请求并调用Service处理
 	authCtrl := controller.NewAuthController(authService)
 	accountCtrl := controller.NewAccountController(accountService)
 	txnCtrl := controller.NewTransactionController(txnService)
@@ -195,7 +202,6 @@ func main() {
 	billCtrl := controller.NewBillController(billService)
 	currencyCtrl := controller.NewCurrencyController(currencyService)
 	ruleCtrl := controller.NewRuleController(ruleService)
-	_ = controller.NewRuleGroupController(ruleGroupService) // Unused for now
 	reportCtrl := controller.NewReportController(reportService)
 	dashboardCtrl := controller.NewDashboardController(dashboardService)
 	importCtrl := controller.NewImportController(importService)
@@ -203,32 +209,31 @@ func main() {
 	attachmentCtrl := controller.NewAttachmentController(attachmentService)
 	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo, budgetRepo, billRepo)
 	exportCtrl := controller.NewExportController(exportService)
-	_ = controller.NewRecurrenceController(recurrenceService) // Unused for now
-	_ = controller.NewCronController(cronService) // Unused for now
 	webhookCtrl := controller.NewWebhookController(webhookService)
 	reconCtrl := controller.NewReconciliationController(reconService)
-	_ = controller.NewTransactionBulkController(txnBulkService) // Unused for now
-	_ = controller.NewLinkTypeController(linkTypeService) // Unused for now
 	txnLinkCtrl := controller.NewTransactionLinkController(txnLinkService)
 	prefCtrl := controller.NewPreferenceController(prefService)
 	rtCtrl := controller.NewRecurringTransactionController(rtService)
 	ogCtrl := controller.NewObjectGroupController(ogService)
-	// 新增图表和洞察控制器
 	chartCtrl := controller.NewChartController(chartService)
 	insightCtrl := controller.NewInsightController(insightService)
-	// 新增MFA控制器
 	mfaCtrl := controller.NewMFAController(mfaService)
-	// 新增用户管理控制器
 	userCtrl := controller.NewUserController(userService)
+	linkTypeCtrl := controller.NewLinkTypeController(linkTypeService)
+	adminService := service.NewAdminService(userRepo, configRepo)
+	adminCtrl := controller.NewAdminController(adminService)
+	adminUserCtrl := controller.NewAdminUserController(adminService)
+	cronCtrl := controller.NewCronController(cronService)
+	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
 
-	// Initialize Gin engine
+	// 初始化Gin引擎，生产环境使用Release模式减少日志输出
 	if config.C.App.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
-	// Setup router
+	// 设置路由：注册所有API端点和中间件
 	r := router.NewRouter(
 		engine,
 		authCtrl,
@@ -257,10 +262,15 @@ func main() {
 		insightCtrl,
 		mfaCtrl,
 		userCtrl,
+		linkTypeCtrl,
+		adminCtrl,
+		adminUserCtrl,
+		cronCtrl,
+		txnBulkCtrl,
 	)
 	r.Setup(jwtService)
 
-	// Start server
+	// 启动HTTP服务器，监听配置的端口
 	addr := ":" + config.C.App.Port
 	logger.Info("Server starting", zap.String("addr", addr))
 	if err := engine.Run(addr); err != nil {

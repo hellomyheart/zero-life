@@ -1,3 +1,4 @@
+// Package router 负责HTTP路由注册，将URL路径映射到对应的控制器方法
 package router
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 )
 
+// Router 路由器，持有Gin引擎和所有控制器的引用，用于注册API路由
 type Router struct {
 	engine *gin.Engine
 
@@ -36,8 +38,14 @@ type Router struct {
 	insightCtrl           *controller.InsightController
 	mfaCtrl               *controller.MFAController
 	userCtrl              *controller.UserController
+	linkTypeCtrl          *controller.LinkTypeController
+	adminCtrl             *controller.AdminController
+	adminUserCtrl         *controller.AdminUserController
+	cronCtrl              *controller.CronController
+	txnBulkCtrl           *controller.TransactionBulkController
 }
 
+// NewRouter 创建路由器实例，注入所有控制器依赖
 func NewRouter(
 	engine *gin.Engine,
 	authCtrl *controller.AuthController,
@@ -66,6 +74,11 @@ func NewRouter(
 	insightCtrl *controller.InsightController,
 	mfaCtrl *controller.MFAController,
 	userCtrl *controller.UserController,
+	linkTypeCtrl *controller.LinkTypeController,
+	adminCtrl *controller.AdminController,
+	adminUserCtrl *controller.AdminUserController,
+	cronCtrl *controller.CronController,
+	txnBulkCtrl *controller.TransactionBulkController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -95,14 +108,24 @@ func NewRouter(
 		insightCtrl:          insightCtrl,
 		mfaCtrl:              mfaCtrl,
 		userCtrl:             userCtrl,
+		linkTypeCtrl:         linkTypeCtrl,
+		adminCtrl:            adminCtrl,
+		adminUserCtrl:        adminUserCtrl,
+		cronCtrl:             cronCtrl,
+		txnBulkCtrl:          txnBulkCtrl,
 	}
 }
 
+// Setup 注册所有API路由，包括公开路由和需要认证的路由
+// 路由结构：/api/v1 下分为公开路由（如注册登录）和认证路由（需JWT验证）
 func (r *Router) Setup(jwtService *jwt.Service) {
+	// 全局CORS中间件，允许跨域请求
 	r.engine.Use(middleware.CORS())
 
+	// API v1版本路由组
 	v1 := r.engine.Group("/api/v1")
 
+	// 认证路由组（公开，无需登录）
 	auth := v1.Group("/auth")
 	{
 		auth.POST("/register", r.authCtrl.Register)
@@ -112,9 +135,11 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 		auth.POST("/reset-password", r.authCtrl.ResetPassword)
 	}
 
+	// 需要JWT认证的路由组，所有请求必须携带有效Token
 	authenticated := v1.Group("")
 	authenticated.Use(middleware.Auth(jwtService))
 	{
+		// 认证后的用户信息路由
 		authAuth := authenticated.Group("/auth")
 		{
 			authAuth.GET("/profile", r.authCtrl.GetProfile)
@@ -122,6 +147,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			authAuth.PUT("/password", r.authCtrl.ChangePassword)
 		}
 
+		// 账户管理路由
 		accounts := authenticated.Group("/accounts")
 		{
 			accounts.POST("", r.accountCtrl.Create)
@@ -131,6 +157,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			accounts.DELETE("/:id", r.accountCtrl.Delete)
 		}
 
+		// 交易管理路由
 		transactions := authenticated.Group("/transactions")
 		{
 			transactions.POST("", r.txnCtrl.Create)
@@ -145,6 +172,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			transactions.POST("/:id/merge", r.txnCtrl.MergeSplits)
 		}
 
+		// 分类管理路由
 		categories := authenticated.Group("/categories")
 		{
 			categories.POST("", r.categoryCtrl.Create)
@@ -153,6 +181,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			categories.DELETE("/:id", r.categoryCtrl.Delete)
 		}
 
+		// 标签管理路由
 		tags := authenticated.Group("/tags")
 		{
 			tags.POST("", r.tagCtrl.Create)
@@ -161,6 +190,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			tags.DELETE("/:id", r.tagCtrl.Delete)
 		}
 
+		// 预算管理路由
 		budgets := authenticated.Group("/budgets")
 		{
 			budgets.POST("", r.budgetCtrl.Create)
@@ -171,6 +201,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			budgets.GET("/:id/history", r.budgetCtrl.GetHistory)
 		}
 
+		// 账单管理路由
 		bills := authenticated.Group("/bills")
 		{
 			bills.POST("", r.billCtrl.Create)
@@ -180,6 +211,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			bills.DELETE("/:id", r.billCtrl.Delete)
 		}
 
+		// 货币管理路由
 		currencies := authenticated.Group("/currencies")
 		{
 			currencies.GET("", r.currencyCtrl.List)
@@ -189,6 +221,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			currencies.POST("/exchange-rates", r.currencyCtrl.SetExchangeRate)
 		}
 
+		// 规则管理路由（自动分类、自动标记等）
 		rules := authenticated.Group("/rules")
 		{
 			rules.POST("", r.ruleCtrl.Create)
@@ -200,6 +233,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			rules.POST("/:id/execute", r.ruleCtrl.Execute)
 		}
 
+		// 报表路由
 		reports := authenticated.Group("/reports")
 		{
 			reports.GET("/income-expense", r.reportCtrl.IncomeExpense)
@@ -355,9 +389,44 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			users.POST("/:id/unlock", r.userCtrl.Unlock)
 		}
 
+		// Link type routes - 链接类型管理API
+		linkTypes := authenticated.Group("/link-types")
+		{
+			linkTypes.POST("", r.linkTypeCtrl.Create)
+			linkTypes.GET("", r.linkTypeCtrl.List)
+			linkTypes.GET("/:id", r.linkTypeCtrl.Get)
+			linkTypes.PUT("/:id", r.linkTypeCtrl.Update)
+			linkTypes.DELETE("/:id", r.linkTypeCtrl.Delete)
+		}
+
+		// Admin routes - 管理员API
+		admin := authenticated.Group("/admin")
+		{
+			admin.GET("/configurations", r.adminCtrl.ListConfigurations)
+			admin.GET("/configurations/:name", r.adminCtrl.GetConfiguration)
+			admin.PUT("/configurations/:name", r.adminCtrl.UpdateConfiguration)
+			admin.POST("/test-email", r.adminCtrl.TestEmail)
+			admin.GET("/users", r.adminUserCtrl.ListUsers)
+			admin.PUT("/users/:id", r.adminUserCtrl.UpdateUser)
+			admin.DELETE("/users/:id", r.adminUserCtrl.DeleteUser)
+			admin.POST("/users/invite", r.adminUserCtrl.InviteUser)
+		}
+
+		// Transaction bulk operations - 交易批量操作API
+		txnBulk := authenticated.Group("/transactions/bulk")
+		{
+			txnBulk.POST("/edit", r.txnBulkCtrl.BulkEdit)
+			txnBulk.POST("/delete", r.txnBulkCtrl.BulkDelete)
+			txnBulk.POST("/:id/convert", r.txnBulkCtrl.ConvertType)
+			txnBulk.POST("/:id/clone", r.txnBulkCtrl.Clone)
+		}
+
 		// Health check (public within authenticated group)
 		authenticated.GET("/health", r.healthCheck)
 	}
+
+	// Cron route - 定时任务API（通过token验证，不需要JWT）
+	r.engine.GET("/api/v1/cron/:token", r.cronCtrl.Run)
 }
 
 func (r *Router) healthCheck(c *gin.Context) {

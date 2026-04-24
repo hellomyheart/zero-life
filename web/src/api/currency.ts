@@ -1,3 +1,4 @@
+// 货币相关API接口 - 货币列表、启用/禁用、默认货币、汇率管理
 import { get, put, post } from '@/utils/request'
 import type { Currency, ExchangeRate, SetCurrencyStatusReq, SetDefaultCurrencyReq, SetExchangeRateReq } from '@/types/currency'
 

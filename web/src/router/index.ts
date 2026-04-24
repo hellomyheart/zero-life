@@ -1,28 +1,31 @@
+// 路由配置 - 定义所有页面路由和导航守卫
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+// 公开路由 - 无需登录即可访问
 const publicRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/pages/auth/LoginPage.vue'),
-    meta: { requiresAuth: false },
+    component: () => import('@/pages/auth/LoginPage.vue'), // 懒加载登录页
+    meta: { requiresAuth: false }, // 不需要认证
   },
   {
     path: '/register',
     name: 'Register',
-    component: () => import('@/pages/auth/RegisterPage.vue'),
+    component: () => import('@/pages/auth/RegisterPage.vue'), // 懒加载注册页
     meta: { requiresAuth: false },
   },
   {
     path: '/reset-password',
     name: 'ResetPassword',
-    component: () => import('@/pages/auth/ResetPasswordPage.vue'),
+    component: () => import('@/pages/auth/ResetPasswordPage.vue'), // 懒加载重置密码页
     meta: { requiresAuth: false },
   },
 ]
 
+// 受保护路由 - 需要登录才能访问
 const protectedRoutes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -127,6 +130,48 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/reports/tag',
+    name: 'TagReport',
+    component: () => import('@/pages/reports/TagReport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/piggy-banks',
+    name: 'PiggyBankList',
+    component: () => import('@/pages/piggyBanks/PiggyBankListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/recurring-transactions',
+    name: 'RecurringTransactionList',
+    component: () => import('@/pages/recurringTransactions/RecurringTransactionListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/webhooks',
+    name: 'WebhookList',
+    component: () => import('@/pages/webhooks/WebhookListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/exports',
+    name: 'Export',
+    component: () => import('@/pages/exports/ExportPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/attachments',
+    name: 'AttachmentList',
+    component: () => import('@/pages/attachments/AttachmentListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reconciliations',
+    name: 'ReconciliationList',
+    component: () => import('@/pages/reconciliations/ReconciliationListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/imports',
     name: 'Import',
     component: () => import('@/pages/imports/ImportPage.vue'),
@@ -150,20 +195,36 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: () => import('@/pages/settings/CurrencySettingsPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/settings/mfa',
+    name: 'MFASettings',
+    component: () => import('@/pages/settings/MFASettingsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/users',
+    name: 'UserManagement',
+    component: () => import('@/pages/settings/UserManagementPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
+// 创建路由实例，使用HTML5 History模式
 const router = createRouter({
   history: createWebHistory(),
-  routes: [...publicRoutes, ...protectedRoutes],
+  routes: [...publicRoutes, ...protectedRoutes], // 合并公开和受保护路由
 })
 
+// 全局前置守卫 - 控制页面访问权限
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
-  const requiresAuth = to.meta.requiresAuth !== false
+  const requiresAuth = to.meta.requiresAuth !== false // 默认需要认证
 
   if (requiresAuth && !authStore.isAuthenticated) {
+    // 需要认证但未登录，跳转到登录页并记录原始路径
     next({ path: '/login', query: { redirect: to.fullPath } })
   } else if (!requiresAuth && authStore.isAuthenticated && to.path !== '/') {
+    // 已登录用户访问公开页面，重定向到首页
     next({ path: '/' })
   } else {
     next()
