@@ -278,3 +278,149 @@ func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error 
 
 	return r.db.Create(&transactionTags).Error
 }
+
+// AdvancedSearchFilter 高级搜索过滤器
+type AdvancedSearchFilter struct {
+	Keyword    string  // 关键词（描述、备注）
+	Type       string  // 交易类型
+	StartDate  string  // 开始日期
+	EndDate    string  // 结束日期
+	MinAmount  string  // 最小金额
+	MaxAmount  string  // 最大金额
+	AccountID  *uint64 // 账户ID
+	CategoryID *uint64 // 分类ID
+	TagID      *uint64 // 标签ID
+	Sort       string  // 排序字段
+}
+
+// AdvancedSearch 高级搜索交易
+func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSearchFilter, offset, limit int) ([]model.Transaction, error) {
+	query := r.db.Model(&model.Transaction{}).Where("user_id = ?", userID)
+
+	// 关键词搜索（描述或备注）
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		query = query.Where("description LIKE ? OR notes LIKE ?", keyword, keyword)
+	}
+
+	// 交易类型过滤
+	if filter.Type != "" {
+		query = query.Where("type = ?", filter.Type)
+	}
+
+	// 日期范围过滤
+	if filter.StartDate != "" {
+		query = query.Where("date >= ?", filter.StartDate)
+	}
+	if filter.EndDate != "" {
+		query = query.Where("date <= ?", filter.EndDate)
+	}
+
+	// 金额范围过滤
+	if filter.MinAmount != "" {
+		query = query.Where("amount >= ?", filter.MinAmount)
+	}
+	if filter.MaxAmount != "" {
+		query = query.Where("amount <= ?", filter.MaxAmount)
+	}
+
+	// 账户过滤
+	if filter.AccountID != nil {
+		query = query.Where("source_id = ? OR destination_id = ?", *filter.AccountID, *filter.AccountID)
+	}
+
+	// 分类过滤
+	if filter.CategoryID != nil {
+		query = query.Where("category_id = ?", *filter.CategoryID)
+	}
+
+	// 标签过滤
+	if filter.TagID != nil {
+		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id").
+			Where("transaction_tags.tag_id = ?", *filter.TagID)
+	}
+
+	// 排序
+	orderClause := "date DESC"
+	if filter.Sort != "" {
+		// 支持的排序字段: date, -date, amount, -amount, created_at, -created_at
+		switch filter.Sort {
+		case "date":
+			orderClause = "date ASC"
+		case "-date":
+			orderClause = "date DESC"
+		case "amount":
+			orderClause = "amount ASC"
+		case "-amount":
+			orderClause = "amount DESC"
+		case "created_at":
+			orderClause = "created_at ASC"
+		case "-created_at":
+			orderClause = "created_at DESC"
+		}
+	}
+
+	var txns []model.Transaction
+	err := query.Preload("Source").
+		Preload("Destination").
+		Preload("Category").
+		Preload("Tags").
+		Order(orderClause).
+		Offset(offset).
+		Limit(limit).
+		Find(&txns).Error
+
+	return txns, err
+}
+
+// AdvancedSearchCount 高级搜索计数
+func (r *TransactionRepository) AdvancedSearchCount(userID uint64, filter AdvancedSearchFilter) (int64, error) {
+	query := r.db.Model(&model.Transaction{}).Where("user_id = ?", userID)
+
+	// 关键词搜索
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		query = query.Where("description LIKE ? OR notes LIKE ?", keyword, keyword)
+	}
+
+	// 交易类型过滤
+	if filter.Type != "" {
+		query = query.Where("type = ?", filter.Type)
+	}
+
+	// 日期范围过滤
+	if filter.StartDate != "" {
+		query = query.Where("date >= ?", filter.StartDate)
+	}
+	if filter.EndDate != "" {
+		query = query.Where("date <= ?", filter.EndDate)
+	}
+
+	// 金额范围过滤
+	if filter.MinAmount != "" {
+		query = query.Where("amount >= ?", filter.MinAmount)
+	}
+	if filter.MaxAmount != "" {
+		query = query.Where("amount <= ?", filter.MaxAmount)
+	}
+
+	// 账户过滤
+	if filter.AccountID != nil {
+		query = query.Where("source_id = ? OR destination_id = ?", *filter.AccountID, *filter.AccountID)
+	}
+
+	// 分类过滤
+	if filter.CategoryID != nil {
+		query = query.Where("category_id = ?", *filter.CategoryID)
+	}
+
+	// 标签过滤
+	if filter.TagID != nil {
+		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id").
+			Where("transaction_tags.tag_id = ?", *filter.TagID)
+	}
+
+	var count int64
+	err := query.Count(&count).Error
+	return count, err
+}

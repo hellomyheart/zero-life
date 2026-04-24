@@ -300,12 +300,26 @@ func (s *TransactionService) Search(userID uint64, req *request.TransactionSearc
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
 
-	txns, err := s.txnRepo.Search(userID, req.Keyword, params.Offset(), params.PageSize)
+	// 构建高级搜索过滤器
+	filter := repository.AdvancedSearchFilter{
+		Keyword:    req.Keyword,
+		Type:       req.Type,
+		StartDate:  req.StartDate,
+		EndDate:    req.EndDate,
+		MinAmount:  req.MinAmount,
+		MaxAmount:  req.MaxAmount,
+		AccountID:  req.AccountID,
+		CategoryID: req.CategoryID,
+		TagID:      req.TagID,
+		Sort:       req.Sort,
+	}
+
+	txns, err := s.txnRepo.AdvancedSearch(userID, filter, params.Offset(), params.PageSize)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	total, err := s.txnRepo.SearchCount(userID, req.Keyword)
+	total, err := s.txnRepo.AdvancedSearchCount(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}

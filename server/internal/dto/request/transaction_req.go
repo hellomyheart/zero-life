@@ -48,9 +48,18 @@ type TransactionListReq struct {
 }
 
 type TransactionSearchReq struct {
-	Page     int    `form:"page,default=1"`
-	PageSize int    `form:"page_size,default=20"`
-	Keyword  string `form:"keyword" binding:"required"`
+	Page       int     `form:"page,default=1"`
+	PageSize   int     `form:"page_size,default=20"`
+	Keyword    string  `form:"keyword"`                              // 关键词搜索（描述、备注）
+	Type       string  `form:"type"`                                 // 交易类型过滤
+	StartDate  string  `form:"start_date"`                           // 开始日期
+	EndDate    string  `form:"end_date"`                             // 结束日期
+	MinAmount  string  `form:"min_amount"`                           // 最小金额
+	MaxAmount  string  `form:"max_amount"`                           // 最大金额
+	AccountID  *uint64 `form:"account_id"`                           // 账户ID
+	CategoryID *uint64 `form:"category_id"`                          // 分类ID
+	TagID      *uint64 `form:"tag_id"`                               // 标签ID
+	Sort       string  `form:"sort,default=-date"`                   // 排序字段
 }
 
 // SplitTransactionReq 拆分交易请求
