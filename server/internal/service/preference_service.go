@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// PreferenceService 偏好设置业务逻辑，管理用户个性化配置
 package service
 
 import (

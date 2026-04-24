@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 用户管理页面管理员 - 管理用户角色邀请禁用和删除
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, update, remove, lock, unlock } from '@/api/user'

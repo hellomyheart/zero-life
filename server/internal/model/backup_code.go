@@ -1,3 +1,5 @@
+// Package model 数据模型层，对应数据库结构
+// BackupCode MFA备用码模型，存储两步验证备用码
 package model
 
 import "time"

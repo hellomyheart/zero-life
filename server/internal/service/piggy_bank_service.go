@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// PiggyBankService 存钱罐业务逻辑，处理储蓄目标、存取和进度计算
 package service
 
 import (

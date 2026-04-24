@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// TransactionBulkService 交易批量操作业务逻辑，支持批量编辑、删除、类型转换和克隆
 package service
 
 import (

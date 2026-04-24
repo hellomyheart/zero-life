@@ -1,4 +1,5 @@
-package service
+// Package service 业务逻辑层，实现核心业务逻辑
+// TransactionService 交易业务逻辑，处理交易的增删改查、拆分、合并和搜索
 
 import (
 	"time"
@@ -300,7 +301,7 @@ func (s *TransactionService) Search(userID uint64, req *request.TransactionSearc
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
 
-	// 构建高级搜索过滤器
+	// 构建高级搜索过滤条件
 	filter := repository.AdvancedSearchFilter{
 		Keyword:    req.Keyword,
 		Type:       req.Type,
@@ -474,26 +475,24 @@ func tagModelToResp(t *model.Tag) response.TagResp {
 }
 
 // Split 拆分交易
-// 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
+// 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
 func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTransactionReq) (*response.TransactionResp, error) {
-	// 获取父交易
-	parent, err := s.txnRepo.GetByID(parentID, userID)
+	// 获取父交易	parent, err := s.txnRepo.GetByID(parentID, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 检查是否已经是拆分交易
+	// 妫€鏌ユ槸鍚﹀凡缁忔槸拆分交易
 	if parent.ParentID != nil {
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "cannot split a child transaction")
 	}
 
-	// 检查是否已有拆分
-	splits, _ := s.txnRepo.GetSplits(parentID, userID)
+	// 检查是否已有拆分	splits, _ := s.txnRepo.GetSplits(parentID, userID)
 	if len(splits) > 0 {
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "transaction already has splits, merge them first")
 	}
 
-	// 验证拆分金额总和
+	// 楠岃瘉鎷嗗垎閲戦鎬诲拰
 	totalSplitAmount := decimal.Zero
 	for _, split := range req.Splits {
 		amount, err := decimal.NewFromString(split.Amount)
@@ -510,7 +509,7 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "sum of split amounts must equal parent amount")
 	}
 
-	// 创建拆分交易
+	// 鍒涘缓拆分交易
 	now := time.Now()
 	splitModels := make([]model.Transaction, 0, len(req.Splits))
 
@@ -546,11 +545,14 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		splitModels = append(splitModels, splitTxn)
 	}
 
-	// 保存拆分交易
+	// 淇濆瓨拆分交易
 	if err := s.txnRepo.CreateBatch(splitModels); err != nil {
 		return nil, err
 	}
 
+	
+		// 为拆分交易添加标签	for i, splitReq := range req.Splits {
+		if len(splitReq.Tags) > 0 {
 	// 为拆分交易添加标签
 	for i, splitReq := range req.Splits {
 		if len(splitReq.Tags) > 0 {

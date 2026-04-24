@@ -1,3 +1,4 @@
+// 循环交易相关类型定义 - 循环交易接口、重复配置类型
 export enum RecurrenceType {
   Daily = 'daily',
   Weekly = 'weekly',

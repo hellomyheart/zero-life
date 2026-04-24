@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 存钱罐列表页面 - 展示储蓄目标和进度支持存取款
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove, addAmount, removeAmount } from '@/api/piggyBank'

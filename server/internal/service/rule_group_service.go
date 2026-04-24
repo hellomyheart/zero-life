@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// RuleGroupService 规则组业务逻辑，处理规则组的增删改查和组执行
 package service
 
 import (

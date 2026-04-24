@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// LinkTypeService 关联类型业务逻辑，管理交易关联类型和增删改查
 package service
 
 import (

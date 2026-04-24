@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// WebhookService Webhook业务逻辑，处理事件通知、签名和HTTP发送
 package service
 
 import (

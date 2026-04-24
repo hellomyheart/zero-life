@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// ImportService 数据导入业务逻辑，处理CSV文件解析和映射转换
 package service
 
 import (

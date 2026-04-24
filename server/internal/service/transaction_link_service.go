@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// TransactionLinkService 交易关联业务逻辑，处理交易之间的关联关系
 package service
 
 import (

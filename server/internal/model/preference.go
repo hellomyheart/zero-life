@@ -1,3 +1,5 @@
+// Package model 数据模型层，对应数据库结构
+// Preference 用户偏好模型，存储用户个性化配置
 package model
 
 import (

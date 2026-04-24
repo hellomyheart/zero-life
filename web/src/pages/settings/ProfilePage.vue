@@ -1,143 +1,154 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+/**
+ * 用户资料页面
+ * 功能：
+ * - 显示和编辑用户基本信息
+ * - 修改密码
+ */
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores/auth'
+import { getProfile, updateProfile, changePassword } from '@/api/profile'
 import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import type { UpdateProfileReq, ChangePasswordReq } from '@/types/auth'
+import type { User } from '@/types/user'
 
 const { t } = useI18n()
-const authStore = useAuthStore()
 
-const profileFormRef = ref<FormInstance>()
-const passwordFormRef = ref<FormInstance>()
-const profileLoading = ref(false)
-const passwordLoading = ref(false)
-
-const profileForm = reactive<UpdateProfileReq>({
-  nickname: '',
-  language: '',
-  timezone: '',
+// 用户信息
+const user = ref<User>({
+  id: 0,
+  email: '',
+  name: '',
+  created_at: '',
+  updated_at: '',
 })
 
-const passwordForm = reactive<ChangePasswordReq & { confirm_password: string }>({
+// 表单数据
+const form = ref({
+  name: '',
+  email: '',
+})
+
+// 密码表单
+const passwordForm = ref({
   old_password: '',
   new_password: '',
   confirm_password: '',
 })
 
-const profileRules: FormRules = {
-  nickname: [{ required: true, message: t('common.required'), trigger: 'blur' }],
-}
+const loading = ref(false)
 
-const passwordRules: FormRules = {
-  old_password: [{ required: true, message: t('common.required'), trigger: 'blur' }],
-  new_password: [
-    { required: true, message: t('common.required'), trigger: 'blur' },
-    { min: 8, message: 'Password must be at least 8 characters', trigger: 'blur' },
-  ],
-  confirm_password: [
-    { required: true, message: t('common.required'), trigger: 'blur' },
-    {
-      validator: (_rule, value, callback) => {
-        if (value !== passwordForm.new_password) {
-          callback(new Error('Passwords do not match'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur',
-    },
-  ],
-}
-
-onMounted(async () => {
-  await authStore.loadProfile()
-  if (authStore.user) {
-    profileForm.nickname = authStore.user.nickname
-    profileForm.language = authStore.user.language
-    profileForm.timezone = authStore.user.timezone
-  }
-})
-
-async function handleProfileSubmit() {
-  const valid = await profileFormRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  profileLoading.value = true
+/**
+ * 获取用户资料
+ */
+async function fetchProfile() {
   try {
-    await authStore.updateProfile(profileForm)
+    const res = await getProfile()
+    user.value = res as unknown as User
+    form.value.name = user.value.name
+    form.value.email = user.value.email
+  } catch {
+    // handle error
+  }
+}
+
+/**
+ * 更新用户资料
+ */
+async function handleUpdateProfile() {
+  loading.value = true
+  try {
+    await updateProfile(form.value)
     ElMessage.success(t('common.success'))
-  } catch (err) {
-    ElMessage.error((err as Error).message || t('common.failed'))
+    await fetchProfile()
+  } catch {
+    // handle error
   } finally {
-    profileLoading.value = false
+    loading.value = false
   }
 }
 
-async function handlePasswordSubmit() {
-  const valid = await passwordFormRef.value?.validate().catch(() => false)
-  if (!valid) return
+/**
+ * 修改密码
+ */
+async function handleChangePassword() {
+  if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
+    ElMessage.error(t('profile.passwordMismatch'))
+    return
+  }
 
-  passwordLoading.value = true
+  loading.value = true
   try {
-    await authStore.changePassword({
-      old_password: passwordForm.old_password,
-      new_password: passwordForm.new_password,
+    await changePassword({
+      old_password: passwordForm.value.old_password,
+      new_password: passwordForm.value.new_password,
     })
     ElMessage.success(t('common.success'))
-    passwordForm.old_password = ''
-    passwordForm.new_password = ''
-    passwordForm.confirm_password = ''
-  } catch (err) {
-    ElMessage.error((err as Error).message || t('common.failed'))
+    passwordForm.value = {
+      old_password: '',
+      new_password: '',
+      confirm_password: '',
+    }
+  } catch {
+    // handle error
   } finally {
-    passwordLoading.value = false
+    loading.value = false
   }
 }
+
+onMounted(() => {
+  fetchProfile()
+})
 </script>
 
 <template>
   <div class="profile-page">
-    <h2>{{ t('profile.title') }}</h2>
+    <el-card>
+      <template #header>
+        <h2>{{ t('profile.title') }}</h2>
+      </template>
 
-    <el-card style="margin-bottom: 20px">
-      <template #header>{{ t('profile.title') }}</template>
-      <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-width="120px">
-        <el-form-item :label="t('profile.nickname')" prop="nickname">
-          <el-input v-model="profileForm.nickname" />
+      <el-form :model="form" label-width="120px">
+        <el-form-item :label="t('profile.name')">
+          <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item :label="t('profile.language')">
-          <el-select v-model="profileForm.language">
-            <el-option label="中文" value="zh-CN" />
-            <el-option label="English" value="en-US" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="t('profile.timezone')">
-          <el-input v-model="profileForm.timezone" />
+        <el-form-item :label="t('profile.email')">
+          <el-input v-model="form.email" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="profileLoading" @click="handleProfileSubmit">{{ t('common.save') }}</el-button>
+          <el-button type="primary" @click="handleUpdateProfile" :loading="loading">
+            {{ t('common.save') }}
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card>
-      <template #header>{{ t('profile.changePassword') }}</template>
-      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="120px">
-        <el-form-item :label="t('profile.oldPassword')" prop="old_password">
-          <el-input v-model="passwordForm.old_password" type="password" show-password />
+    <el-card style="margin-top: 20px">
+      <template #header>
+        <h3>{{ t('profile.changePassword') }}</h3>
+      </template>
+
+      <el-form :model="passwordForm" label-width="120px">
+        <el-form-item :label="t('profile.oldPassword')">
+          <el-input v-model="passwordForm.old_password" type="password" />
         </el-form-item>
-        <el-form-item :label="t('profile.newPassword')" prop="new_password">
-          <el-input v-model="passwordForm.new_password" type="password" show-password />
+        <el-form-item :label="t('profile.newPassword')">
+          <el-input v-model="passwordForm.new_password" type="password" />
         </el-form-item>
-        <el-form-item :label="t('profile.confirmNewPassword')" prop="confirm_password">
-          <el-input v-model="passwordForm.confirm_password" type="password" show-password />
+        <el-form-item :label="t('profile.confirmPassword')">
+          <el-input v-model="passwordForm.confirm_password" type="password" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="passwordLoading" @click="handlePasswordSubmit">{{ t('common.save') }}</el-button>
+          <el-button type="primary" @click="handleChangePassword" :loading="loading">
+            {{ t('common.save') }}
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
   </div>
 </template>
+
+<style scoped>
+.profile-page {
+  padding: 20px;
+}
+</style>

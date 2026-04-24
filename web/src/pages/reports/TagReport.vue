@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 标签报表 - 按标签展示收支占比饼图和明细表
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { category } from '@/api/report'

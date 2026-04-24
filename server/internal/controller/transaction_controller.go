@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// TransactionController 交易控制器，处理交易的增删改查和拆分合并
 package controller
 
 import (
@@ -9,14 +11,25 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// TransactionController 交易控制器
+// 处理交易相关的HTTP请求，包括交易的创建、查询、更新、删除、拆分和合并
 type TransactionController struct {
-	txnService *service.TransactionService
+	txnService *service.TransactionService // 交易业务服务
 }
 
+// NewTransactionController 创建交易控制器实例
+// 参数：
+//   - txnService: 交易业务服务
+// 返回：
+//   - *TransactionController: 交易控制器实例
 func NewTransactionController(txnService *service.TransactionService) *TransactionController {
 	return &TransactionController{txnService: txnService}
 }
 
+// Create 创建交易
+// 接收创建交易请求，调用业务层创建交易记录
+// 参数：
+//   - c: Gin上下文，包含请求信息
 func (ctrl *TransactionController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 

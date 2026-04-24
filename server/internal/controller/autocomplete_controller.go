@@ -1,5 +1,5 @@
-// Package controller �ṩHTTP�����������
-// AutocompleteController �Զ���ȫ���������ṩ��������ӿ�
+// Package controller 提供HTTP请求处理控制器
+// AutocompleteController 自动补全控制器，提供自动补全接口
 package controller
 
 import (
@@ -11,17 +11,30 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
+// autocompleteLimit 自动补全结果数量限制
 const autocompleteLimit = 20
 
+// AutocompleteController 自动补全控制器
+// 提供账户、分类、标签、货币、预算、账单等数据的自动补全功能
 type AutocompleteController struct {
-	accountRepo  *repository.AccountRepository
-	categoryRepo *repository.CategoryRepository
-	tagRepo      *repository.TagRepository
-	currencyRepo *repository.CurrencyRepository
-	budgetRepo   *repository.BudgetRepository
-	billRepo     *repository.BillRepository
+	accountRepo  *repository.AccountRepository  // 账户数据访问对象
+	categoryRepo *repository.CategoryRepository // 分类数据访问对象
+	tagRepo      *repository.TagRepository      // 标签数据访问对象
+	currencyRepo *repository.CurrencyRepository // 货币数据访问对象
+	budgetRepo   *repository.BudgetRepository   // 预算数据访问对象
+	billRepo     *repository.BillRepository     // 账单数据访问对象
 }
 
+// NewAutocompleteController 创建自动补全控制器实例
+// 参数：
+//   - accountRepo: 账户数据访问对象
+//   - categoryRepo: 分类数据访问对象
+//   - tagRepo: 标签数据访问对象
+//   - currencyRepo: 货币数据访问对象
+//   - budgetRepo: 预算数据访问对象
+//   - billRepo: 账单数据访问对象
+// 返回：
+//   - *AutocompleteController: 自动补全控制器实例
 func NewAutocompleteController(
 	accountRepo *repository.AccountRepository,
 	categoryRepo *repository.CategoryRepository,
@@ -40,6 +53,10 @@ func NewAutocompleteController(
 	}
 }
 
+// Accounts 账户自动补全
+// 根据查询关键词返回匹配的账户列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -61,6 +78,10 @@ func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
+// Categories 分类自动补全
+// 根据查询关键词返回匹配的分类列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Categories(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -87,6 +108,10 @@ func (c *AutocompleteController) Categories(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
+// Tags 标签自动补全
+// 根据查询关键词返回匹配的标签列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Tags(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -114,6 +139,10 @@ func (c *AutocompleteController) Tags(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
+// Currencies 货币自动补全
+// 根据查询关键词返回匹配的货币列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 	query := strings.ToLower(ctx.Query("q"))
 
@@ -143,6 +172,10 @@ func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
+// Budgets 预算自动补全
+// 根据查询关键词返回匹配的预算列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -169,6 +202,10 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
+// Bills 账单自动补全
+// 根据查询关键词返回匹配的账单列表
+// 参数：
+//   - ctx: Gin上下文
 func (c *AutocompleteController) Bills(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))

@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// 响应工具函数，统一封装HTTP成功和错误响应格式
 package controller
 
 import (

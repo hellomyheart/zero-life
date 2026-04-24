@@ -1,3 +1,5 @@
+// Package model 数据模型层，对应数据库结构
+// ObjectGroup 对象分组模型，管理实体分组排序
 package model
 
 import (

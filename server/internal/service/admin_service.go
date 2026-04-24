@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// AdminService 管理员业务逻辑，管理系统配置和用户管理
 package service
 
 import (

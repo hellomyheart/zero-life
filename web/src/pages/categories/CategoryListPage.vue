@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 分类列表页面 - 树形结构展示分类支持拖拽排序
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/category'

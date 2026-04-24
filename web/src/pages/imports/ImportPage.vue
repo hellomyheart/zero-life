@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 数据导入页面 - 4步向导上传映射预览确认导入
 import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { upload, parse, execute } from '@/api/import'

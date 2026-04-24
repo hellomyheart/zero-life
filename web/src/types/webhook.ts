@@ -1,3 +1,4 @@
+// Webhook相关类型定义 - Webhook接口、发送事件和消息/响应
 export interface Webhook {
   id: string
   name: string

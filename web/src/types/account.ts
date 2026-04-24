@@ -1,3 +1,4 @@
+// 账户相关类型定义 - 账户接口、资产/负债账户列表类型
 export enum AccountType {
   Asset = 'asset',
   Expense = 'expense',

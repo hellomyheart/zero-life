@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/**
+ * 交易列表页面
+ * 功能：
+ * - 展示交易列表，支持分页
+ * - 支持按类型、日期范围、账户、分类、关键词筛选
+ * - 支持创建、编辑、删除交易
+ * - 支持查看交易详情
+ */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -13,21 +21,27 @@ import DateRangePicker from '@/components/common/DateRangePicker.vue'
 const { t } = useI18n()
 const router = useRouter()
 
-const transactions = ref<Transaction[]>([])
-const total = ref(0)
-const loading = ref(false)
+// 响应式数据
+const transactions = ref<Transaction[]>([]) // 交易列表数据
+const total = ref(0) // 总记录数
+const loading = ref(false) // 加载状态
 
+// 筛选条件
 const filter = reactive({
-  type: undefined as TransactionType | undefined,
-  start_date: '',
-  end_date: '',
-  source_account_id: '',
-  category_id: '',
-  keyword: '',
-  page: 1,
-  page_size: 20,
+  type: undefined as TransactionType | undefined, // 交易类型
+  start_date: '', // 开始日期
+  end_date: '', // 结束日期
+  source_account_id: '', // 源账户ID
+  category_id: '', // 分类ID
+  keyword: '', // 搜索关键词
+  page: 1, // 当前页码
+  page_size: 20, // 每页记录数
 })
 
+/**
+ * 获取交易列表
+ * 根据筛选条件从后端获取交易数据
+ */
 async function fetchTransactions() {
   loading.value = true
   try {
@@ -50,14 +64,26 @@ async function fetchTransactions() {
   }
 }
 
+/**
+ * 跳转到创建交易页面
+ */
 function handleCreate() {
   router.push('/transactions/create')
 }
 
+/**
+ * 跳转到编辑交易页面
+ * @param id 交易ID
+ */
 function handleEdit(id: string) {
   router.push(`/transactions/${id}/edit`)
 }
 
+/**
+ * 删除交易
+ * 弹出确认框，确认后删除交易记录
+ * @param id 交易ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('transaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })

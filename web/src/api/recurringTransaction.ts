@@ -1,3 +1,4 @@
+// 循环交易API接口 - 循环交易增删改查和到期提醒
 import { get, post, put, del } from '@/utils/request'
 import type { RecurringTransaction, CreateRecurringTransactionReq, UpdateRecurringTransactionReq, RecurringTransactionListReq } from '@/types/recurringTransaction'
 import type { PageResult } from '@/types/common'

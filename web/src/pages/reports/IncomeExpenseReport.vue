@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 收支报表页面 - 展示月度收入支出和按账户分类的收支明细
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { incomeExpense } from '@/api/report'

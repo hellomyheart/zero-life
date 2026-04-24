@@ -1,3 +1,4 @@
+// 报表相关类型定义 - 各类报表数据接口
 export interface ReportReq {
   start_date: string
   end_date: string

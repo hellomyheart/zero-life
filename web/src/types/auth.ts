@@ -1,3 +1,4 @@
+// 认证相关类型定义 - 登录、注册、Token刷新等接口
 export interface LoginReq {
   email: string
   password: string

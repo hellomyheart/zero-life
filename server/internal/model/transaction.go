@@ -1,3 +1,4 @@
+// Package model 定义了系统的数据模型，对应数据库表结构
 package model
 
 import (
@@ -16,7 +17,7 @@ const (
 	TransactionTypeTransfer    TransactionType = "transfer"   // 转账：账户间转移
 )
 
-// Transaction 交易模型
+// Transaction 交易模型，对应transactions表
 // 记录所有的财务交易，包括收入、支出和转账
 // 支持交易拆分、标签、分类等高级功能
 type Transaction struct {

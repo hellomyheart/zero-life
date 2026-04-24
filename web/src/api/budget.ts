@@ -1,3 +1,4 @@
+// 预算相关API接口
 import { get, post, put, del } from '@/utils/request'
 import type { Budget, CreateBudgetReq, UpdateBudgetReq, BudgetHistory } from '@/types/budget'
 

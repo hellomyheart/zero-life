@@ -1,3 +1,4 @@
+// 通用类型定义 - API响应、分页、筛选分页
 export interface ApiResponse<T> {
   code: number
   message: string

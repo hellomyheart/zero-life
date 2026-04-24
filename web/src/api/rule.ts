@@ -1,3 +1,4 @@
+// 规则API接口 - 规则增删改查、启用/禁用和执行
 import { get, post, put, del } from '@/utils/request'
 import type { Rule, CreateRuleReq, UpdateRuleReq, ExecuteRuleReq } from '@/types/rule'
 

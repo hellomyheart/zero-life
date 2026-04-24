@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// RecurringTransactionController 循环交易控制器
 package controller
 
 import (

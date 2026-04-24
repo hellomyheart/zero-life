@@ -1,3 +1,5 @@
+// Package model 数据模型层，对应数据库结构
+// TransactionLink 交易关联模型，记录交易之间的关联
 package model
 
 import (

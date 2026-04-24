@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 仪表盘页面 - 展示月度收支预算账单消费和资产概况
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDashboard } from '@/api/dashboard'

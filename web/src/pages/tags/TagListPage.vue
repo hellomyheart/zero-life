@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 标签列表页面 - 展示标签描述颜色和关联交易数量
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/tag'

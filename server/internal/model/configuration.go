@@ -1,3 +1,5 @@
+// Package model 数据模型层，对应数据库结构
+// Configuration 系统配置模型，存储全局配置项
 package model
 
 import "time"

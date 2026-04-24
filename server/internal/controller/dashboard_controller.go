@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// DashboardController 仪表盘控制器
 package controller
 
 import (

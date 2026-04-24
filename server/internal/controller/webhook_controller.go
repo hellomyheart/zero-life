@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// Webhook控制器，处理Webhook的增删改查
 package controller
 
 import (

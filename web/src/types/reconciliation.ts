@@ -1,3 +1,4 @@
+// 对账相关类型定义 - 对账接口、增删改查
 export interface Reconciliation {
   id: string
   account_id: string

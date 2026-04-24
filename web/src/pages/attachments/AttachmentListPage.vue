@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 附件管理页面 - 上传下载和删除附件文件
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, upload, remove } from '@/api/attachment'

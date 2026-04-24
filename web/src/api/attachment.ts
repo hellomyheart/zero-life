@@ -1,3 +1,4 @@
+// 附件相关API接口 - 文件上传、下载和删除
 import { get, post, del } from '@/utils/request'
 import type { Attachment, AttachmentListReq } from '@/types/attachment'
 import type { PageResult } from '@/types/common'

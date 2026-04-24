@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 货币管理页面 - 管理货币启用状态默认货币和汇率
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, updateStatus, setDefault, getExchangeRates, setExchangeRate } from '@/api/currency'

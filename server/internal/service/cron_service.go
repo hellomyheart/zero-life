@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// CronService 定时任务业务逻辑，处理账单提醒和循环交易
 package service
 
 import (

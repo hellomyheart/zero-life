@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 账户表单页面 - 用于创建和编辑账户
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'

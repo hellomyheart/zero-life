@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 预算列表页面 - 展示预算已用和剩余使用率等
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'

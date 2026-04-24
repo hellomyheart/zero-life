@@ -1,3 +1,4 @@
+// 账单相关API接口 - 账单增删改查和定期提醒
 import { get, post, put, del } from '@/utils/request'
 import type { Bill, CreateBillReq, UpdateBillReq } from '@/types/bill'
 

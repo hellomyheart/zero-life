@@ -1,3 +1,4 @@
+// 用户管理API接口 - 管理员管理用户列表/角色
 import { get, put, del, post } from '@/utils/request'
 import type { User, UpdateUserReq, UserListReq } from '@/types/user'
 import type { PageResult } from '@/types/common'

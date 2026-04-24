@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 趋势报表 - 展示月度收入支出和净值变化趋势
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { trend } from '@/api/report'

@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// CategoryService 分类业务逻辑，处理分类的增删改查（支持树形结构）
 package service
 
 import (

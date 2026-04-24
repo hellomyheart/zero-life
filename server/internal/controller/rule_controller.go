@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// RuleController 规则控制器
 package controller
 
 import (

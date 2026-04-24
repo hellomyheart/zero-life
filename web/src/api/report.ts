@@ -1,3 +1,4 @@
+// 报表API接口 - 收支报表、预算、净值、趋势报表
 import { get } from '@/utils/request'
 import type { IncomeExpenseResp, CategoryReportResp, BudgetReportResp, NetWorthResp, TrendResp, ReportReq } from '@/types/report'
 

@@ -1,3 +1,4 @@
+// 分类相关类型定义 - 分类接口、增删改查
 export interface Category {
   id: string
   name: string

@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// ReconciliationService 对账业务逻辑，核对账户余额与实际余额
 package service
 
 import (

@@ -1,3 +1,4 @@
+// 仪表盘相关类型定义 - 首页汇总数据接口
 export interface BudgetAlert {
   budget_id: string
   budget_name: string

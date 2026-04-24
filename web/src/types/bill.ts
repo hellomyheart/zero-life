@@ -1,3 +1,4 @@
+// 账单相关类型定义 - 账单接口、增删改查返回类型
 export enum RepeatRule {
   Daily = 'daily',
   Weekly = 'weekly',

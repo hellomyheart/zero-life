@@ -1,3 +1,4 @@
+// 用户管理相关类型定义 - 用户接口、角色和列表类型
 export interface User {
   id: string
   email: string

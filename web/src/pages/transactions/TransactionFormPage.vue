@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 交易编辑页面 - 用于创建和编辑交易支持拆分交易
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'

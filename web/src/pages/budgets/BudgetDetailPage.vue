@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 预算详情页面 - 展示预算信息和历史消费图表
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'

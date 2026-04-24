@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// CurrencyService 货币业务逻辑，处理货币管理和汇率转换
 package service
 
 import (

@@ -1,3 +1,4 @@
+// 存钱罐相关类型定义 - 存钱罐接口、存取款和事件记录
 export interface PiggyBank {
   id: string
   name: string

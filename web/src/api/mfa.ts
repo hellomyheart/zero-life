@@ -1,3 +1,4 @@
+// 多因素认证API接口 - 2FA设置、启用、禁用和验证
 import { get, post } from '@/utils/request'
 import type { MFAStatus, MFASetupResp, MFAVerifyReq } from '@/types/mfa'
 

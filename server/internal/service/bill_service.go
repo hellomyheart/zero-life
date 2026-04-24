@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// BillService 账单业务逻辑，处理账单的增删改查和定期计算
 package service
 
 import (

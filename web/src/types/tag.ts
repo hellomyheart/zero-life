@@ -1,3 +1,4 @@
+// 标签相关类型定义 - 标签接口、增删改查
 export interface Tag {
   id: string
   name: string

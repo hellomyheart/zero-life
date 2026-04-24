@@ -1,3 +1,4 @@
+// Webhook管理API接口 - Webhook增删改查和发送事件
 import { get, post, put, del } from '@/utils/request'
 import type { Webhook, CreateWebhookReq, UpdateWebhookReq, WebhookListReq, WebhookDelivery } from '@/types/webhook'
 import type { PageResult } from '@/types/common'

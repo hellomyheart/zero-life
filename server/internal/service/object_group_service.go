@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// ObjectGroupService 对象分组业务逻辑，管理实体分组排序
 package service
 
 import (

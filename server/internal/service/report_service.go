@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// ReportService 报表业务逻辑，生成收支、预算、净值等报表数据
 package service
 
 import (

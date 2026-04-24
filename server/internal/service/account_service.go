@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// AccountService 账户业务逻辑，处理账户的增删改查及资产账户余额计算
 package service
 
 import (
@@ -11,14 +13,33 @@ import (
 	"gorm.io/gorm"
 )
 
+// AccountService 账户业务服务
+// 负责处理账户相关的业务逻辑，包括账户的创建、查询、更新、删除等操作
 type AccountService struct {
-	accountRepo *repository.AccountRepository
+	accountRepo *repository.AccountRepository // 账户数据访问对象
 }
 
+// NewAccountService 创建账户服务实例
+// 参数：
+//   - accountRepo: 账户数据访问对象
+// 返回：
+//   - *AccountService: 账户服务实例
 func NewAccountService(accountRepo *repository.AccountRepository) *AccountService {
 	return &AccountService{accountRepo: accountRepo}
 }
 
+// Create 创建新账户
+// 业务流程：
+// 1. 检查同类型下账户名称是否重复
+// 2. 解析并验证初始余额
+// 3. 创建账户记录，初始余额作为当前余额
+// 4. 重新加载账户信息（包含关联的货币信息）
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建账户请求参数
+// 返回：
+//   - *response.AccountResp: 创建成功的账户信息
+//   - error: 错误信息（如名称重复、参数错误等）
 func (s *AccountService) Create(userID uint64, req *request.CreateAccountReq) (*response.AccountResp, error) {
 	// Check name uniqueness under same type
 	accounts, err := s.accountRepo.List(userID, req.Type, "", "name", 0, 0)
@@ -60,6 +81,14 @@ func (s *AccountService) Create(userID uint64, req *request.CreateAccountReq) (*
 	return s.toResp(created), nil
 }
 
+// Get 获取账户详情
+// 根据账户ID和用户ID查询账户信息
+// 参数：
+//   - userID: 用户ID
+//   - id: 账户ID
+// 返回：
+//   - *response.AccountResp: 账户信息
+//   - error: 错误信息（如账户不存在）
 func (s *AccountService) Get(userID, id uint64) (*response.AccountResp, error) {
 	account, err := s.accountRepo.GetByID(id, userID)
 	if err != nil {
@@ -71,6 +100,14 @@ func (s *AccountService) Get(userID, id uint64) (*response.AccountResp, error) {
 	return s.toResp(account), nil
 }
 
+// List 获取账户列表
+// 支持按类型过滤、搜索、排序和分页
+// 参数：
+//   - userID: 用户ID
+//   - req: 列表查询参数（包含类型、搜索关键词、排序、分页等）
+// 返回：
+//   - *pagination.Result: 分页结果（包含账户列表和总数）
+//   - error: 错误信息
 func (s *AccountService) List(userID uint64, req *request.AccountListReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -93,6 +130,15 @@ func (s *AccountService) List(userID uint64, req *request.AccountListReq) (*pagi
 	return pagination.NewResult(items, total, params), nil
 }
 
+// Update 更新账户信息
+// 仅更新请求中提供的字段（部分更新）
+// 参数：
+//   - userID: 用户ID
+//   - id: 账户ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.AccountResp: 更新后的账户信息
+//   - error: 错误信息（如账户不存在）
 func (s *AccountService) Update(userID, id uint64, req *request.UpdateAccountReq) (*response.AccountResp, error) {
 	account, err := s.accountRepo.GetByID(id, userID)
 	if err != nil {
@@ -119,6 +165,13 @@ func (s *AccountService) Update(userID, id uint64, req *request.UpdateAccountReq
 	return s.toResp(account), nil
 }
 
+// Delete 删除账户
+// 业务规则：如果账户下存在交易记录，则不允许删除
+// 参数：
+//   - userID: 用户ID
+//   - id: 账户ID
+// 返回：
+//   - error: 错误信息（如账户不存在、账户有交易记录）
 func (s *AccountService) Delete(userID, id uint64) error {
 	hasTxns, err := s.accountRepo.HasTransactions(id, userID)
 	if err != nil {
@@ -131,6 +184,11 @@ func (s *AccountService) Delete(userID, id uint64) error {
 	return s.accountRepo.Delete(id, userID)
 }
 
+// toResp 将账户模型转换为响应对象
+// 参数：
+//   - a: 账户模型
+// 返回：
+//   - *response.AccountResp: 账户响应对象
 func (s *AccountService) toResp(a *model.Account) *response.AccountResp {
 	return &response.AccountResp{
 		ID:             a.ID,
@@ -147,6 +205,11 @@ func (s *AccountService) toResp(a *model.Account) *response.AccountResp {
 	}
 }
 
+// currencyToResp 将货币模型转换为响应对象
+// 参数：
+//   - c: 货币模型
+// 返回：
+//   - response.CurrencyResp: 货币响应对象
 func currencyToResp(c *model.Currency) response.CurrencyResp {
 	return response.CurrencyResp{
 		ID:            c.ID,

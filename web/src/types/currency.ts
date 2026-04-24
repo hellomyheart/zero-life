@@ -1,3 +1,4 @@
+// 货币相关类型定义 - 货币接口、汇率接口
 export interface Currency {
   id: string
   code: string

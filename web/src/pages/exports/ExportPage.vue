@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 数据导出页面 - 支持导出为CSV和JSON格式
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { exportTransactions, exportAccounts, exportBudgets, exportCategories, exportTags } from '@/api/export'

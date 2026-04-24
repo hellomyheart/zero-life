@@ -1,3 +1,4 @@
+// 存钱罐API接口 - 存钱罐增删改查、存取款
 import { get, post, put, del } from '@/utils/request'
 import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, PiggyBankListReq } from '@/types/piggyBank'
 import type { PiggyEvent } from '@/types/piggyBank'

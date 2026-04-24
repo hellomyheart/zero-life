@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 净值报表 - 展示资产和债务及净值变化趋势
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { netWorth } from '@/api/report'

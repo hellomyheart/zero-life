@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 账户列表页面 - 按类型标签展示账户
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'

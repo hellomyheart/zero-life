@@ -1,3 +1,4 @@
+// Package controller 提供HTTP请求处理控制器
 package controller
 
 import (
@@ -9,14 +10,17 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// AuthController 认证管理控制器，处理注册、登录、Token刷新、密码重置等HTTP请求
 type AuthController struct {
 	authService *service.AuthService
 }
 
+// NewAuthController 创建认证控制器实例
 func NewAuthController(authService *service.AuthService) *AuthController {
 	return &AuthController{authService: authService}
 }
 
+// Register 用户注册
 func (ctrl *AuthController) Register(c *gin.Context) {
 	var req request.RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -33,6 +37,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	Success(c, result)
 }
 
+// Login 用户登录
 func (ctrl *AuthController) Login(c *gin.Context) {
 	var req request.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,6 +54,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	Success(c, result)
 }
 
+// RefreshToken 刷新访问令牌
 func (ctrl *AuthController) RefreshToken(c *gin.Context) {
 	var req request.RefreshReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,6 +71,7 @@ func (ctrl *AuthController) RefreshToken(c *gin.Context) {
 	Success(c, result)
 }
 
+// ForgotPassword 忘记密码，发送重置邮件
 func (ctrl *AuthController) ForgotPassword(c *gin.Context) {
 	var req request.ForgotPasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,6 +87,7 @@ func (ctrl *AuthController) ForgotPassword(c *gin.Context) {
 	Success(c, nil)
 }
 
+// ResetPassword 重置密码
 func (ctrl *AuthController) ResetPassword(c *gin.Context) {
 	var req request.ResetPasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -95,6 +103,7 @@ func (ctrl *AuthController) ResetPassword(c *gin.Context) {
 	Success(c, nil)
 }
 
+// GetProfile 获取当前用户个人信息
 func (ctrl *AuthController) GetProfile(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -107,6 +116,7 @@ func (ctrl *AuthController) GetProfile(c *gin.Context) {
 	Success(c, result)
 }
 
+// UpdateProfile 更新当前用户个人信息
 func (ctrl *AuthController) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -125,6 +135,7 @@ func (ctrl *AuthController) UpdateProfile(c *gin.Context) {
 	Success(c, result)
 }
 
+// ChangePassword 修改密码
 func (ctrl *AuthController) ChangePassword(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -142,6 +153,7 @@ func (ctrl *AuthController) ChangePassword(c *gin.Context) {
 	Success(c, nil)
 }
 
+// handleError 统一错误处理，根据错误码映射HTTP状态码
 func handleError(c *gin.Context, err error) {
 	if e, ok := err.(*errcode.Error); ok {
 		status := http.StatusInternalServerError

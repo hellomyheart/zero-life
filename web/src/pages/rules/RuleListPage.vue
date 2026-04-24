@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 规则列表页面 - 展示规则处理顺序支持启用禁用和手动执行
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, remove, toggleStatus, execute } from '@/api/rule'

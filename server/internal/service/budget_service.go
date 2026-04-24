@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// BudgetService 预算业务逻辑，处理预算的增删改查及使用率计算
 package service
 
 import (

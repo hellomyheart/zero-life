@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 多因素认证页面 - 设置启用和禁用TOTP认证码验证
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { status, setup, enable, disable } from '@/api/mfa'

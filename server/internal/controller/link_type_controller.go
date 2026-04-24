@@ -1,3 +1,5 @@
+// Package controller 提供HTTP请求处理控制器
+// LinkTypeController 关联类型控制器
 package controller
 
 import (

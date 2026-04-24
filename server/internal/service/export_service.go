@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// ExportService 数据导出业务逻辑，支持导出为CSV和JSON格式
 package service
 
 import (

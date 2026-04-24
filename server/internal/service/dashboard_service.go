@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// DashboardService 仪表盘业务逻辑，汇总首页展示的收支、预算、账单等
 package service
 
 import (

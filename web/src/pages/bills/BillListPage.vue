@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 账单列表页面 - 展示账单重复频率和到期日
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/bill'

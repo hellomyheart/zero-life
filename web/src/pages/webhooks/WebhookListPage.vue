@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Webhook列表页面 - 配置事件通知发送到URL和触发条件
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/webhook'

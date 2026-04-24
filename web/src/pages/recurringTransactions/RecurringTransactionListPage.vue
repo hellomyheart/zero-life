@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 循环交易列表页面 - 展示定期交易模板支持手动执行
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove, processDue } from '@/api/recurringTransaction'

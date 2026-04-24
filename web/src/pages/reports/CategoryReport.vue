@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 分类报表 - 各分类展示收支占比饼图和明细表
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { category } from '@/api/report'

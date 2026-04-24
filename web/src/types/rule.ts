@@ -1,3 +1,4 @@
+// 规则相关类型定义 - 规则接口、增删改查、触发器/动作类型
 export interface RuleCondition {
   field: string
   operator: string

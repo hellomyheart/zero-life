@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 对账管理页面 - 核对账户余额与实际余额
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/reconciliation'

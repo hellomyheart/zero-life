@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// AttachmentService 附件业务逻辑，处理文件上传、存储和下载
 package service
 
 import (

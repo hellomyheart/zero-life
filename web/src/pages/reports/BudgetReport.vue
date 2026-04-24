@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// 预算报表 - 对比预算与实际支出柱状图
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { budget } from '@/api/report'

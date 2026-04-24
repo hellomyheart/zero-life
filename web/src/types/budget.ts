@@ -1,3 +1,4 @@
+// 预算相关类型定义 - 预算接口、增删改查和历史记录
 export enum BudgetPeriod {
   Monthly = 'monthly',
   Quarterly = 'quarterly',
