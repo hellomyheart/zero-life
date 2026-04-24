@@ -75,8 +75,8 @@ export interface BudgetReportResp {
  * 资产、负债和净值的变化趋势
  */
 export interface NetWorthResp {
-  items: {                     // 按日期的净值变化列表
-    date: string               // 日期
+  trend: {                     // 按日期的净值变化列表
+    date: string               // 日期（格式：YYYY-MM 或 YYYY-MM-DD）
     net_worth: string          // 当日净值
   }[]
   total_assets: string         // 总资产

@@ -1,5 +1,21 @@
 <script setup lang="ts">
-// 对账管理页面 - 核对账户余额与实际余额
+/**
+ * 对账管理页面
+ * 功能：
+ * - 创建对账记录，核对账户余额与实际余额
+ * - 查看对账历史，包括期初余额、期末余额和差额
+ * - 编辑和删除对账记录
+ * 
+ * 业务流程：
+ * 1. 选择要对账的账户
+ * 2. 输入对账周期（开始日期和结束日期）
+ * 3. 输入期初余额和期末余额
+ * 4. 系统自动计算差额（期末余额 - 账面余额）
+ * 5. 保存对账记录，状态为 open
+ * 
+ * 数据来源：后端 /api/v1/reconciliations 接口
+ * 使用 Store：accountStore（获取账户列表）
+ */
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/reconciliation'
@@ -12,12 +28,18 @@ const { t } = useI18n()
 // 账户状态管理 - 用于获取账户下拉选项
 const accountStore = useAccountStore()
 
+// 对账记录列表
 const items = ref<Reconciliation[]>([])
+// 加载状态
 const loading = ref(false)
+// 对话框显示状态
 const dialogVisible = ref(false)
+// 对话框标题
 const dialogTitle = ref('')
+// 当前编辑的对账记录 ID
 const editingId = ref<string | null>(null)
 
+// 表单数据
 const form = ref<CreateReconciliationReq>({
   account_id: '',
   start_date: '',
@@ -27,18 +49,26 @@ const form = ref<CreateReconciliationReq>({
   notes: '',
 })
 
+/**
+ * 获取对账记录列表
+ * 从后端 API 获取所有对账记录
+ */
 async function fetchList() {
   loading.value = true
   try {
     const res = await list({}) as unknown as { items: Reconciliation[] }
     items.value = res.items || []
-  } catch {
-    // handle error
+  } catch (error) {
+    console.error('Failed to fetch reconciliation list:', error)
   } finally {
     loading.value = false
   }
 }
 
+/**
+ * 打开创建对话框
+ * 初始化表单为空值
+ */
 function handleCreate() {
   dialogTitle.value = t('reconciliation.create')
   editingId.value = null
@@ -46,6 +76,10 @@ function handleCreate() {
   dialogVisible.value = true
 }
 
+/**
+ * 打开编辑对话框
+ * @param row 选中的对账记录
+ */
 function handleEdit(row: Reconciliation) {
   dialogTitle.value = t('reconciliation.edit')
   editingId.value = row.id
@@ -60,22 +94,32 @@ function handleEdit(row: Reconciliation) {
   dialogVisible.value = true
 }
 
+/**
+ * 删除对账记录
+ * @param id 对账记录 ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('reconciliation.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchList()
-  } catch {
-    // cancelled or error
+  } catch (error) {
+    console.error('Failed to delete reconciliation:', error)
   }
 }
 
+/**
+ * 提交表单数据
+ * 根据 editingId 判断是创建还是更新操作
+ */
 async function handleSubmit() {
   try {
     if (editingId.value) {
+      // 更新操作：只允许更新期末余额和备注
       await update(editingId.value, { end_balance: form.value.end_balance, notes: form.value.notes } as UpdateReconciliationReq)
     } else {
+      // 创建操作
       await create(form.value)
     }
     ElMessage.success(t('common.success'))
@@ -86,6 +130,7 @@ async function handleSubmit() {
   }
 }
 
+// 组件挂载时加载账户列表和对账记录
 onMounted(async () => {
   // 打开页面时加载账户列表，供下拉选择使用
   await accountStore.fetchAccounts()

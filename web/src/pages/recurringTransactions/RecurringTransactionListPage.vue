@@ -1,5 +1,21 @@
 <script setup lang="ts">
-// 循环交易列表页面 - 展示定期交易模板支持手动执行
+/**
+ * 循环交易管理页面
+ * 功能：
+ * - 创建循环交易模板，定义定期执行的交易
+ * - 设置循环频率（日/周/月/年）和间隔
+ * - 手动触发执行到期的循环交易
+ * - 查看和管理所有循环交易
+ * 
+ * 业务流程：
+ * 1. 创建循环交易模板，设置金额、账户、分类、频率等
+ * 2. 系统根据频率自动计算下次执行日期
+ * 3. 点击"执行到期交易"按钮，手动触发所有到期的循环交易
+ * 4. 循环交易执行后创建实际交易记录，更新账户余额
+ * 
+ * 数据来源：后端 /api/v1/recurring-transactions 接口
+ * 使用 Store：accountStore（账户列表）、categoryStore（分类列表）
+ */
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove, processDue } from '@/api/recurringTransaction'
@@ -16,12 +32,18 @@ const accountStore = useAccountStore()
 // 分类状态管理 - 用于获取分类下拉选项
 const categoryStore = useCategoryStore()
 
+// 循环交易列表
 const items = ref<RecurringTransaction[]>([])
+// 加载状态
 const loading = ref(false)
+// 对话框显示状态
 const dialogVisible = ref(false)
+// 对话框标题
 const dialogTitle = ref('')
+// 当前编辑的循环交易 ID
 const editingId = ref<string | null>(null)
 
+// 循环频率选项
 const recurrenceTypeOptions = [
   { value: RecurrenceType.Daily, label: t('recurringTransaction.daily') },
   { value: RecurrenceType.Weekly, label: t('recurringTransaction.weekly') },
@@ -29,6 +51,7 @@ const recurrenceTypeOptions = [
   { value: RecurrenceType.Yearly, label: t('recurringTransaction.yearly') },
 ]
 
+// 表单数据
 const form = ref<CreateRecurringTransactionReq>({
   title: '',
   type: 'withdrawal',
@@ -42,18 +65,26 @@ const form = ref<CreateRecurringTransactionReq>({
   description: '',
 })
 
+/**
+ * 获取循环交易列表
+ * 从后端 API 获取所有循环交易记录
+ */
 async function fetchList() {
   loading.value = true
   try {
     const res = await list({}) as unknown as { items: RecurringTransaction[] }
     items.value = res.items || []
-  } catch {
-    // handle error
+  } catch (error) {
+    console.error('Failed to fetch recurring transaction list:', error)
   } finally {
     loading.value = false
   }
 }
 
+/**
+ * 打开创建对话框
+ * 初始化表单为空值
+ */
 function handleCreate() {
   dialogTitle.value = t('recurringTransaction.create')
   editingId.value = null
@@ -72,6 +103,10 @@ function handleCreate() {
   dialogVisible.value = true
 }
 
+/**
+ * 打开编辑对话框
+ * @param row 选中的循环交易记录
+ */
 function handleEdit(row: RecurringTransaction) {
   dialogTitle.value = t('recurringTransaction.edit')
   editingId.value = row.id
@@ -91,17 +126,25 @@ function handleEdit(row: RecurringTransaction) {
   dialogVisible.value = true
 }
 
+/**
+ * 删除循环交易
+ * @param id 循环交易 ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('recurringTransaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchList()
-  } catch {
-    // cancelled or error
+  } catch (error) {
+    console.error('Failed to delete recurring transaction:', error)
   }
 }
 
+/**
+ * 提交表单数据
+ * 根据 editingId 判断是创建还是更新操作
+ */
 async function handleSubmit() {
   if (!form.value.title) {
     ElMessage.warning(t('common.required'))
@@ -109,8 +152,10 @@ async function handleSubmit() {
   }
   try {
     if (editingId.value) {
+      // 更新操作
       await update(editingId.value, form.value as UpdateRecurringTransactionReq)
     } else {
+      // 创建操作
       await create(form.value)
     }
     ElMessage.success(t('common.success'))
@@ -121,6 +166,10 @@ async function handleSubmit() {
   }
 }
 
+/**
+ * 执行所有到期的循环交易
+ * 调用后端 API 处理所有到期日期在今天或之前的循环交易
+ */
 async function handleProcessDue() {
   try {
     await processDue()
@@ -131,6 +180,7 @@ async function handleProcessDue() {
   }
 }
 
+// 组件挂载时加载账户、分类列表和循环交易列表
 onMounted(async () => {
   // 打开页面时同时加载账户和分类列表，供下拉选择使用
   await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
