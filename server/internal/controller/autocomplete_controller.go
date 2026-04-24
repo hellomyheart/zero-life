@@ -16,6 +16,8 @@ type AutocompleteController struct {
 	categoryRepo *repository.CategoryRepository
 	tagRepo      *repository.TagRepository
 	currencyRepo *repository.CurrencyRepository
+	budgetRepo   *repository.BudgetRepository
+	billRepo     *repository.BillRepository
 }
 
 func NewAutocompleteController(
@@ -23,17 +25,21 @@ func NewAutocompleteController(
 	categoryRepo *repository.CategoryRepository,
 	tagRepo *repository.TagRepository,
 	currencyRepo *repository.CurrencyRepository,
+	budgetRepo *repository.BudgetRepository,
+	billRepo *repository.BillRepository,
 ) *AutocompleteController {
 	return &AutocompleteController{
 		accountRepo:  accountRepo,
 		categoryRepo: categoryRepo,
 		tagRepo:      tagRepo,
 		currencyRepo: currencyRepo,
+		budgetRepo:   budgetRepo,
+		billRepo:     billRepo,
 	}
 }
 
 func (c *AutocompleteController) Accounts(ctx *gin.Context) {
-	userID := ctx.GetUint64("userID")
+	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
 
 	accounts, err := c.accountRepo.List(userID, "", query, "name", 0, autocompleteLimit)
@@ -50,11 +56,11 @@ func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 			Type: string(a.Type),
 		})
 	}
-	ctx.JSON(http.StatusOK, items)
+	Success(ctx, items)
 }
 
 func (c *AutocompleteController) Categories(ctx *gin.Context) {
-	userID := ctx.GetUint64("userID")
+	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
 
 	categories, err := c.categoryRepo.List(userID)
@@ -76,11 +82,11 @@ func (c *AutocompleteController) Categories(ctx *gin.Context) {
 			break
 		}
 	}
-	ctx.JSON(http.StatusOK, items)
+	Success(ctx, items)
 }
 
 func (c *AutocompleteController) Tags(ctx *gin.Context) {
-	userID := ctx.GetUint64("userID")
+	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
 
 	tags, err := c.tagRepo.List(userID)
@@ -103,7 +109,7 @@ func (c *AutocompleteController) Tags(ctx *gin.Context) {
 			break
 		}
 	}
-	ctx.JSON(http.StatusOK, items)
+	Success(ctx, items)
 }
 
 func (c *AutocompleteController) Currencies(ctx *gin.Context) {
@@ -132,5 +138,57 @@ func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 			break
 		}
 	}
-	ctx.JSON(http.StatusOK, items)
+	Success(ctx, items)
+}
+
+func (c *AutocompleteController) Budgets(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	query := strings.ToLower(ctx.Query("q"))
+
+	budgets, err := c.budgetRepo.List(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	items := make([]response.AutocompleteItemResp, 0)
+	for _, b := range budgets {
+		if query != "" && !strings.Contains(strings.ToLower(b.Name), query) {
+			continue
+		}
+		items = append(items, response.AutocompleteItemResp{
+			ID:   b.ID,
+			Name: b.Name,
+		})
+		if len(items) >= autocompleteLimit {
+			break
+		}
+	}
+	Success(ctx, items)
+}
+
+func (c *AutocompleteController) Bills(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+	query := strings.ToLower(ctx.Query("q"))
+
+	bills, err := c.billRepo.List(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	items := make([]response.AutocompleteItemResp, 0)
+	for _, b := range bills {
+		if query != "" && !strings.Contains(strings.ToLower(b.Name), query) {
+			continue
+		}
+		items = append(items, response.AutocompleteItemResp{
+			ID:   b.ID,
+			Name: b.Name,
+		})
+		if len(items) >= autocompleteLimit {
+			break
+		}
+	}
+	Success(ctx, items)
 }

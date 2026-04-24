@@ -9,18 +9,18 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
-type ReconciliationController struct {
-	service *service.ReconciliationService
+type ObjectGroupController struct {
+	service *service.ObjectGroupService
 }
 
-func NewReconciliationController(service *service.ReconciliationService) *ReconciliationController {
-	return &ReconciliationController{service: service}
+func NewObjectGroupController(service *service.ObjectGroupService) *ObjectGroupController {
+	return &ObjectGroupController{service: service}
 }
 
-func (ctrl *ReconciliationController) Create(c *gin.Context) {
+func (ctrl *ObjectGroupController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
-	var req request.CreateReconciliationReq
+	var req request.CreateObjectGroupReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
@@ -35,10 +35,11 @@ func (ctrl *ReconciliationController) Create(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *ReconciliationController) Get(c *gin.Context) {
+func (ctrl *ObjectGroupController) Get(c *gin.Context) {
+	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
-	result, err := ctrl.service.Get(id)
+	result, err := ctrl.service.Get(userID, id)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -47,32 +48,30 @@ func (ctrl *ReconciliationController) Get(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *ReconciliationController) List(c *gin.Context) {
-	var req request.ReconciliationListReq
-	if err := c.ShouldBindQuery(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
-		return
-	}
+func (ctrl *ObjectGroupController) List(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	groupableType := c.Query("groupable_type")
 
-	result, err := ctrl.service.List(&req)
+	result, err := ctrl.service.List(userID, groupableType)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
-	SuccessPage(c, result)
+	Success(c, result)
 }
 
-func (ctrl *ReconciliationController) Update(c *gin.Context) {
+func (ctrl *ObjectGroupController) Update(c *gin.Context) {
+	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
-	var req request.UpdateReconciliationReq
+	var req request.UpdateObjectGroupReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
-	result, err := ctrl.service.Update(id, &req)
+	result, err := ctrl.service.Update(userID, id, &req)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -81,10 +80,11 @@ func (ctrl *ReconciliationController) Update(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *ReconciliationController) Delete(c *gin.Context) {
+func (ctrl *ObjectGroupController) Delete(c *gin.Context) {
+	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
-	if err := ctrl.service.Delete(id); err != nil {
+	if err := ctrl.service.Delete(userID, id); err != nil {
 		handleError(c, err)
 		return
 	}

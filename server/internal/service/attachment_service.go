@@ -118,6 +118,33 @@ func (s *AttachmentService) Download(userID, id uint64) (string, error) {
 	return fullPath, nil
 }
 
+type AttachmentViewResult struct {
+	FilePath string
+	Filename string
+	Mime     string
+}
+
+func (s *AttachmentService) View(userID, id uint64) (*AttachmentViewResult, error) {
+	attachment, err := s.attachmentRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	fullPath := filepath.Join(s.storagePath, attachment.Path)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		return nil, errcode.ErrNotFound
+	}
+
+	return &AttachmentViewResult{
+		FilePath: fullPath,
+		Filename: attachment.Filename,
+		Mime:     attachment.Mime,
+	}, nil
+}
+
 func (s *AttachmentService) List(userID uint64, attachableType string, attachableID uint64) ([]response.AttachmentResp, error) {
 	attachments, err := s.attachmentRepo.List(userID, attachableType, attachableID)
 	if err != nil {

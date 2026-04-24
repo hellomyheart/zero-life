@@ -18,17 +18,17 @@ func NewExportController(service *service.ExportService) *ExportController {
 }
 
 func (c *ExportController) ExportTransactions(ctx *gin.Context) {
-	userID := ctx.GetUint64("userID")
+	userID := ctx.GetUint64("user_id")
 
 	var req request.ExportReq
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
 	data, filename, err := c.service.ExportTransactions(userID, req.StartDate, req.EndDate, req.Format)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
 		return
 	}
 
@@ -43,17 +43,92 @@ func (c *ExportController) ExportTransactions(ctx *gin.Context) {
 }
 
 func (c *ExportController) ExportAccounts(ctx *gin.Context) {
-	userID := ctx.GetUint64("userID")
+	userID := ctx.GetUint64("user_id")
 
 	var req request.ExportReq
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
 	data, filename, err := c.service.ExportAccounts(userID, req.Format)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handleError(ctx, err)
+		return
+	}
+
+	contentType := "text/csv"
+	if req.Format == "json" {
+		contentType = "application/json"
+	}
+
+	ctx.Header("Content-Type", contentType)
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Data(http.StatusOK, contentType, data)
+}
+
+func (c *ExportController) ExportBudgets(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	var req request.ExportReq
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	data, filename, err := c.service.ExportBudgets(userID, req.Format)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	contentType := "text/csv"
+	if req.Format == "json" {
+		contentType = "application/json"
+	}
+
+	ctx.Header("Content-Type", contentType)
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Data(http.StatusOK, contentType, data)
+}
+
+func (c *ExportController) ExportCategories(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	var req request.ExportReq
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	data, filename, err := c.service.ExportCategories(userID, req.Format)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	contentType := "text/csv"
+	if req.Format == "json" {
+		contentType = "application/json"
+	}
+
+	ctx.Header("Content-Type", contentType)
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Data(http.StatusOK, contentType, data)
+}
+
+func (c *ExportController) ExportTags(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	var req request.ExportReq
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	data, filename, err := c.service.ExportTags(userID, req.Format)
+	if err != nil {
+		handleError(ctx, err)
 		return
 	}
 

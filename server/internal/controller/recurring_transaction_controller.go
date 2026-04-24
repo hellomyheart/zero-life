@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
@@ -10,18 +9,18 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
-type WebhookController struct {
-	service *service.WebhookService
+type RecurringTransactionController struct {
+	service *service.RecurringTransactionService
 }
 
-func NewWebhookController(service *service.WebhookService) *WebhookController {
-	return &WebhookController{service: service}
+func NewRecurringTransactionController(service *service.RecurringTransactionService) *RecurringTransactionController {
+	return &RecurringTransactionController{service: service}
 }
 
-func (ctrl *WebhookController) Create(c *gin.Context) {
+func (ctrl *RecurringTransactionController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
-	var req request.CreateWebhookReq
+	var req request.CreateRecurringTransactionReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
@@ -36,7 +35,7 @@ func (ctrl *WebhookController) Create(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *WebhookController) Get(c *gin.Context) {
+func (ctrl *RecurringTransactionController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
@@ -49,23 +48,29 @@ func (ctrl *WebhookController) Get(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *WebhookController) List(c *gin.Context) {
+func (ctrl *RecurringTransactionController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
-	result, err := ctrl.service.List(userID)
+	var req request.RecurringTransactionListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	result, err := ctrl.service.List(userID, &req)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
-	Success(c, result)
+	SuccessPage(c, result)
 }
 
-func (ctrl *WebhookController) Update(c *gin.Context) {
+func (ctrl *RecurringTransactionController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
-	var req request.UpdateWebhookReq
+	var req request.UpdateRecurringTransactionReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
@@ -80,7 +85,7 @@ func (ctrl *WebhookController) Update(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *WebhookController) Delete(c *gin.Context) {
+func (ctrl *RecurringTransactionController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
 
@@ -92,18 +97,14 @@ func (ctrl *WebhookController) Delete(c *gin.Context) {
 	Success(c, nil)
 }
 
-func (ctrl *WebhookController) ListDeliveries(c *gin.Context) {
+func (ctrl *RecurringTransactionController) ProcessDue(c *gin.Context) {
 	userID := c.GetUint64("user_id")
-	webhookID := parseIDParam(c, "id")
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	result, err := ctrl.service.ListDeliveries(userID, webhookID, page, pageSize)
+	created, err := ctrl.service.ProcessDue(userID)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
-	Success(c, result)
+	Success(c, gin.H{"created": created})
 }

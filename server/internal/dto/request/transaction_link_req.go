@@ -1,12 +1,13 @@
 package request
 
 type CreateTransactionLinkReq struct {
-	LinkTypeID    uint64 `json:"link_type_id" binding:"required"`
-	SourceID      uint64 `json:"source_id" binding:"required"`
-	DestinationID uint64 `json:"destination_id" binding:"required"`
-	Comment       string `json:"comment"`
+	TransactionID    uint64 `json:"transaction_id" binding:"required"`
+	LinkType         string `json:"link_type" binding:"required,oneof=rolled_back reconciled linked"`
+	LinkedJournalID  uint64 `json:"linked_journal_id" binding:"required"`
 }
 
 type TransactionLinkListReq struct {
-	TransactionID uint64 `form:"transaction_id" binding:"required"`
+	TransactionID *uint64 `form:"transaction_id"`
+	Page          int     `form:"page,default=1"`
+	PageSize      int     `form:"page_size,default=20"`
 }

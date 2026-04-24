@@ -5,41 +5,31 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/pagination"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"gorm.io/gorm"
 )
 
 type TransactionLinkService struct {
-	txnLinkRepo *repository.TransactionLinkRepository
+	linkRepo *repository.TransactionLinkRepository
 }
 
-func NewTransactionLinkService(txnLinkRepo *repository.TransactionLinkRepository) *TransactionLinkService {
-	return &TransactionLinkService{txnLinkRepo: txnLinkRepo}
+func NewTransactionLinkService(linkRepo *repository.TransactionLinkRepository) *TransactionLinkService {
+	return &TransactionLinkService{linkRepo: linkRepo}
 }
 
 func (s *TransactionLinkService) Create(req *request.CreateTransactionLinkReq) (*response.TransactionLinkResp, error) {
-	// Check for duplicate link
-	exists, err := s.txnLinkRepo.Exists(req.LinkTypeID, req.SourceID, req.DestinationID)
-	if err != nil {
-		return nil, errcode.ErrInternal
-	}
-	if exists {
-		return nil, errcode.ErrTxnLinkDuplicate
+	link := &model.TransactionJournalLink{
+		TransactionID:   req.TransactionID,
+		LinkType:        model.TransactionLinkType(req.LinkType),
+		LinkedJournalID: req.LinkedJournalID,
 	}
 
-	link := &model.TransactionLink{
-		LinkTypeID:    req.LinkTypeID,
-		SourceID:      req.SourceID,
-		DestinationID: req.DestinationID,
-		Comment:       req.Comment,
-	}
-
-	if err := s.txnLinkRepo.Create(link); err != nil {
+	if err := s.linkRepo.Create(link); err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	// Reload with LinkType
-	created, err := s.txnLinkRepo.GetByID(link.ID)
+	created, err := s.linkRepo.GetByID(link.ID)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -47,8 +37,16 @@ func (s *TransactionLinkService) Create(req *request.CreateTransactionLinkReq) (
 	return s.toResp(created), nil
 }
 
-func (s *TransactionLinkService) List(transactionID uint64) ([]response.TransactionLinkResp, error) {
-	links, err := s.txnLinkRepo.ListByTransactionID(transactionID)
+func (s *TransactionLinkService) List(req *request.TransactionLinkListReq) (*pagination.Result, error) {
+	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
+	params.Normalize()
+
+	links, err := s.linkRepo.List(req.TransactionID, params.Offset(), params.PageSize)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	total, err := s.linkRepo.Count(req.TransactionID)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -58,39 +56,26 @@ func (s *TransactionLinkService) List(transactionID uint64) ([]response.Transact
 		items = append(items, *s.toResp(&l))
 	}
 
-	return items, nil
+	return pagination.NewResult(items, total, params), nil
 }
 
 func (s *TransactionLinkService) Delete(id uint64) error {
-	_, err := s.txnLinkRepo.GetByID(id)
+	_, err := s.linkRepo.GetByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errcode.ErrNotFound
 		}
 		return errcode.ErrInternal
 	}
-	return s.txnLinkRepo.Delete(id)
+	return s.linkRepo.Delete(id)
 }
 
-func (s *TransactionLinkService) toResp(l *model.TransactionLink) *response.TransactionLinkResp {
-	resp := &response.TransactionLinkResp{
-		ID:            l.ID,
-		LinkTypeID:    l.LinkTypeID,
-		SourceID:      l.SourceID,
-		DestinationID: l.DestinationID,
-		Comment:       l.Comment,
-		CreatedAt:     l.CreatedAt,
+func (s *TransactionLinkService) toResp(l *model.TransactionJournalLink) *response.TransactionLinkResp {
+	return &response.TransactionLinkResp{
+		ID:              l.ID,
+		TransactionID:   l.TransactionID,
+		LinkType:        string(l.LinkType),
+		LinkedJournalID: l.LinkedJournalID,
+		CreatedAt:       l.CreatedAt,
 	}
-	if l.LinkType.ID > 0 {
-		resp.LinkType = response.LinkTypeResp{
-			ID:            l.LinkType.ID,
-			Name:          l.LinkType.Name,
-			Outward:       l.LinkType.Outward,
-			Inward:        l.LinkType.Inward,
-			IsDirectional: l.LinkType.IsDirectional,
-			CreatedAt:     l.LinkType.CreatedAt,
-			UpdatedAt:     l.LinkType.UpdatedAt,
-		}
-	}
-	return resp
 }

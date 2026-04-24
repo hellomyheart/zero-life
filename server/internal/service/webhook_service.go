@@ -1,24 +1,26 @@
 package service
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
-	"log"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
-	"github.com/hellomyheart/zero-life/server/internal/pkg/pagination"
-	"github.com/hellomyheart/zero-life/server/internal/pkg/webhook"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"gorm.io/gorm"
 )
 
-// WebhookNotifier defines the interface for triggering webhooks.
-// This interface decouples TransactionService from WebhookService to avoid circular dependencies.
 type WebhookNotifier interface {
-	TriggerWebhooks(userID uint64, trigger model.WebhookTrigger, data interface{})
+	Trigger(userID uint64, trigger model.WebhookTrigger, payload interface{})
+	TriggerWebhooks(userID uint64, triggerType string, payload interface{})
 }
 
 type WebhookService struct {
@@ -29,36 +31,32 @@ func NewWebhookService(webhookRepo *repository.WebhookRepository) *WebhookServic
 	return &WebhookService{webhookRepo: webhookRepo}
 }
 
-// --- Webhook CRUD ---
-
 func (s *WebhookService) Create(userID uint64, req *request.CreateWebhookReq) (*response.WebhookResp, error) {
-	if err := webhook.ValidateURL(req.URL); err != nil {
-		return nil, errcode.ErrWebhookURLInvalid
+	webhook := &model.Webhook{
+		UserID:   userID,
+		Name:     req.Name,
+		URL:      req.URL,
+		Trigger:  model.WebhookTrigger(req.Trigger),
+		IsActive: true,
+		Secret:   generateWebhookSecret(),
 	}
 
-	wh := &model.Webhook{
-		UserID:  userID,
-		URL:     req.URL,
-		Trigger: model.WebhookTrigger(req.Trigger),
-		Secret:  req.Secret,
-	}
-
-	if err := s.webhookRepo.Create(wh); err != nil {
+	if err := s.webhookRepo.Create(webhook); err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	return s.toResp(wh), nil
+	return s.toResp(webhook), nil
 }
 
 func (s *WebhookService) Get(userID, id uint64) (*response.WebhookResp, error) {
-	wh, err := s.webhookRepo.GetByID(id, userID)
+	webhook, err := s.webhookRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errcode.ErrNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
-	return s.toResp(wh), nil
+	return s.toResp(webhook), nil
 }
 
 func (s *WebhookService) List(userID uint64) ([]response.WebhookResp, error) {
@@ -68,14 +66,14 @@ func (s *WebhookService) List(userID uint64) ([]response.WebhookResp, error) {
 	}
 
 	items := make([]response.WebhookResp, 0, len(webhooks))
-	for _, wh := range webhooks {
-		items = append(items, *s.toResp(&wh))
+	for _, w := range webhooks {
+		items = append(items, *s.toResp(&w))
 	}
 	return items, nil
 }
 
 func (s *WebhookService) Update(userID, id uint64, req *request.UpdateWebhookReq) (*response.WebhookResp, error) {
-	wh, err := s.webhookRepo.GetByID(id, userID)
+	webhook, err := s.webhookRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errcode.ErrNotFound
@@ -83,130 +81,157 @@ func (s *WebhookService) Update(userID, id uint64, req *request.UpdateWebhookReq
 		return nil, errcode.ErrInternal
 	}
 
-	if err := webhook.ValidateURL(req.URL); err != nil {
-		return nil, errcode.ErrWebhookURLInvalid
+	if req.Name != "" {
+		webhook.Name = req.Name
 	}
-
-	wh.URL = req.URL
-	wh.Trigger = model.WebhookTrigger(req.Trigger)
-	wh.Secret = req.Secret
+	if req.URL != "" {
+		webhook.URL = req.URL
+	}
+	if req.Trigger != "" {
+		webhook.Trigger = model.WebhookTrigger(req.Trigger)
+	}
 	if req.IsActive != nil {
-		wh.IsActive = *req.IsActive
+		webhook.IsActive = *req.IsActive
 	}
 
-	if err := s.webhookRepo.Update(wh); err != nil {
+	if err := s.webhookRepo.Update(webhook); err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	return s.toResp(wh), nil
+	return s.toResp(webhook), nil
 }
 
 func (s *WebhookService) Delete(userID, id uint64) error {
+	_, err := s.webhookRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errcode.ErrNotFound
+		}
+		return errcode.ErrInternal
+	}
 	return s.webhookRepo.Delete(id, userID)
 }
 
-// --- Trigger & Messages ---
-
-// TriggerWebhooks finds matching webhooks and sends them asynchronously.
-func (s *WebhookService) TriggerWebhooks(userID uint64, trigger model.WebhookTrigger, data interface{}) {
-	webhooks, err := s.webhookRepo.GetByTrigger(userID, trigger)
+func (s *WebhookService) Trigger(userID uint64, trigger model.WebhookTrigger, payload interface{}) {
+	webhooks, err := s.webhookRepo.GetActiveByTrigger(userID, trigger)
 	if err != nil {
-		log.Printf("[WebhookService] TriggerWebhooks: failed to get webhooks for user %d trigger %s: %v", userID, trigger, err)
 		return
 	}
 
-	if len(webhooks) == 0 {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
 		return
 	}
 
-	payload := webhook.BuildPayload(string(trigger), data)
-	payloadBytes, _ := json.Marshal(payload)
-
-	for _, wh := range webhooks {
-		go func(wh model.Webhook) {
-			result := webhook.Send(wh.URL, wh.Secret, payload)
-
-			now := time.Now()
-			msg := &model.WebhookMessage{
-				WebhookID:    wh.ID,
-				RequestBody:  string(payloadBytes),
-				ResponseBody: result.ResponseBody,
-				Attempts:     3,
-				SentAt:       &now,
-				CreatedAt:    time.Now(),
-			}
-
-			if result.Success {
-				msg.Status = model.WebhookMessageSuccess
-				msg.ResponseCode = &result.ResponseCode
-			} else {
-				msg.Status = model.WebhookMessageFailed
-				if result.ResponseCode > 0 {
-					msg.ResponseCode = &result.ResponseCode
-				}
-			}
-
-			if err := s.webhookRepo.CreateMessage(msg); err != nil {
-				log.Printf("[WebhookService] TriggerWebhooks: failed to save message for webhook %d: %v", wh.ID, err)
-			}
-		}(wh)
+	for _, webhook := range webhooks {
+		s.deliver(&webhook, payloadBytes)
 	}
 }
 
-// GetMessages returns paginated messages for a webhook.
-func (s *WebhookService) GetMessages(userID, webhookID uint64, req *request.WebhookMessageListReq) (*pagination.Result, error) {
-	// Verify webhook belongs to user
+func (s *WebhookService) deliver(webhook *model.Webhook, payload []byte) {
+	signature := computeHMAC(webhook.Secret, payload)
+
+	req, err := http.NewRequest("POST", webhook.URL, bytes.NewReader(payload))
+	if err != nil {
+		s.recordDelivery(webhook.ID, payload, nil, fmt.Sprintf("failed to create request: %v", err))
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Webhook-Signature", signature)
+	req.Header.Set("X-Webhook-Trigger", string(webhook.Trigger))
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		s.recordDelivery(webhook.ID, payload, nil, fmt.Sprintf("failed to send: %v", err))
+		return
+	}
+	defer resp.Body.Close()
+
+	statusCode := resp.StatusCode
+	var errorMsg *string
+	if statusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		msg := fmt.Sprintf("HTTP %d: %s", statusCode, string(body))
+		errorMsg = &msg
+	}
+
+	now := time.Now()
+	webhook.LastDeliveredAt = &now
+	s.webhookRepo.Update(webhook)
+
+	s.recordDelivery(webhook.ID, payload, &statusCode, func() string {
+		if errorMsg != nil {
+			return *errorMsg
+		}
+		return ""
+	}())
+}
+
+func (s *WebhookService) recordDelivery(webhookID uint64, payload []byte, statusCode *int, errorMsg string) {
+	delivery := &model.WebhookDelivery{
+		WebhookID:   webhookID,
+		Payload:     string(payload),
+		StatusCode:  statusCode,
+		DeliveredAt: func() *time.Time { t := time.Now(); return &t }(),
+	}
+	if errorMsg != "" {
+		delivery.ErrorMessage = &errorMsg
+	}
+	s.webhookRepo.CreateDelivery(delivery)
+}
+
+func (s *WebhookService) TriggerWebhooks(userID uint64, triggerType string, payload interface{}) {
+	trigger := model.WebhookTrigger(triggerType)
+	s.Trigger(userID, trigger, payload)
+}
+
+func (s *WebhookService) ListDeliveries(userID, webhookID uint64, page, pageSize int) ([]response.WebhookDeliveryResp, error) {
 	_, err := s.webhookRepo.GetByID(webhookID, userID)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
-		}
-		return nil, errcode.ErrInternal
+		return nil, errcode.ErrNotFound
 	}
 
-	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
-	params.Normalize()
-
-	messages, err := s.webhookRepo.GetMessagesByWebhookID(webhookID, params.Offset(), params.PageSize)
+	offset := (page - 1) * pageSize
+	deliveries, err := s.webhookRepo.ListDeliveries(webhookID, offset, pageSize)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	total, err := s.webhookRepo.CountMessagesByWebhookID(webhookID)
-	if err != nil {
-		return nil, errcode.ErrInternal
+	items := make([]response.WebhookDeliveryResp, 0, len(deliveries))
+	for _, d := range deliveries {
+		items = append(items, response.WebhookDeliveryResp{
+			ID:           d.ID,
+			WebhookID:    d.WebhookID,
+			StatusCode:   d.StatusCode,
+			ErrorMessage: d.ErrorMessage,
+			DeliveredAt:  d.DeliveredAt,
+			CreatedAt:    d.CreatedAt,
+		})
 	}
-
-	items := make([]response.WebhookMessageResp, 0, len(messages))
-	for _, m := range messages {
-		items = append(items, s.messageToResp(&m))
-	}
-
-	return pagination.NewResult(items, total, params), nil
+	return items, nil
 }
 
-func (s *WebhookService) toResp(wh *model.Webhook) *response.WebhookResp {
+func (s *WebhookService) toResp(w *model.Webhook) *response.WebhookResp {
 	return &response.WebhookResp{
-		ID:        wh.ID,
-		URL:       wh.URL,
-		Trigger:   string(wh.Trigger),
-		Secret:    wh.Secret,
-		IsActive:  wh.IsActive,
-		CreatedAt: wh.CreatedAt,
-		UpdatedAt: wh.UpdatedAt,
+		ID:              w.ID,
+		Name:            w.Name,
+		URL:             w.URL,
+		Trigger:         string(w.Trigger),
+		IsActive:        w.IsActive,
+		LastDeliveredAt: w.LastDeliveredAt,
+		CreatedAt:       w.CreatedAt,
+		UpdatedAt:       w.UpdatedAt,
 	}
 }
 
-func (s *WebhookService) messageToResp(m *model.WebhookMessage) response.WebhookMessageResp {
-	return response.WebhookMessageResp{
-		ID:           m.ID,
-		WebhookID:    m.WebhookID,
-		RequestBody:  m.RequestBody,
-		ResponseCode: m.ResponseCode,
-		ResponseBody: m.ResponseBody,
-		Attempts:     m.Attempts,
-		Status:       string(m.Status),
-		SentAt:       m.SentAt,
-		CreatedAt:    m.CreatedAt,
-	}
+func generateWebhookSecret() string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().UnixMilli()))))
+}
+
+func computeHMAC(secret string, payload []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	return fmt.Sprintf("%x", mac.Sum(nil))
 }

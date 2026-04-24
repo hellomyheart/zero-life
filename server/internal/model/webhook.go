@@ -23,15 +23,17 @@ const (
 )
 
 type Webhook struct {
-	ID        uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID    uint64         `gorm:"not null;index" json:"user_id"`
-	URL       string         `gorm:"not null;size:500" json:"url"`
-	Trigger   WebhookTrigger `gorm:"not null;size:50" json:"trigger"`
-	Secret    string         `gorm:"size:255" json:"secret"`
-	IsActive  bool           `gorm:"default:true" json:"is_active"`
-	CreatedAt time.Time      `gorm:"not null" json:"created_at"`
-	UpdatedAt time.Time      `gorm:"not null" json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID              uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID          uint64         `gorm:"not null;index" json:"user_id"`
+	Name            string         `gorm:"not null;size:100" json:"name"`
+	URL             string         `gorm:"not null;size:500" json:"url"`
+	Trigger         WebhookTrigger `gorm:"not null;size:50" json:"trigger"`
+	Secret          string         `gorm:"size:255" json:"secret"`
+	IsActive        bool           `gorm:"default:true" json:"is_active"`
+	LastDeliveredAt *time.Time     `json:"last_delivered_at,omitempty"`
+	CreatedAt       time.Time      `gorm:"not null" json:"created_at"`
+	UpdatedAt       time.Time      `gorm:"not null" json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (Webhook) TableName() string { return "webhooks" }
@@ -49,3 +51,15 @@ type WebhookMessage struct {
 }
 
 func (WebhookMessage) TableName() string { return "webhook_messages" }
+
+type WebhookDelivery struct {
+	ID           uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	WebhookID    uint64     `gorm:"not null;index" json:"webhook_id"`
+	Payload      string     `gorm:"type:text" json:"payload"`
+	StatusCode   *int       `json:"status_code,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
+	DeliveredAt  *time.Time `json:"delivered_at,omitempty"`
+	CreatedAt    time.Time  `gorm:"not null" json:"created_at"`
+}
+
+func (WebhookDelivery) TableName() string { return "webhook_deliveries" }

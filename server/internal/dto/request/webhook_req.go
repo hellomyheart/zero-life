@@ -1,19 +1,14 @@
 package request
 
 type CreateWebhookReq struct {
-	URL     string `json:"url" binding:"required"`
-	Trigger string `json:"trigger" binding:"required,oneof=TRANSACTION_CREATE TRANSACTION_UPDATE TRANSACTION_DELETE"`
-	Secret  string `json:"secret"`
+	Name    string `json:"name" binding:"required"`
+	URL     string `json:"url" binding:"required,url"`
+	Trigger string `json:"trigger" binding:"required,oneof=transaction.created transaction.updated transaction.deleted bill.paid budget.created budget.updated budget.deleted"`
 }
 
 type UpdateWebhookReq struct {
-	URL      string `json:"url" binding:"required"`
-	Trigger  string `json:"trigger" binding:"required,oneof=TRANSACTION_CREATE TRANSACTION_UPDATE TRANSACTION_DELETE"`
-	Secret   string `json:"secret"`
-	IsActive *bool  `json:"is_active"`
-}
-
-type WebhookMessageListReq struct {
-	Page     int `form:"page,default=1"`
-	PageSize int `form:"page_size,default=20"`
+	Name     string  `json:"name"`
+	URL      string  `json:"url" binding:"omitempty,url"`
+	Trigger  string  `json:"trigger" binding:"omitempty,oneof=transaction.created transaction.updated transaction.deleted bill.paid budget.created budget.updated budget.deleted"`
+	IsActive *bool   `json:"is_active"`
 }

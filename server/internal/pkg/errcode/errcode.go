@@ -63,28 +63,37 @@ var (
 	ErrImportFileInvalid = &Error{Code: 90001, Message: "invalid import file"}
 	ErrImportParseFail   = &Error{Code: 90002, Message: "failed to parse import file"}
 
-	// 循环交易错误 10xxxx
+	// 定期交易/Recurrence错误 10xxxx
 	ErrRecurrenceAmountInvalid = &Error{Code: 100001, Message: "recurrence amount must be greater than zero"}
 	ErrRecurrenceInactive      = &Error{Code: 100002, Message: "recurrence is inactive"}
+	ErrRecurringTransactionInvalid = &Error{Code: 100003, Message: "invalid recurring transaction"}
+	ErrRecurringTransactionExpired = &Error{Code: 100004, Message: "recurring transaction has expired"}
 
 	// Webhook错误 11xxxx
-	ErrWebhookURLInvalid = &Error{Code: 110001, Message: "webhook URL must start with https://"}
-	ErrWebhookNotFound   = &Error{Code: 110002, Message: "webhook not found"}
+	ErrWebhookURLInvalid     = &Error{Code: 110001, Message: "invalid webhook URL"}
+	ErrWebhookTriggerInvalid = &Error{Code: 110002, Message: "invalid webhook trigger"}
+	ErrWebhookDeliveryFail   = &Error{Code: 110003, Message: "webhook delivery failed"}
 
-	// 对账错误 12xxxx
-	ErrReconciliationInvalidDate = &Error{Code: 120001, Message: "reconciliation date range is invalid"}
-	ErrReconciliationBalanceInvalid = &Error{Code: 120002, Message: "submitted balance is invalid"}
+	// 对象组错误 12xxxx
+	ErrObjectGroupNameExists = &Error{Code: 120001, Message: "object group name already exists"}
 
-	// 批量操作错误 13xxxx
-	ErrBulkEmptyIDs    = &Error{Code: 130001, Message: "transaction IDs list cannot be empty"}
-	ErrBulkConvertFail = &Error{Code: 130002, Message: "failed to convert transaction type"}
+	// 交易链接错误 13xxxx
+	ErrTransactionLinkInvalid = &Error{Code: 130001, Message: "invalid transaction link"}
+	ErrTransactionLinkExists  = &Error{Code: 130002, Message: "transaction link already exists"}
 
-	// 交易链接错误 14xxxx
-	ErrTxnLinkDuplicate = &Error{Code: 140001, Message: "transaction link already exists"}
-	ErrLinkTypeNameExists = &Error{Code: 140002, Message: "link type name already exists"}
+	// 偏好设置错误 14xxxx
+	ErrPreferenceInvalid = &Error{Code: 140001, Message: "invalid preference key"}
 
-	// 偏好设置错误 15xxxx
-	ErrPreferenceNameInvalid = &Error{Code: 150001, Message: "preference name is invalid"}
+	// 对账错误 15xxxx
+	ErrReconciliationInvalid = &Error{Code: 150001, Message: "invalid reconciliation"}
+	ErrReconciliationNotOpen = &Error{Code: 150002, Message: "reconciliation is not open"}
+
+	// MFA错误 16xxxx
+	ErrMFAAlreadyEnabled  = &Error{Code: 160001, Message: "MFA is already enabled"}
+	ErrMFASetupNotFound   = &Error{Code: 160002, Message: "MFA setup not found or expired"}
+	ErrMFAInvalidCode     = &Error{Code: 160003, Message: "invalid MFA code"}
+	ErrMFANotEnabled      = &Error{Code: 160004, Message: "MFA is not enabled"}
+	ErrMFAInvalidToken    = &Error{Code: 160005, Message: "invalid MFA token"}
 )
 
 func WithMessage(e *Error, msg string) *Error {

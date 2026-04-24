@@ -5,37 +5,33 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/controller"
 	"github.com/hellomyheart/zero-life/server/internal/middleware"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
-	"gorm.io/gorm"
 )
 
 type Router struct {
 	engine *gin.Engine
 
-	authCtrl         *controller.AuthController
-	accountCtrl      *controller.AccountController
-	txnCtrl          *controller.TransactionController
-	categoryCtrl     *controller.CategoryController
-	tagCtrl          *controller.TagController
-	budgetCtrl       *controller.BudgetController
-	billCtrl         *controller.BillController
-	currencyCtrl     *controller.CurrencyController
-	ruleCtrl         *controller.RuleController
-	ruleGroupCtrl    *controller.RuleGroupController
-	reportCtrl       *controller.ReportController
-	dashboardCtrl    *controller.DashboardController
-	importCtrl       *controller.ImportController
-	piggyBankCtrl    *controller.PiggyBankController
-	attachmentCtrl   *controller.AttachmentController
-	autocompleteCtrl *controller.AutocompleteController
-	exportCtrl       *controller.ExportController
-	recurrenceCtrl   *controller.RecurrenceController
-	cronCtrl         *controller.CronController
-	webhookCtrl      *controller.WebhookController
-	reconCtrl        *controller.ReconciliationController
-	txnBulkCtrl      *controller.TransactionBulkController
-	linkTypeCtrl     *controller.LinkTypeController
-	txnLinkCtrl      *controller.TransactionLinkController
-	prefCtrl         *controller.PreferenceController
+	authCtrl              *controller.AuthController
+	accountCtrl           *controller.AccountController
+	txnCtrl               *controller.TransactionController
+	categoryCtrl          *controller.CategoryController
+	tagCtrl               *controller.TagController
+	budgetCtrl            *controller.BudgetController
+	billCtrl              *controller.BillController
+	currencyCtrl          *controller.CurrencyController
+	ruleCtrl              *controller.RuleController
+	reportCtrl            *controller.ReportController
+	dashboardCtrl         *controller.DashboardController
+	importCtrl            *controller.ImportController
+	piggyBankCtrl         *controller.PiggyBankController
+	attachmentCtrl        *controller.AttachmentController
+	autocompleteCtrl      *controller.AutocompleteController
+	exportCtrl            *controller.ExportController
+	recurringTxnCtrl      *controller.RecurringTransactionController
+	webhookCtrl           *controller.WebhookController
+	objectGroupCtrl       *controller.ObjectGroupController
+	transactionLinkCtrl   *controller.TransactionLinkController
+	preferenceCtrl        *controller.PreferenceController
+	reconciliationCtrl    *controller.ReconciliationController
 }
 
 func NewRouter(
@@ -49,7 +45,6 @@ func NewRouter(
 	billCtrl *controller.BillController,
 	currencyCtrl *controller.CurrencyController,
 	ruleCtrl *controller.RuleController,
-	ruleGroupCtrl *controller.RuleGroupController,
 	reportCtrl *controller.ReportController,
 	dashboardCtrl *controller.DashboardController,
 	importCtrl *controller.ImportController,
@@ -57,53 +52,45 @@ func NewRouter(
 	attachmentCtrl *controller.AttachmentController,
 	autocompleteCtrl *controller.AutocompleteController,
 	exportCtrl *controller.ExportController,
-	recurrenceCtrl *controller.RecurrenceController,
-	cronCtrl *controller.CronController,
+	recurringTxnCtrl *controller.RecurringTransactionController,
 	webhookCtrl *controller.WebhookController,
-	reconCtrl *controller.ReconciliationController,
-	txnBulkCtrl *controller.TransactionBulkController,
-	linkTypeCtrl *controller.LinkTypeController,
-	txnLinkCtrl *controller.TransactionLinkController,
-	prefCtrl *controller.PreferenceController,
+	objectGroupCtrl *controller.ObjectGroupController,
+	transactionLinkCtrl *controller.TransactionLinkController,
+	preferenceCtrl *controller.PreferenceController,
+	reconciliationCtrl *controller.ReconciliationController,
 ) *Router {
 	return &Router{
-		engine:           engine,
-		authCtrl:         authCtrl,
-		accountCtrl:      accountCtrl,
-		txnCtrl:          txnCtrl,
-		categoryCtrl:     categoryCtrl,
-		tagCtrl:          tagCtrl,
-		budgetCtrl:       budgetCtrl,
-		billCtrl:         billCtrl,
-		currencyCtrl:     currencyCtrl,
-		ruleCtrl:         ruleCtrl,
-		ruleGroupCtrl:    ruleGroupCtrl,
-		reportCtrl:       reportCtrl,
-		dashboardCtrl:    dashboardCtrl,
-		importCtrl:       importCtrl,
-		piggyBankCtrl:    piggyBankCtrl,
-		attachmentCtrl:   attachmentCtrl,
-		autocompleteCtrl: autocompleteCtrl,
-		exportCtrl:       exportCtrl,
-		recurrenceCtrl:   recurrenceCtrl,
-		cronCtrl:         cronCtrl,
-		webhookCtrl:      webhookCtrl,
-		reconCtrl:        reconCtrl,
-		txnBulkCtrl:      txnBulkCtrl,
-		linkTypeCtrl:     linkTypeCtrl,
-		txnLinkCtrl:      txnLinkCtrl,
-		prefCtrl:         prefCtrl,
+		engine:               engine,
+		authCtrl:             authCtrl,
+		accountCtrl:          accountCtrl,
+		txnCtrl:              txnCtrl,
+		categoryCtrl:         categoryCtrl,
+		tagCtrl:              tagCtrl,
+		budgetCtrl:           budgetCtrl,
+		billCtrl:             billCtrl,
+		currencyCtrl:         currencyCtrl,
+		ruleCtrl:             ruleCtrl,
+		reportCtrl:           reportCtrl,
+		dashboardCtrl:        dashboardCtrl,
+		importCtrl:           importCtrl,
+		piggyBankCtrl:        piggyBankCtrl,
+		attachmentCtrl:       attachmentCtrl,
+		autocompleteCtrl:     autocompleteCtrl,
+		exportCtrl:           exportCtrl,
+		recurringTxnCtrl:     recurringTxnCtrl,
+		webhookCtrl:          webhookCtrl,
+		objectGroupCtrl:      objectGroupCtrl,
+		transactionLinkCtrl:  transactionLinkCtrl,
+		preferenceCtrl:       preferenceCtrl,
+		reconciliationCtrl:   reconciliationCtrl,
 	}
 }
 
-func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
-	// Global middleware
+func (r *Router) Setup(jwtService *jwt.Service) {
 	r.engine.Use(middleware.CORS())
 
-	// API v1 group
 	v1 := r.engine.Group("/api/v1")
 
-	// Public routes (no auth required)
 	auth := v1.Group("/auth")
 	{
 		auth.POST("/register", r.authCtrl.Register)
@@ -113,11 +100,9 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 		auth.POST("/reset-password", r.authCtrl.ResetPassword)
 	}
 
-	// Authenticated routes
 	authenticated := v1.Group("")
 	authenticated.Use(middleware.Auth(jwtService))
 	{
-		// Auth profile
 		authAuth := authenticated.Group("/auth")
 		{
 			authAuth.GET("/profile", r.authCtrl.GetProfile)
@@ -125,7 +110,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			authAuth.PUT("/password", r.authCtrl.ChangePassword)
 		}
 
-		// Accounts
 		accounts := authenticated.Group("/accounts")
 		{
 			accounts.POST("", r.accountCtrl.Create)
@@ -135,7 +119,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			accounts.DELETE("/:id", r.accountCtrl.Delete)
 		}
 
-		// Transactions
 		transactions := authenticated.Group("/transactions")
 		{
 			transactions.POST("", r.txnCtrl.Create)
@@ -146,7 +129,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			transactions.DELETE("/:id", r.txnCtrl.Delete)
 		}
 
-		// Categories
 		categories := authenticated.Group("/categories")
 		{
 			categories.POST("", r.categoryCtrl.Create)
@@ -155,7 +137,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			categories.DELETE("/:id", r.categoryCtrl.Delete)
 		}
 
-		// Tags
 		tags := authenticated.Group("/tags")
 		{
 			tags.POST("", r.tagCtrl.Create)
@@ -164,7 +145,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			tags.DELETE("/:id", r.tagCtrl.Delete)
 		}
 
-		// Budgets
 		budgets := authenticated.Group("/budgets")
 		{
 			budgets.POST("", r.budgetCtrl.Create)
@@ -175,7 +155,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			budgets.GET("/:id/history", r.budgetCtrl.GetHistory)
 		}
 
-		// Bills
 		bills := authenticated.Group("/bills")
 		{
 			bills.POST("", r.billCtrl.Create)
@@ -185,7 +164,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			bills.DELETE("/:id", r.billCtrl.Delete)
 		}
 
-		// Currencies
 		currencies := authenticated.Group("/currencies")
 		{
 			currencies.GET("", r.currencyCtrl.List)
@@ -195,7 +173,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			currencies.POST("/exchange-rates", r.currencyCtrl.SetExchangeRate)
 		}
 
-		// Rules
 		rules := authenticated.Group("/rules")
 		{
 			rules.POST("", r.ruleCtrl.Create)
@@ -207,18 +184,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			rules.POST("/:id/execute", r.ruleCtrl.Execute)
 		}
 
-		// Rule Groups
-		ruleGroups := authenticated.Group("/rule-groups")
-		{
-			ruleGroups.POST("", r.ruleGroupCtrl.Create)
-			ruleGroups.GET("", r.ruleGroupCtrl.List)
-			ruleGroups.GET("/:id", r.ruleGroupCtrl.Get)
-			ruleGroups.PUT("/:id", r.ruleGroupCtrl.Update)
-			ruleGroups.DELETE("/:id", r.ruleGroupCtrl.Delete)
-			ruleGroups.POST("/:id/execute", r.ruleGroupCtrl.ExecuteGroup)
-		}
-
-		// Reports
 		reports := authenticated.Group("/reports")
 		{
 			reports.GET("/income-expense", r.reportCtrl.IncomeExpense)
@@ -229,7 +194,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			reports.GET("/tag", r.reportCtrl.Tag)
 		}
 
-		// Import
 		imports := authenticated.Group("/imports")
 		{
 			imports.POST("/upload", r.importCtrl.Upload)
@@ -237,13 +201,11 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			imports.POST("/execute", r.importCtrl.Execute)
 		}
 
-		// Dashboard
 		dashboard := authenticated.Group("/dashboard")
 		{
 			dashboard.GET("", r.dashboardCtrl.Get)
 		}
 
-		// Piggy Banks
 		piggyBanks := authenticated.Group("/piggy-banks")
 		{
 			piggyBanks.POST("", r.piggyBankCtrl.Create)
@@ -256,43 +218,44 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			piggyBanks.GET("/:id/events", r.piggyBankCtrl.GetEvents)
 		}
 
-		// Attachments
 		attachments := authenticated.Group("/attachments")
 		{
 			attachments.POST("/upload", r.attachmentCtrl.Upload)
 			attachments.GET("/:id/download", r.attachmentCtrl.Download)
+			attachments.GET("/:id/view", r.attachmentCtrl.View)
 			attachments.GET("", r.attachmentCtrl.List)
 			attachments.DELETE("/:id", r.attachmentCtrl.Delete)
 		}
 
-		// Autocomplete
 		autocomplete := authenticated.Group("/autocomplete")
 		{
 			autocomplete.GET("/accounts", r.autocompleteCtrl.Accounts)
 			autocomplete.GET("/categories", r.autocompleteCtrl.Categories)
 			autocomplete.GET("/tags", r.autocompleteCtrl.Tags)
 			autocomplete.GET("/currencies", r.autocompleteCtrl.Currencies)
+			autocomplete.GET("/budgets", r.autocompleteCtrl.Budgets)
+			autocomplete.GET("/bills", r.autocompleteCtrl.Bills)
 		}
 
-		// Exports
 		exports := authenticated.Group("/exports")
 		{
 			exports.GET("/transactions", r.exportCtrl.ExportTransactions)
 			exports.GET("/accounts", r.exportCtrl.ExportAccounts)
+			exports.GET("/budgets", r.exportCtrl.ExportBudgets)
+			exports.GET("/categories", r.exportCtrl.ExportCategories)
+			exports.GET("/tags", r.exportCtrl.ExportTags)
 		}
 
-		// Recurrences
-		recurrences := authenticated.Group("/recurrences")
+		recurringTxns := authenticated.Group("/recurring-transactions")
 		{
-			recurrences.POST("", r.recurrenceCtrl.Create)
-			recurrences.GET("", r.recurrenceCtrl.List)
-			recurrences.GET("/:id", r.recurrenceCtrl.Get)
-			recurrences.PUT("/:id", r.recurrenceCtrl.Update)
-			recurrences.DELETE("/:id", r.recurrenceCtrl.Delete)
-			recurrences.POST("/:id/trigger", r.recurrenceCtrl.Trigger)
+			recurringTxns.POST("", r.recurringTxnCtrl.Create)
+			recurringTxns.GET("", r.recurringTxnCtrl.List)
+			recurringTxns.GET("/:id", r.recurringTxnCtrl.Get)
+			recurringTxns.PUT("/:id", r.recurringTxnCtrl.Update)
+			recurringTxns.DELETE("/:id", r.recurringTxnCtrl.Delete)
+			recurringTxns.POST("/process-due", r.recurringTxnCtrl.ProcessDue)
 		}
 
-		// Webhooks
 		webhooks := authenticated.Group("/webhooks")
 		{
 			webhooks.POST("", r.webhookCtrl.Create)
@@ -300,50 +263,47 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			webhooks.GET("/:id", r.webhookCtrl.Get)
 			webhooks.PUT("/:id", r.webhookCtrl.Update)
 			webhooks.DELETE("/:id", r.webhookCtrl.Delete)
-			webhooks.GET("/:id/messages", r.webhookCtrl.GetMessages)
+			webhooks.GET("/:id/deliveries", r.webhookCtrl.ListDeliveries)
 		}
 
-		// Reconciliation (nested under accounts)
-		accounts.GET("/:id/reconcile", r.reconCtrl.GetReconciliation)
-		accounts.POST("/:id/reconcile", r.reconCtrl.SubmitReconciliation)
-
-		// Transaction bulk operations
-		transactions.POST("/bulk/edit", r.txnBulkCtrl.BulkEdit)
-		transactions.POST("/bulk/delete", r.txnBulkCtrl.BulkDelete)
-		transactions.POST("/:id/convert", r.txnBulkCtrl.ConvertType)
-		transactions.POST("/:id/clone", r.txnBulkCtrl.Clone)
-
-		// Link Types (admin only)
-		linkTypes := authenticated.Group("/link-types")
-		linkTypes.Use(middleware.Admin(db))
+		objectGroups := authenticated.Group("/object-groups")
 		{
-			linkTypes.POST("", r.linkTypeCtrl.Create)
-			linkTypes.GET("", r.linkTypeCtrl.List)
-			linkTypes.GET("/:id", r.linkTypeCtrl.Get)
-			linkTypes.PUT("/:id", r.linkTypeCtrl.Update)
-			linkTypes.DELETE("/:id", r.linkTypeCtrl.Delete)
+			objectGroups.POST("", r.objectGroupCtrl.Create)
+			objectGroups.GET("", r.objectGroupCtrl.List)
+			objectGroups.GET("/:id", r.objectGroupCtrl.Get)
+			objectGroups.PUT("/:id", r.objectGroupCtrl.Update)
+			objectGroups.DELETE("/:id", r.objectGroupCtrl.Delete)
 		}
 
-		// Transaction Links
-		txnLinks := authenticated.Group("/transaction-links")
+		transactionLinks := authenticated.Group("/transaction-links")
 		{
-			txnLinks.POST("", r.txnLinkCtrl.Create)
-			txnLinks.GET("", r.txnLinkCtrl.List)
-			txnLinks.DELETE("/:id", r.txnLinkCtrl.Delete)
+			transactionLinks.POST("", r.transactionLinkCtrl.Create)
+			transactionLinks.GET("", r.transactionLinkCtrl.List)
+			transactionLinks.DELETE("/:id", r.transactionLinkCtrl.Delete)
 		}
 
-		// Preferences
 		preferences := authenticated.Group("/preferences")
 		{
-			preferences.GET("", r.prefCtrl.List)
-			preferences.GET("/:name", r.prefCtrl.Get)
-			preferences.PUT("/:name", r.prefCtrl.Update)
+			preferences.GET("", r.preferenceCtrl.List)
+			preferences.GET("/:key", r.preferenceCtrl.Get)
+			preferences.PUT("", r.preferenceCtrl.Set)
+			preferences.DELETE("/:key", r.preferenceCtrl.Delete)
 		}
 
-		// Audit report
-		reports.GET("/audit", r.reportCtrl.Audit)
-	}
+		reconciliations := authenticated.Group("/reconciliations")
+		{
+			reconciliations.POST("", r.reconciliationCtrl.Create)
+			reconciliations.GET("", r.reconciliationCtrl.List)
+			reconciliations.GET("/:id", r.reconciliationCtrl.Get)
+			reconciliations.PUT("/:id", r.reconciliationCtrl.Update)
+			reconciliations.DELETE("/:id", r.reconciliationCtrl.Delete)
+		}
 
-	// Cron (public, token-protected)
-	v1.GET("/cron/:token", r.cronCtrl.Run)
+		// Health check (public within authenticated group)
+		authenticated.GET("/health", r.healthCheck)
+	}
+}
+
+func (r *Router) healthCheck(c *gin.Context) {
+	c.JSON(200, gin.H{"status": "healthy"})
 }

@@ -10,30 +10,23 @@ import (
 )
 
 type PreferenceController struct {
-	prefService *service.PreferenceService
+	service *service.PreferenceService
 }
 
-func NewPreferenceController(prefService *service.PreferenceService) *PreferenceController {
-	return &PreferenceController{prefService: prefService}
-}
-
-func (ctrl *PreferenceController) List(c *gin.Context) {
-	userID := c.GetUint64("user_id")
-
-	result, err := ctrl.prefService.List(userID)
-	if err != nil {
-		handleError(c, err)
-		return
-	}
-
-	Success(c, result)
+func NewPreferenceController(service *service.PreferenceService) *PreferenceController {
+	return &PreferenceController{service: service}
 }
 
 func (ctrl *PreferenceController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
-	name := c.Param("name")
+	key := c.Query("key")
 
-	result, err := ctrl.prefService.Get(userID, name)
+	if key == "" {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	result, err := ctrl.service.Get(userID, key)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -42,21 +35,44 @@ func (ctrl *PreferenceController) Get(c *gin.Context) {
 	Success(c, result)
 }
 
-func (ctrl *PreferenceController) Update(c *gin.Context) {
+func (ctrl *PreferenceController) Set(c *gin.Context) {
 	userID := c.GetUint64("user_id")
-	name := c.Param("name")
 
-	var req request.UpdatePreferenceReq
+	var req request.SetPreferenceReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
 		return
 	}
 
-	result, err := ctrl.prefService.Set(userID, name, req.Value)
+	result, err := ctrl.service.Set(userID, &req)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
 	Success(c, result)
+}
+
+func (ctrl *PreferenceController) List(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+
+	result, err := ctrl.service.List(userID)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
+func (ctrl *PreferenceController) Delete(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	key := c.Param("key")
+
+	if err := ctrl.service.Delete(userID, key); err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, nil)
 }

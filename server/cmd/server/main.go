@@ -85,12 +85,20 @@ func main() {
 		&model.PiggyEvent{},
 		&model.Attachment{},
 		&model.Recurrence{},
+		&model.RecurringTransaction{},
+		&model.RecurringTransactionLog{},
 		&model.Webhook{},
 		&model.WebhookMessage{},
+		&model.WebhookDelivery{},
 		&model.Reconciliation{},
+		&model.TransactionReconciliation{},
+		&model.ReconciliationEntry{},
 		&model.LinkType{},
-		&model.TransactionLink{},
+		&model.TransactionJournalLink{},
 		&model.Preference{},
+		&model.ObjectGroup{},
+		&model.Configuration{},
+		&model.BackupCode{},
 	); err != nil {
 		logger.Fatal("Failed to auto migrate", zap.Error(err))
 	}

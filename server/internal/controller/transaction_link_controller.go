@@ -10,11 +10,11 @@ import (
 )
 
 type TransactionLinkController struct {
-	txnLinkService *service.TransactionLinkService
+	service *service.TransactionLinkService
 }
 
-func NewTransactionLinkController(txnLinkService *service.TransactionLinkService) *TransactionLinkController {
-	return &TransactionLinkController{txnLinkService: txnLinkService}
+func NewTransactionLinkController(service *service.TransactionLinkService) *TransactionLinkController {
+	return &TransactionLinkController{service: service}
 }
 
 func (ctrl *TransactionLinkController) Create(c *gin.Context) {
@@ -24,7 +24,7 @@ func (ctrl *TransactionLinkController) Create(c *gin.Context) {
 		return
 	}
 
-	result, err := ctrl.txnLinkService.Create(&req)
+	result, err := ctrl.service.Create(&req)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -40,19 +40,19 @@ func (ctrl *TransactionLinkController) List(c *gin.Context) {
 		return
 	}
 
-	result, err := ctrl.txnLinkService.List(req.TransactionID)
+	result, err := ctrl.service.List(&req)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
-	Success(c, result)
+	SuccessPage(c, result)
 }
 
 func (ctrl *TransactionLinkController) Delete(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
-	if err := ctrl.txnLinkService.Delete(id); err != nil {
+	if err := ctrl.service.Delete(id); err != nil {
 		handleError(c, err)
 		return
 	}

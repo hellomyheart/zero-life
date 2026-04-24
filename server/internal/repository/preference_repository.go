@@ -13,23 +13,19 @@ func NewPreferenceRepository(db *gorm.DB) *PreferenceRepository {
 	return &PreferenceRepository{db: db}
 }
 
-func (r *PreferenceRepository) Get(userID uint64, name string) (*model.Preference, error) {
+func (r *PreferenceRepository) Get(userID uint64, key string) (*model.Preference, error) {
 	var pref model.Preference
-	if err := r.db.Where("user_id = ? AND name = ?", userID, name).First(&pref).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND key = ?", userID, key).First(&pref).Error; err != nil {
 		return nil, err
 	}
 	return &pref, nil
 }
 
-func (r *PreferenceRepository) Set(userID uint64, name, value string) error {
+func (r *PreferenceRepository) Set(userID uint64, key, value string) error {
 	var pref model.Preference
-	err := r.db.Where("user_id = ? AND name = ?", userID, name).First(&pref).Error
+	err := r.db.Where("user_id = ? AND key = ?", userID, key).First(&pref).Error
 	if err == gorm.ErrRecordNotFound {
-		pref = model.Preference{
-			UserID: userID,
-			Name:   name,
-			Value:  value,
-		}
+		pref = model.Preference{UserID: userID, Key: key, Value: value}
 		return r.db.Create(&pref).Error
 	}
 	if err != nil {
@@ -41,8 +37,12 @@ func (r *PreferenceRepository) Set(userID uint64, name, value string) error {
 
 func (r *PreferenceRepository) List(userID uint64) ([]model.Preference, error) {
 	var prefs []model.Preference
-	if err := r.db.Where("user_id = ?", userID).Order("name ASC").Find(&prefs).Error; err != nil {
+	if err := r.db.Where("user_id = ?", userID).Find(&prefs).Error; err != nil {
 		return nil, err
 	}
 	return prefs, nil
+}
+
+func (r *PreferenceRepository) Delete(userID uint64, key string) error {
+	return r.db.Where("user_id = ? AND key = ?", userID, key).Delete(&model.Preference{}).Error
 }
