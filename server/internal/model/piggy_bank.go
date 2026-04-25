@@ -80,7 +80,7 @@ type PiggyBank struct {
 	// 指针类型表示可为 nil（不设定期限）
 	// nil: 不设定期限，按自己节奏存
 	// 非 nil: 有明确期限，系统可提醒进度
-	TargetDate *time.Time `json:"target_date,omitempty"`
+	TargetDate *time.Time `gorm:"index" json:"target_date,omitempty"`
 
 	// Notes 备注信息
 	// 记录储蓄目标的附加说明
@@ -147,7 +147,7 @@ type PiggyEvent struct {
 	// TransactionID 关联交易 ID（可选）
 	// 指针类型表示可为 nil（手动存取不关联交易）
 	// 非 nil: 关联到 transactions 表，表示该存取操作来自一笔交易
-	TransactionID *uint64 `json:"transaction_id,omitempty"`
+	TransactionID *uint64 `gorm:"index" json:"transaction_id,omitempty"`
 
 	// Note 备注信息
 	// 记录本次操作的说明，如"4月储蓄"、"应急支出"

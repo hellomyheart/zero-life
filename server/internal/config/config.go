@@ -21,6 +21,7 @@ type AppConfig struct {
 	Env         string `mapstructure:"env"`
 	Port        string `mapstructure:"port"`
 	FrontendURL string `mapstructure:"frontend_url"`
+	CronToken   string `mapstructure:"cron_token"`
 }
 
 type DBConfig struct {

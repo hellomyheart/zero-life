@@ -67,8 +67,14 @@ func (s *CurrencyService) UpdateStatus(id uint64, isEnabled bool) error {
 		return errcode.ErrDefaultCurrency
 	}
 
-	// Cannot disable if in use by accounts
-	// Simplified: allow disabling, actual check would query accounts with this currency
+	// 检查货币是否正在被账户使用
+	// 如果有账户使用该货币，不允许禁用，否则会导致账户数据异常
+	if !isEnabled {
+		count, err := s.accountRepo.CountByCurrency(id)
+		if err == nil && count > 0 {
+			return errcode.WithMessage(errcode.ErrBadRequest, "currency is in use by accounts and cannot be disabled")
+		}
+	}
 
 	currency.IsEnabled = isEnabled
 	return s.currencyRepo.Update(currency)

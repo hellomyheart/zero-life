@@ -108,7 +108,7 @@ type Transaction struct {
 	// 收入交易：资产账户（资金流入）
 	// 转账交易：转入账户
 	// 指针类型表示可为 nil（某些简单交易可能没有目标账户）
-	DestinationID *uint64 `json:"destination_id"`
+	DestinationID *uint64 `gorm:"index" json:"destination_id"`
 
 	// CategoryID 分类 ID（可选）
 	// 关联到 categories 表，用于分类统计和预算控制
@@ -124,7 +124,7 @@ type Transaction struct {
 	// BillID 关联账单 ID（可选）
 	// 关联到 bills 表，表示该交易对应哪个账单
 	// 指针类型表示可为 nil（非账单关联的交易）
-	BillID *uint64 `json:"bill_id"`
+	BillID *uint64 `gorm:"index" json:"bill_id"`
 
 	// ParentID 父交易 ID（用于交易拆分）
 	// nil: 这是一笔独立交易（或父交易）

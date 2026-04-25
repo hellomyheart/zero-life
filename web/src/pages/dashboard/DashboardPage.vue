@@ -2,6 +2,7 @@
 // 仪表盘页面 - 展示月度收支预算账单消费和资产概况
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { getDashboard } from '@/api/dashboard'
 import { formatAmount, formatDate } from '@/utils/format'
 import type { DashboardResp } from '@/types/dashboard'
@@ -15,7 +16,7 @@ onMounted(async () => {
   try {
     dashboard.value = await getDashboard() as unknown as DashboardResp
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load dashboard')
   } finally {
     loading.value = false
   }

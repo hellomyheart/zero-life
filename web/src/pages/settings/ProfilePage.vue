@@ -16,16 +16,19 @@ const { t } = useI18n()
 
 // 用户信息
 const user = ref<User>({
-  id: 0,
+  id: '',
   email: '',
-  name: '',
+  nickname: '',
+  role: '',
+  language: '',
+  timezone: '',
+  locked: false,
   created_at: '',
   updated_at: '',
 })
 
-// 表单数据
 const form = ref({
-  name: '',
+  nickname: '',
   email: '',
 })
 
@@ -44,7 +47,7 @@ const passwordFormRef = ref()
 
 // 个人资料表单验证规则 - 姓名必填、邮箱格式校验
 const profileRules: FormRules = {
-  name: [{ required: true, message: t('profile.nameRequired'), trigger: 'blur' }],
+  nickname: [{ required: true, message: t('profile.nameRequired'), trigger: 'blur' }],
   email: [
     { required: true, message: t('profile.emailRequired'), trigger: 'blur' },
     { type: 'email', message: t('profile.emailInvalid'), trigger: 'blur' },
@@ -68,10 +71,10 @@ async function fetchProfile() {
   try {
     const res = await getProfile()
     user.value = res as unknown as User
-    form.value.name = user.value.name
+    form.value.nickname = user.value.nickname
     form.value.email = user.value.email
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 
@@ -91,7 +94,7 @@ async function handleUpdateProfile() {
     ElMessage.success(t('common.success'))
     await fetchProfile()
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -125,7 +128,7 @@ async function handleChangePassword() {
       confirm_password: '',
     }
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -144,8 +147,8 @@ onMounted(() => {
       </template>
 
       <el-form ref="profileFormRef" :model="form" :rules="profileRules" label-width="120px">
-        <el-form-item :label="t('profile.name')" prop="name">
-          <el-input v-model="form.name" />
+        <el-form-item :label="t('profile.name')" prop="nickname">
+          <el-input v-model="form.nickname" />
         </el-form-item>
         <el-form-item :label="t('profile.email')" prop="email">
           <el-input v-model="form.email" />

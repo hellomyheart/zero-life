@@ -25,7 +25,7 @@ async function fetchData() {
     currencies.value = await list() as unknown as Currency[]
     exchangeRates.value = await getExchangeRates() as unknown as ExchangeRate[]
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -51,8 +51,8 @@ async function handleSetDefault(currency: Currency) {
     await setDefault({ currency_id: currency.id })
     ElMessage.success(t('common.success'))
     await fetchData()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

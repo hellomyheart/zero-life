@@ -4,8 +4,9 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { tag } from '@/api/report'
 import { formatAmount, formatPercent } from '@/utils/format'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
-import type { CategoryReportResp, ReportReq } from '@/types/report'
+import type { CategoryReportResp, ReportReq } from '@/types/report' // TODO: CategoryReportResp is used as a stand-in; no TagReportResp type exists yet
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import PieChart from '@/components/charts/PieChart.vue'
 
@@ -24,7 +25,7 @@ async function fetchReport() {
   try {
     data.value = await tag(params.value) as unknown as CategoryReportResp
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }

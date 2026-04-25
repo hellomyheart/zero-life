@@ -38,11 +38,11 @@ const form = ref<CreateRuleReq>({
 async function fetchRules() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Rule[], total: number }
+    const res = await list() as unknown as { items: Rule[], total: number }
     rules.value = res.items || []
     pagination.total = res.total || 0
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -113,8 +113,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchRules()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 
@@ -133,8 +133,8 @@ async function handleExecute(rule: Rule) {
     await ElMessageBox.confirm(`Execute rule "${rule.name}"?`, t('common.confirm'), { type: 'info' })
     await execute(rule.id, { transaction_ids: [] })
     ElMessage.success(t('common.success'))
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

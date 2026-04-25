@@ -101,13 +101,13 @@ type Bill struct {
 	// 关联的资产账户，用于支付该账单
 	// 如：用"招商银行卡"支付房租
 	// json:"source_id" 允许为空
-	SourceID *uint64 `json:"source_id"`
+	SourceID *uint64 `gorm:"index" json:"source_id"`
 	
 	// CategoryID 分类 ID（可选）
 	// 关联的支出分类
 	// 如：房租账单关联到"居住"分类
 	// json:"category_id" 允许为空
-	CategoryID *uint64 `json:"category_id"`
+	CategoryID *uint64 `gorm:"index" json:"category_id"`
 	
 	// Notes 备注信息
 	// 记录账单的附加说明，如房东联系方式、缴费账号等

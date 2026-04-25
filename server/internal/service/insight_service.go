@@ -218,7 +218,7 @@ func (s *InsightService) ExpenseInsight(userID uint64, startDate, endDate time.T
 		ByCategory: byCategory,
 		ByAccount:  byAccount,
 		ByDate:     byDate,
-		Trend:      "stable", // 简化处理，实际应该计算趋势
+		Trend:      calculateTrend(byDate),
 	}, nil
 }
 
@@ -226,6 +226,10 @@ func (s *InsightService) ExpenseInsight(userID uint64, startDate, endDate time.T
 // 业务流程：
 // 1. 获取指定时间范围内的收入交易
 // 2. 计算基础统计：总收入、平均收入、最大/最小单笔收入、交易笔数
+// 3. 按分类汇总：每个分类的收入金额、笔数、百分比
+// 4. 按账户汇总：每个收入账户的收入金额、笔数、百分比
+// 5. 按日期汇总：每天的收入金额和笔数
+// 6. 计算趋势：比较前半段和后半段的收入总额判断趋势方向
 // 参数：
 //   - userID: 用户ID
 //   - startDate: 开始日期
@@ -250,6 +254,10 @@ func (s *InsightService) IncomeInsight(userID uint64, startDate, endDate time.Ti
 	min := decimal.Zero
 	count := len(txns)
 
+	categoryMap := make(map[uint64]*CategoryInsight)
+	accountMap := make(map[uint64]*AccountInsight)
+	dateMap := make(map[string]*DateInsight)
+
 	for i, txn := range txns {
 		total = total.Add(txn.Amount)
 		if i == 0 || txn.Amount.GreaterThan(max) {
@@ -258,17 +266,78 @@ func (s *InsightService) IncomeInsight(userID uint64, startDate, endDate time.Ti
 		if i == 0 || txn.Amount.LessThan(min) {
 			min = txn.Amount
 		}
+
+		// 按分类统计
+		if txn.CategoryID != nil {
+			catID := *txn.CategoryID
+			if _, exists := categoryMap[catID]; !exists {
+				category, _ := s.categoryRepo.GetByID(catID, userID)
+				categoryMap[catID] = &CategoryInsight{
+					CategoryID:   catID,
+					CategoryName: category.Name,
+				}
+			}
+			categoryMap[catID].Amount = categoryMap[catID].Amount.Add(txn.Amount)
+			categoryMap[catID].Count++
+		}
+
+		// 按账户统计（收入交易的目标账户）
+		if txn.DestinationID != nil {
+			accID := *txn.DestinationID
+			if _, exists := accountMap[accID]; !exists {
+				account, _ := s.accountRepo.GetByID(accID, userID)
+				accountMap[accID] = &AccountInsight{
+					AccountID:   accID,
+					AccountName: account.Name,
+				}
+			}
+			accountMap[accID].Amount = accountMap[accID].Amount.Add(txn.Amount)
+			accountMap[accID].Count++
+		}
+
+		// 按日期统计
+		dateStr := txn.Date.Format("2006-01-02")
+		if _, exists := dateMap[dateStr]; !exists {
+			dateMap[dateStr] = &DateInsight{Date: dateStr}
+		}
+		dateMap[dateStr].Amount = dateMap[dateStr].Amount.Add(txn.Amount)
+		dateMap[dateStr].Count++
 	}
 
+	// 计算平均值和百分比
 	average := total.Div(decimal.NewFromInt(int64(count)))
 
+	byCategory := make([]CategoryInsight, 0)
+	for _, cat := range categoryMap {
+		if !total.IsZero() {
+			cat.Percentage = cat.Amount.Div(total).Mul(decimal.NewFromInt(100))
+		}
+		byCategory = append(byCategory, *cat)
+	}
+
+	byAccount := make([]AccountInsight, 0)
+	for _, acc := range accountMap {
+		if !total.IsZero() {
+			acc.Percentage = acc.Amount.Div(total).Mul(decimal.NewFromInt(100))
+		}
+		byAccount = append(byAccount, *acc)
+	}
+
+	byDate := make([]DateInsight, 0)
+	for _, date := range dateMap {
+		byDate = append(byDate, *date)
+	}
+
 	return &IncomeInsightData{
-		Total:   total,
-		Average: average,
-		Max:     max,
-		Min:     min,
-		Count:   count,
-		Trend:   "stable",
+		Total:      total,
+		Average:    average,
+		Max:       max,
+		Min:       min,
+		Count:     count,
+		ByCategory: byCategory,
+		ByAccount:  byAccount,
+		ByDate:     byDate,
+		Trend:      calculateTrend(byDate),
 	}, nil
 }
 
@@ -334,4 +403,38 @@ func (s *InsightService) TransferInsight(userID uint64, startDate, endDate time.
 		Count:         count,
 		FrequentPairs: frequentPairs,
 	}, nil
+}
+
+// calculateTrend 根据按日期的数据计算趋势方向
+// 将日期数据分成前后两半，比较后半段总额与前半段总额
+// 如果后半段 > 前半段 → "up"，后半段 < 前半段 → "down"，相等 → "stable"
+// 参数：
+//   - byDate: 按日期统计的数据列表
+// 返回：
+//   - string: 趋势方向（"up"/"down"/"stable"）
+func calculateTrend(byDate []DateInsight) string {
+	if len(byDate) < 2 {
+		return "stable"
+	}
+
+	// 将数据分成前后两半
+	mid := len(byDate) / 2
+	firstHalf := decimal.Zero
+	secondHalf := decimal.Zero
+
+	for i, d := range byDate {
+		if i < mid {
+			firstHalf = firstHalf.Add(d.Amount)
+		} else {
+			secondHalf = secondHalf.Add(d.Amount)
+		}
+	}
+
+	if secondHalf.GreaterThan(firstHalf) {
+		return "up"
+	}
+	if secondHalf.LessThan(firstHalf) {
+		return "down"
+	}
+	return "stable"
 }

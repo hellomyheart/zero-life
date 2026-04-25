@@ -75,6 +75,13 @@ type User struct {
 	// gorm:"size:20" 限制最大长度为 20 个字符
 	Role string `gorm:"size:20;default:user" json:"role"`
 	
+	// IsLocked 用户是否被锁定
+	// true: 用户被锁定，无法登录
+	// false: 用户正常，可以登录
+	// 锁定与角色分离，锁定不会改变用户角色，解锁后保留原有角色
+	// 默认值：false（未锁定）
+	IsLocked bool `gorm:"default:false" json:"is_locked"`
+	
 	// MFASecret MFA（多因素认证）密钥
 	// 用于生成 TOTP 验证码
 	// 使用 Google Authenticator 等验证器 App

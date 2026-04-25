@@ -82,7 +82,7 @@ type BackupCode struct {
 	//     // 备用码已使用，拒绝登录
 	//     return error
 	//   }
-	UsedAt *time.Time `json:"used_at"`
+	UsedAt *time.Time `gorm:"index" json:"used_at"`
 	
 	// CreatedAt 备用码创建时间
 	// 即生成备用码的时间

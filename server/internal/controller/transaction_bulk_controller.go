@@ -11,14 +11,27 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// TransactionBulkController 交易批量操作控制器
+// 处理交易的批量编辑、批量删除、类型转换和克隆等HTTP请求
 type TransactionBulkController struct {
-	bulkService *service.TransactionBulkService
+	bulkService *service.TransactionBulkService // 批量操作业务服务
 }
 
+// NewTransactionBulkController 创建批量操作控制器实例
+// 参数：
+//   - bulkService: 批量操作业务服务实例
+// 返回：
+//   - *TransactionBulkController: 批量操作控制器实例
 func NewTransactionBulkController(bulkService *service.TransactionBulkService) *TransactionBulkController {
 	return &TransactionBulkController{bulkService: bulkService}
 }
 
+// BulkEdit 批量编辑交易
+// 批量修改指定交易的分类、备注和标签
+// 参数：
+//   - c: Gin上下文，包含用户身份
+// 请求体：BulkEditReq（包含交易ID列表、分类ID、备注、标签ID列表）
+// 响应：编辑成功返回nil
 func (ctrl *TransactionBulkController) BulkEdit(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -36,6 +49,12 @@ func (ctrl *TransactionBulkController) BulkEdit(c *gin.Context) {
 	Success(c, nil)
 }
 
+// BulkDelete 批量删除交易
+// 批量删除指定ID列表中的交易
+// 参数：
+//   - c: Gin上下文，包含用户身份
+// 请求体：BulkDeleteReq（包含交易ID列表）
+// 响应：删除成功返回nil
 func (ctrl *TransactionBulkController) BulkDelete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -53,6 +72,13 @@ func (ctrl *TransactionBulkController) BulkDelete(c *gin.Context) {
 	Success(c, nil)
 }
 
+// ConvertType 转换交易类型
+// 将指定交易从一种类型转换为另一种类型（如支出转收入）
+// 参数：
+//   - c: Gin上下文，包含用户身份和URL路径参数id
+// 路径参数：id（交易ID）
+// 请求体：ConvertReq（包含目标类型、源账户ID、目标账户ID）
+// 响应：转换后的交易信息
 func (ctrl *TransactionBulkController) ConvertType(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -72,6 +98,12 @@ func (ctrl *TransactionBulkController) ConvertType(c *gin.Context) {
 	Success(c, result)
 }
 
+// Clone 克隆交易
+// 复制指定交易的所有信息创建一笔新交易
+// 参数：
+//   - c: Gin上下文，包含用户身份和URL路径参数id
+// 路径参数：id（原交易ID）
+// 响应：克隆后的新交易信息
 func (ctrl *TransactionBulkController) Clone(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

@@ -273,6 +273,8 @@ func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*respon
 	netWorth := totalAssets.Sub(totalLiabilities)
 
 	// Calculate trend by month
+	// 修正逻辑：每月净值应从初始余额开始，逐月累加从报告起始到该月末的交易影响
+	// 这样每月的净值反映的是"从开始到该月末的累计净值"，而非"仅该月的净值"
 	startDate, endDate, err := s.parseDateRange(req)
 	if err != nil {
 		return &response.NetWorthResp{
@@ -282,45 +284,57 @@ func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*respon
 	}
 
 	trend := make([]response.NetWorthPointResp, 0)
+
+	// 先计算初始余额作为基准
+	initialAssets := decimal.Zero
+	for _, a := range accounts {
+		initialAssets = initialAssets.Add(a.InitialBalance)
+	}
+	initialLiabilities := decimal.Zero
+	for _, a := range liabilities {
+		initialLiabilities = initialLiabilities.Add(a.InitialBalance);
+	}
+
+	// 获取整个报告时间范围内的所有交易，一次性查询避免重复查询
+	allFilter := repository.TransactionFilter{
+		StartDate: startDate.Format("2006-01-02"),
+		EndDate:   endDate.Format("2006-01-02"),
+	}
+	allTxns, err := s.txnRepo.List(userID, allFilter, 0, 10000)
+	if err != nil {
+		allTxns = nil
+	}
+
+	// 按月分组交易
+	monthlyTxnEffects := make(map[string]decimal.Decimal)
+	for _, txn := range allTxns {
+		monthKey := txn.Date.Format("2006-01")
+		effect := decimal.Zero
+		switch txn.Type {
+		case model.TransactionTypeDeposit:
+			effect = txn.Amount
+		case model.TransactionTypeWithdrawal:
+			effect = txn.Amount.Neg()
+		case model.TransactionTypeTransfer:
+			// 转账不影响净值
+		}
+		monthlyTxnEffects[monthKey] = monthlyTxnEffects[monthKey].Add(effect)
+	}
+
+	// 逐月累加净值趋势
 	current := time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, startDate.Location())
+	cumulativeNetWorth := initialAssets.Sub(initialLiabilities)
 	for current.Before(endDate) || current.Equal(endDate) {
-		monthEnd := current.AddDate(0, 1, 0).Add(-time.Second)
-
-		filter := repository.TransactionFilter{
-			StartDate: startDate.Format("2006-01-02"),
-			EndDate:   monthEnd.Format("2006-01-02"),
+		monthKey := current.Format("2006-01")
+		// 累加该月的交易影响
+		if effect, ok := monthlyTxnEffects[monthKey]; ok {
+			cumulativeNetWorth = cumulativeNetWorth.Add(effect)
 		}
-		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
-		if err == nil {
-			monthAssets := decimal.Zero
-			monthLiabilities := decimal.Zero
 
-			// Start with initial balances
-			for _, a := range accounts {
-				monthAssets = monthAssets.Add(a.InitialBalance)
-			}
-			for _, a := range liabilities {
-				monthLiabilities = monthLiabilities.Add(a.InitialBalance)
-			}
-
-			// Add transaction effects
-			for _, txn := range txns {
-				switch txn.Type {
-				case model.TransactionTypeDeposit:
-					monthAssets = monthAssets.Add(txn.Amount)
-				case model.TransactionTypeWithdrawal:
-					monthAssets = monthAssets.Sub(txn.Amount)
-				case model.TransactionTypeTransfer:
-					// Transfers don't change net worth
-				}
-			}
-
-			monthNetWorth := monthAssets.Sub(monthLiabilities)
-			trend = append(trend, response.NetWorthPointResp{
-				Date:     current.Format("2006-01"),
-				NetWorth: monthNetWorth.StringFixed(4),
-			})
-		}
+		trend = append(trend, response.NetWorthPointResp{
+			Date:     monthKey,
+			NetWorth: cumulativeNetWorth.StringFixed(4),
+		})
 
 		current = current.AddDate(0, 1, 0)
 	}

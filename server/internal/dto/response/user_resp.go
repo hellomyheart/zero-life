@@ -1,3 +1,4 @@
+// Package response 定义所有HTTP响应的数据传输对象（DTO）
 package response
 
 import "time"

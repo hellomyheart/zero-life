@@ -47,12 +47,12 @@ const form = ref<CreateTagReq>({
 async function fetchTags() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size } as any)
+    const res = await list()
     const data = res as unknown as { items: Tag[]; total: number }
     tags.value = data.items || (res as unknown as Tag[])
     pagination.total = data.total || 0
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -88,8 +88,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchTags()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

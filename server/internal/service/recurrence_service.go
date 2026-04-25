@@ -20,19 +20,21 @@ import (
 // 负责处理循环交易的增删改查、手动触发和自动执行
 // 循环交易按指定频率（日/周/月/年）自动创建交易，支持设置结束条件和最大重复次数
 // 依赖recurrenceRepo进行循环交易数据访问，依赖txnService创建交易（确保余额更新）
-// 依赖accountRepo验证账户归属和加载账户名称
+// 依赖accountRepo验证账户归属和加载账户名称，依赖tagRepo将标签名称转换为标签ID
 type RecurrenceService struct {
 	recurrenceRepo *repository.RecurrenceRepository // 循环交易数据访问对象
 	txnService     *TransactionService              // 交易服务，用于创建循环产生的交易
 	accountRepo    *repository.AccountRepository    // 账户数据访问对象
+	tagRepo        *repository.TagRepository        // 标签数据访问对象，用于标签名称转ID
 }
 
 // NewRecurrenceService 创建循环交易服务实例
-func NewRecurrenceService(recurrenceRepo *repository.RecurrenceRepository, txnService *TransactionService, accountRepo *repository.AccountRepository) *RecurrenceService {
+func NewRecurrenceService(recurrenceRepo *repository.RecurrenceRepository, txnService *TransactionService, accountRepo *repository.AccountRepository, tagRepo *repository.TagRepository) *RecurrenceService {
 	return &RecurrenceService{
 		recurrenceRepo: recurrenceRepo,
 		txnService:     txnService,
 		accountRepo:    accountRepo,
+		tagRepo:        tagRepo,
 	}
 }
 
@@ -306,13 +308,26 @@ func (s *RecurrenceService) ExecuteRecurrence(rec *model.Recurrence) error {
 
 // createTransactionFromRecurrence 根据循环交易模板创建实际交易
 // 通过txnService.Create()确保账户余额更新、规则触发和Webhook通知
+// 标签处理：将逗号分隔的标签名称解析为标签ID列表，通过标签仓库查找匹配的标签
 func (s *RecurrenceService) createTransactionFromRecurrence(rec *model.Recurrence) (*response.TransactionResp, error) {
-	// Parse tag names to tag IDs (empty for now, tags are stored by name)
+	// 解析标签名称为标签ID：循环交易模板中标签以逗号分隔的名称存储
+	// 需要查询用户的标签列表，将名称匹配转换为ID
 	var tagIDs []uint64
 	if rec.TagNames != "" {
-		_ = strings.Split(rec.TagNames, ",")
-		// Tag names are stored as comma-separated; we pass empty tagIDs
-		// since the transaction service expects tag IDs
+		tagNames := strings.Split(rec.TagNames, ",")
+		// 查询用户所有标签，按名称匹配获取ID
+		allTags, err := s.tagRepo.List(rec.UserID)
+		if err == nil {
+			for _, tagName := range tagNames {
+				tagName = strings.TrimSpace(tagName)
+				for _, tag := range allTags {
+					if tag.Name == tagName {
+						tagIDs = append(tagIDs, tag.ID)
+						break
+					}
+				}
+			}
+		}
 	}
 
 	dateStr := rec.NextDate.Format("2006-01-02")

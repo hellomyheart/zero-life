@@ -18,7 +18,7 @@ async function fetchStatus() {
   try {
     mfaStatus.value = await status() as unknown as MFAStatus
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

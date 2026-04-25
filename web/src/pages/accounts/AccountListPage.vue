@@ -58,7 +58,7 @@ async function fetchAccounts() {
     pagination.total = data.total || 0
     filterAccounts()
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -101,8 +101,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchAccounts()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

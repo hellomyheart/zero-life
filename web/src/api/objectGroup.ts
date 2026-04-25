@@ -22,7 +22,7 @@ export function list(params?: ObjectGroupListParams) {
  * @returns 对象分组详情
  * @endpoint GET /object-groups/:id
  */
-export function get(id: number) {
+export function getObjectGroup(id: number) {
   return get<ObjectGroup>(`/object-groups/${id}`)
 }
 

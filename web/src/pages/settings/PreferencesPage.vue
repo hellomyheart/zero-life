@@ -124,8 +124,7 @@ const rules: FormRules = {
 async function fetchData() {
   loading.value = true;
   try {
-    const res = await preferenceApi.list();
-    // 为每条数据添加 editing 标记
+    const res = await preferenceApi.list() as unknown as Preference[];
     preferences.value = res.map(item => ({ ...item, editing: false }));
   } catch (error) {
     ElMessage.error(t('common.fetchError'));

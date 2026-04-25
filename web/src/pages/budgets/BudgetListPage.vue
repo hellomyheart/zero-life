@@ -34,7 +34,7 @@ async function fetchBudgets() {
   try {
     budgets.value = await list() as unknown as Budget[]
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -70,8 +70,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchBudgets()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 
@@ -125,7 +125,7 @@ onMounted(async () => {
       </el-table-column>
       <el-table-column :label="t('budget.usageRate')" width="200">
         <template #default="{ row }">
-          <el-progress :percentage="Math.round(row.spent / row.amount * 100)" :status="getStatusType(row.status) === 'danger' ? 'exception' : getStatusType(row.status) === 'warning' ? 'warning' : undefined" />
+          <el-progress :percentage="row.amount ? Math.round(row.spent / row.amount * 100) : 0" :status="getStatusType(row.status) === 'danger' ? 'exception' : getStatusType(row.status) === 'warning' ? 'warning' : undefined" />
         </template>
       </el-table-column>
       <el-table-column :label="t('budget.status')" width="100">

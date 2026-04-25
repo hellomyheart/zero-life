@@ -1,3 +1,6 @@
+// Package email 提供邮件发送功能
+// 支持通过SMTP协议发送HTML格式邮件，兼容TLS（465端口）和STARTTLS（587端口）
+// 用于发送密码重置邮件、邀请邮件等通知类邮件
 package email
 
 import (

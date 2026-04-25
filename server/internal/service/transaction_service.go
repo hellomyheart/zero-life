@@ -612,7 +612,7 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "transaction already has splits, merge them first")
 	}
 
-	// 楠岃瘉鎷嗗垎閲戦鎬诲拰
+	// 验证拆分金额总和
 	totalSplitAmount := decimal.Zero
 	for _, split := range req.Splits {
 		amount, err := decimal.NewFromString(split.Amount)
@@ -629,7 +629,7 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "sum of split amounts must equal parent amount")
 	}
 
-	// 鍒涘缓拆分交易
+	// 创建拆分交易
 	now := time.Now()
 	splitModels := make([]model.Transaction, 0, len(req.Splits))
 

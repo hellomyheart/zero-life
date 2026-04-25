@@ -125,6 +125,7 @@ func (r *BudgetRepository) GetSpentAmount(budgetID, userID uint64) (decimal.Deci
 		Where("user_id = ? AND type = ?", userID, "withdrawal")
 
 	// 如果预算关联了分类，只统计这些分类的交易
+	// Categories 是 []Category 类型，cat.ID 就是分类的ID
 	if len(budget.Categories) > 0 {
 		categoryIDs := make([]uint64, len(budget.Categories))
 		for i, cat := range budget.Categories {

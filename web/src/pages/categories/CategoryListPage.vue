@@ -29,7 +29,7 @@ async function fetchCategories() {
   try {
     categories.value = await list() as unknown as Category[]
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -55,8 +55,8 @@ async function handleDelete(data: Category) {
     await remove(data.id)
     ElMessage.success(t('common.success'))
     await fetchCategories()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

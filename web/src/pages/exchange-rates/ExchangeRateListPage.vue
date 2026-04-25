@@ -10,9 +10,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/exchange-rate'
-import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { ExchangeRate } from '@/types/exchange-rate'
+import type { ExchangeRate, ExchangeRateListParams, CreateExchangeRateReq, UpdateExchangeRateReq } from '@/types/exchange-rate'
 import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
@@ -29,16 +28,15 @@ const editingId = ref<string | null>(null)
 
 // 表单数据 - 创建/编辑汇率时使用
 const form = ref({
-  from_currency_id: '',
-  to_currency_id: '',
+  from_currency_id: '' as string | number,
+  to_currency_id: '' as string | number,
   date: '',
   rate: '',
 })
 
-// 筛选条件
 const filter = reactive({
-  from_currency_id: '',
-  to_currency_id: '',
+  from_currency_id: '' as string | number,
+  to_currency_id: '' as string | number,
   start_date: '',
   end_date: '',
   page: 1,
@@ -51,21 +49,21 @@ const filter = reactive({
 async function fetchExchangeRates() {
   loading.value = true
   try {
-    const params: Record<string, unknown> = {
+    const params: ExchangeRateListParams = {
       page: filter.page,
-      page_size: filter.page_size
+      page_size: filter.page_size,
+      from_currency_id: filter.from_currency_id ? Number(filter.from_currency_id) : undefined,
+      to_currency_id: filter.to_currency_id ? Number(filter.to_currency_id) : undefined,
+      start_date: filter.start_date || undefined,
+      end_date: filter.end_date || undefined,
     }
-    if (filter.from_currency_id) params.from_currency_id = filter.from_currency_id
-    if (filter.to_currency_id) params.to_currency_id = filter.to_currency_id
-    if (filter.start_date) params.start_date = filter.start_date
-    if (filter.end_date) params.end_date = filter.end_date
 
-    const res = await list(params as unknown as typeof filter)
+    const res = await list(params)
     const data = res as unknown as { items: ExchangeRate[]; total: number }
     exchangeRates.value = data.items || []
     total.value = data.total || 0
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -77,7 +75,7 @@ async function fetchExchangeRates() {
 function handleCreate() {
   dialogTitle.value = t('common.create')
   editingId.value = null
-  form.value = { from_currency_id: '', to_currency_id: '', date: '', rate: '' }
+  form.value = { from_currency_id: '', to_currency_id: '', date: '', rate: '' } as typeof form.value
   dialogVisible.value = true
 }
 
@@ -88,8 +86,8 @@ function handleEdit(row: ExchangeRate) {
   dialogTitle.value = t('common.edit')
   editingId.value = String(row.id)
   form.value = {
-    from_currency_id: String(row.from_currency_id),
-    to_currency_id: String(row.to_currency_id),
+    from_currency_id: row.from_currency_id,
+    to_currency_id: row.to_currency_id,
     date: row.date,
     rate: row.rate,
   }
@@ -106,9 +104,19 @@ async function handleSubmit() {
   }
   try {
     if (editingId.value) {
-      await update(editingId.value, form.value)
+      await update(String(editingId.value), {
+        from_currency_id: Number(form.value.from_currency_id),
+        to_currency_id: Number(form.value.to_currency_id),
+        date: form.value.date,
+        rate: form.value.rate,
+      } as UpdateExchangeRateReq)
     } else {
-      await create(form.value)
+      await create({
+        from_currency_id: Number(form.value.from_currency_id),
+        to_currency_id: Number(form.value.to_currency_id),
+        date: form.value.date,
+        rate: form.value.rate,
+      } as CreateExchangeRateReq)
     }
     ElMessage.success(t('common.success'))
     dialogVisible.value = false
@@ -127,8 +135,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchExchangeRates()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

@@ -153,19 +153,18 @@ func (s *UserService) ChangeRole(id uint64, role string) error {
 }
 
 // Lock 锁定用户
-// 将用户角色设为"locked"，锁定后用户无法登录
+// 将用户标记为锁定状态，锁定后用户无法登录
+// 锁定不改变用户角色，解锁后保留原有角色权限
 // 参数：
 //   - id: 用户ID
 // 返回：
 //   - error: 错误信息
 func (s *UserService) Lock(id uint64) error {
-	// 这里可以通过设置一个锁定标记或修改角色来实现
-	// 简单实现：将角色改为 "locked"
 	now := time.Now()
 	if err := s.db.Model(&model.User{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"role":       "locked",
+			"is_locked":  true,
 			"updated_at": now,
 		}).Error; err != nil {
 		return errcode.ErrInternal
@@ -175,7 +174,8 @@ func (s *UserService) Lock(id uint64) error {
 }
 
 // Unlock 解锁用户
-// 将用户角色恢复为"user"
+// 将用户标记为未锁定状态，恢复登录权限
+// 解锁后用户保留原有角色，不会降级为普通用户
 // 参数：
 //   - id: 用户ID
 // 返回：
@@ -185,7 +185,7 @@ func (s *UserService) Unlock(id uint64) error {
 	if err := s.db.Model(&model.User{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"role":       "user",
+			"is_locked":  false,
 			"updated_at": now,
 		}).Error; err != nil {
 		return errcode.ErrInternal

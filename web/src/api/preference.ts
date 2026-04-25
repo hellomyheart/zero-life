@@ -20,8 +20,8 @@ export function list() {
  * @returns 偏好信息
  * @endpoint GET /preferences
  */
-export function get(params: GetPreferenceParams) {
-  return get<Preference>('/preferences', params as Record<string, unknown>)
+export function getPreference(params: GetPreferenceParams) {
+  return get<Preference>('/preferences', params as unknown as Record<string, unknown>)
 }
 
 /**

@@ -11,14 +11,29 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// AdminController 管理员配置管理控制器
+// 处理系统配置的查询、更新和邮件测试等HTTP请求
+// 仅管理员可访问，用于管理系统级配置参数
 type AdminController struct {
-	adminService *service.AdminService
+	adminService *service.AdminService // 管理员业务服务
 }
 
+// NewAdminController 创建管理员控制器实例
+// 参数：
+//   - adminService: 管理员业务服务实例
+// 返回：
+//   - *AdminController: 管理员控制器实例
 func NewAdminController(adminService *service.AdminService) *AdminController {
 	return &AdminController{adminService: adminService}
 }
 
+// GetConfiguration 获取指定配置项
+// 根据配置名称查询单个系统配置的值
+// 参数：
+//   - c: Gin上下文
+// 路径参数：name（配置名称）
+// 响应：配置详细信息
+// 业务规则：name不能为空
 func (ctrl *AdminController) GetConfiguration(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
@@ -35,6 +50,11 @@ func (ctrl *AdminController) GetConfiguration(c *gin.Context) {
 	Success(c, result)
 }
 
+// ListConfigurations 获取所有配置项列表
+// 返回系统中所有配置项
+// 参数：
+//   - c: Gin上下文
+// 响应：配置项列表
 func (ctrl *AdminController) ListConfigurations(c *gin.Context) {
 	result, err := ctrl.adminService.ListConfigurations()
 	if err != nil {
@@ -45,6 +65,13 @@ func (ctrl *AdminController) ListConfigurations(c *gin.Context) {
 	Success(c, result)
 }
 
+// UpdateConfiguration 更新指定配置项
+// 根据配置名称更新配置值
+// 参数：
+//   - c: Gin上下文
+// 路径参数：name（配置名称）
+// 请求体：AdminUpdateConfigurationReq（包含value字段）
+// 响应：更新后的配置信息
 func (ctrl *AdminController) UpdateConfiguration(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
@@ -67,6 +94,12 @@ func (ctrl *AdminController) UpdateConfiguration(c *gin.Context) {
 	Success(c, result)
 }
 
+// TestEmail 测试邮件发送
+// 向指定邮箱发送测试邮件，验证SMTP配置是否正确
+// 参数：
+//   - c: Gin上下文
+// 请求体：AdminTestEmailReq（包含email字段）
+// 响应：AdminTestEmailResp（包含success和message）
 func (ctrl *AdminController) TestEmail(c *gin.Context) {
 	var req request.AdminTestEmailReq
 	if err := c.ShouldBindJSON(&req); err != nil {

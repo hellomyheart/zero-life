@@ -12,14 +12,28 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// AdminUserController 管理员用户管理控制器
+// 处理用户列表查询、用户信息更新、用户删除和邀请用户等HTTP请求
+// 仅管理员可访问，用于管理系统中所有用户
 type AdminUserController struct {
-	adminService *service.AdminService
+	adminService *service.AdminService // 管理员业务服务
 }
 
+// NewAdminUserController 创建管理员用户管理控制器实例
+// 参数：
+//   - adminService: 管理员业务服务实例
+// 返回：
+//   - *AdminUserController: 管理员用户管理控制器实例
 func NewAdminUserController(adminService *service.AdminService) *AdminUserController {
 	return &AdminUserController{adminService: adminService}
 }
 
+// ListUsers 获取用户列表（分页）
+// 支持按关键词搜索用户
+// 参数：
+//   - c: Gin上下文
+// 查询参数：AdminListUsersReq（包含page、page_size、search）
+// 响应：用户分页列表
 func (ctrl *AdminUserController) ListUsers(c *gin.Context) {
 	var req request.AdminListUsersReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -38,6 +52,13 @@ func (ctrl *AdminUserController) ListUsers(c *gin.Context) {
 	SuccessPage(c, pagination.NewResult(items, total, params))
 }
 
+// UpdateUser 更新用户信息
+// 管理员更新指定用户的信息（昵称、角色、语言、时区）
+// 参数：
+//   - c: Gin上下文
+// 路径参数：id（用户ID）
+// 请求体：AdminUpdateUserReq（包含昵称、角色、语言、时区）
+// 响应：更新后的用户信息
 func (ctrl *AdminUserController) UpdateUser(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -56,6 +77,12 @@ func (ctrl *AdminUserController) UpdateUser(c *gin.Context) {
 	Success(c, result)
 }
 
+// DeleteUser 删除用户
+// 管理员删除指定用户
+// 参数：
+//   - c: Gin上下文
+// 路径参数：id（用户ID）
+// 响应：删除成功返回nil
 func (ctrl *AdminUserController) DeleteUser(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -67,6 +94,12 @@ func (ctrl *AdminUserController) DeleteUser(c *gin.Context) {
 	Success(c, nil)
 }
 
+// InviteUser 邀请用户
+// 管理员通过邮箱邀请新用户注册，发送邀请邮件
+// 参数：
+//   - c: Gin上下文
+// 请求体：AdminInviteUserReq（包含邮箱、昵称、角色）
+// 响应：邀请结果
 func (ctrl *AdminUserController) InviteUser(c *gin.Context) {
 	var req request.AdminInviteUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {

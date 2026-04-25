@@ -1,18 +1,23 @@
+// Package response 定义所有HTTP响应的数据传输对象（DTO）
+// 包含认证相关的响应结构体，用于封装返回给客户端的数据
 package response
 
 import "time"
 
+// LoginResp 登录响应
+// 返回访问令牌、刷新令牌和过期时间
 type LoginResp struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	AccessToken  string    `json:"access_token"`  // 访问令牌，用于API请求认证
+	RefreshToken string    `json:"refresh_token"` // 刷新令牌，用于获取新的访问令牌
+	ExpiresAt    time.Time `json:"expires_at"`    // 访问令牌过期时间
 }
 
+// ProfileResp 用户个人信息响应
 type ProfileResp struct {
-	ID        uint64    `json:"id"`
-	Email     string    `json:"email"`
-	Nickname  string    `json:"nickname"`
-	Language  string    `json:"language"`
-	Timezone  string    `json:"timezone"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uint64    `json:"id"`         // 用户ID
+	Email     string    `json:"email"`      // 用户邮箱
+	Nickname  string    `json:"nickname"`   // 用户昵称
+	Language  string    `json:"language"`   // 界面语言
+	Timezone  string    `json:"timezone"`   // 时区
+	CreatedAt time.Time `json:"created_at"` // 注册时间
 }

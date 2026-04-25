@@ -1,10 +1,33 @@
+// Package errcode 提供统一的业务错误码定义
+// 错误码按模块分段管理：
+//   - 0: 成功
+//   - 400-499: HTTP标准错误
+//   - 1xxxx: 认证错误
+//   - 2xxxx: 账户错误
+//   - 3xxxx: 交易错误
+//   - 4xxxx: 分类错误
+//   - 5xxxx: 标签错误
+//   - 6xxxx: 预算错误
+//   - 7xxxx: 账单错误
+//   - 8xxxx: 规则错误
+//   - 9xxxx: 导入错误
+//   - 10xxxx: 定期交易错误
+//   - 11xxxx: Webhook错误
+//   - 12xxxx: 对象组错误
+//   - 13xxxx: 交易链接错误
+//   - 14xxxx: 偏好设置错误
+//   - 15xxxx: 对账错误
+//   - 16xxxx: MFA错误
 package errcode
 
+// Error 业务错误结构
+// 包含错误码和错误消息，实现error接口
 type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int    `json:"code"`    // 错误码，用于程序判断
+	Message string `json:"message"` // 错误消息，用于展示给用户
 }
 
+// Error 实现error接口，返回错误消息
 func (e *Error) Error() string {
 	return e.Message
 }
@@ -96,6 +119,13 @@ var (
 	ErrMFAInvalidToken    = &Error{Code: 160005, Message: "invalid MFA token"}
 )
 
+// WithMessage 创建具有自定义消息的错误
+// 保留原始错误码，替换错误消息
+// 参数：
+//   - e: 原始错误
+//   - msg: 自定义错误消息
+// 返回：
+//   - *Error: 新的错误实例
 func WithMessage(e *Error, msg string) *Error {
 	return &Error{Code: e.Code, Message: msg}
 }

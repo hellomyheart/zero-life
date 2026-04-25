@@ -101,13 +101,13 @@ type Recurrence struct {
 	// 收入交易：资金流入的账户（如银行卡）
 	// 转账交易：转入账户
 	// 指针类型表示可为 nil
-	DestinationID *uint64 `json:"destination_id"`
+	DestinationID *uint64 `gorm:"index" json:"destination_id"`
 
 	// CategoryID 分类 ID（可选）
 	// 自动创建交易时使用的分类
 	// 如：房租定期交易关联"居住"分类
 	// 指针类型表示可为 nil
-	CategoryID *uint64 `json:"category_id"`
+	CategoryID *uint64 `gorm:"index" json:"category_id"`
 
 	// Description 交易描述
 	// 自动创建交易时的描述文本
@@ -146,7 +146,7 @@ type Recurrence struct {
 	// EndDate 结束日期（可选）
 	// 指针类型表示可为 nil（无结束日期，永久重复）
 	// 非 nil: 到达此日期后不再创建交易
-	EndDate *time.Time `json:"end_date"`
+	EndDate *time.Time `gorm:"index" json:"end_date"`
 
 	// Repetitions 已执行次数
 	// 记录该定期交易已经自动创建了多少笔交易
@@ -156,7 +156,7 @@ type Recurrence struct {
 	// MaxRepetitions 最大执行次数（可选）
 	// 指针类型表示可为 nil（无次数限制）
 	// 非 nil: 达到指定次数后不再创建交易
-	MaxRepetitions *int `json:"max_repetitions"`
+	MaxRepetitions *int `gorm:"type:integer" json:"max_repetitions"`
 
 	// IsActive 是否激活
 	// true: 到期自动创建交易

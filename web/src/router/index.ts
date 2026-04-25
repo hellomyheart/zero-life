@@ -225,6 +225,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: () => import('@/pages/transactionLinks/TransactionLinkListPage.vue'),
     meta: { requiresAuth: true },
   },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', redirect: '/dashboard' },
 ]
 
 // 创建路由实例，使用HTML5 History模式

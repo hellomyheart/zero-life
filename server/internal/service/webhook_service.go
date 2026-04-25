@@ -5,6 +5,7 @@ package service
 import (
 	"bytes"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -299,9 +300,14 @@ func (s *WebhookService) toResp(w *model.Webhook) *response.WebhookResp {
 }
 
 // generateWebhookSecret 生成Webhook签名密钥
-// 使用SHA256对时间戳进行哈希生成随机密钥
+// 使用crypto/rand生成安全的随机密钥，避免使用可预测的时间戳哈希
 func generateWebhookSecret() string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().UnixMilli()))))
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		// 降级方案：如果系统随机数生成器不可用，使用时间戳+随机数
+		return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().UnixMilli()))))
+	}
+	return fmt.Sprintf("%x", b)
 }
 
 // computeHMAC 计算HMAC-SHA256签名

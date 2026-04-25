@@ -11,14 +11,28 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/service"
 )
 
+// AttachmentController 附件管理控制器
+// 处理附件的上传、下载、在线预览、列表查询和删除等HTTP请求
+// 附件可以关联到交易、账单等不同类型的对象（attachable）
 type AttachmentController struct {
-	service *service.AttachmentService
+	service *service.AttachmentService // 附件业务服务
 }
 
+// NewAttachmentController 创建附件控制器实例
+// 参数：
+//   - service: 附件业务服务实例
+// 返回：
+//   - *AttachmentController: 附件控制器实例
 func NewAttachmentController(service *service.AttachmentService) *AttachmentController {
 	return &AttachmentController{service: service}
 }
 
+// Upload 上传附件
+// 接收multipart/form-data格式的文件上传请求，将文件关联到指定对象
+// 参数：
+//   - ctx: Gin上下文，包含用户身份
+// 表单字段：attachable_type（关联对象类型）、attachable_id（关联对象ID）、file（文件）
+// 响应：上传成功的附件信息
 func (c *AttachmentController) Upload(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -44,6 +58,12 @@ func (c *AttachmentController) Upload(ctx *gin.Context) {
 	Success(ctx, resp)
 }
 
+// Download 下载附件
+// 以附件形式下载指定ID的文件
+// 参数：
+//   - ctx: Gin上下文，包含用户身份和URL路径参数id
+// 路径参数：id（附件ID）
+// 响应：文件流（Content-Disposition: attachment）
 func (c *AttachmentController) Download(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -56,6 +76,12 @@ func (c *AttachmentController) Download(ctx *gin.Context) {
 	ctx.FileAttachment(filePath, "")
 }
 
+// View 在线预览附件
+// 以内联方式在浏览器中预览指定ID的文件
+// 参数：
+//   - ctx: Gin上下文，包含用户身份和URL路径参数id
+// 路径参数：id（附件ID）
+// 响应：文件流（Content-Disposition: inline）
 func (c *AttachmentController) View(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -71,6 +97,12 @@ func (c *AttachmentController) View(ctx *gin.Context) {
 	ctx.File(result.FilePath)
 }
 
+// List 获取附件列表
+// 根据关联对象类型和ID查询附件列表
+// 参数：
+//   - ctx: Gin上下文，包含用户身份
+// 查询参数：attachable_type（关联对象类型）、attachable_id（关联对象ID）
+// 响应：附件列表
 func (c *AttachmentController) List(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	attachableType := ctx.Query("attachable_type")
@@ -84,6 +116,11 @@ func (c *AttachmentController) List(ctx *gin.Context) {
 	Success(ctx, resp)
 }
 
+// Delete 删除附件
+// 参数：
+//   - ctx: Gin上下文，包含用户身份和URL路径参数id
+// 路径参数：id（附件ID）
+// 响应：删除成功返回nil
 func (c *AttachmentController) Delete(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")

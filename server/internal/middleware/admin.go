@@ -1,3 +1,4 @@
+// Package middleware 提供HTTP请求中间件
 package middleware
 
 import (
@@ -8,7 +9,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// Admin checks if the authenticated user has admin role.
+// Admin 管理员权限校验中间件
+// 检查当前认证用户是否具有admin角色，非管理员返回403
+// 参数：
+//   - db: GORM数据库实例，用于查询用户角色信息
+// 返回：
+//   - gin.HandlerFunc: Gin中间件函数
+// 业务规则：
+//   - 必须先经过Auth中间件，确保上下文中存在user_id
+//   - 从数据库查询用户信息，验证角色为admin
+//   - 非管理员请求将被中止并返回403 Forbidden
 func Admin(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("user_id")

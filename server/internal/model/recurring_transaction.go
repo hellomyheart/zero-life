@@ -86,12 +86,12 @@ type RecurringTransaction struct {
 	// 支出交易：支出分类账户
 	// 收入交易：资金流入的账户
 	// 指针类型表示可为 nil
-	DestinationID *uint64 `json:"destination_id"`
+	DestinationID *uint64 `gorm:"index" json:"destination_id"`
 
 	// CategoryID 分类 ID（可选）
 	// 自动创建交易时使用的分类
 	// 指针类型表示可为 nil
-	CategoryID *uint64 `json:"category_id"`
+	CategoryID *uint64 `gorm:"index" json:"category_id"`
 
 	// Notes 备注信息
 	// 记录循环交易的附加说明
@@ -116,7 +116,7 @@ type RecurringTransaction struct {
 	// EndDate 结束日期（可选）
 	// 指针类型表示可为 nil（无结束日期，永久循环）
 	// 非 nil: 到达此日期后不再创建交易
-	EndDate *time.Time `json:"end_date,omitempty"`
+	EndDate *time.Time `gorm:"index" json:"end_date,omitempty"`
 
 	// NextOccurrence 下次执行日期
 	// 系统在此日期自动创建一笔交易

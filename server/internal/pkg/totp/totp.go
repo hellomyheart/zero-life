@@ -1,3 +1,6 @@
+// Package totp 提供TOTP（基于时间的一次性密码）功能
+// 用于多因素认证（MFA），支持密钥生成、二维码URL生成、验证码校验和备用码管理
+// 使用HMAC-SHA1算法，30秒时间窗口，6位验证码
 package totp
 
 import (

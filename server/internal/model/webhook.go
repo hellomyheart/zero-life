@@ -110,7 +110,7 @@ type Webhook struct {
 	// 指针类型表示可为 nil（从未投递过）
 	// 非 nil: 最后一次成功投递的时间
 	// 用于监控 Webhook 是否正常工作
-	LastDeliveredAt *time.Time `json:"last_delivered_at,omitempty"`
+	LastDeliveredAt *time.Time `gorm:"index" json:"last_delivered_at,omitempty"`
 
 	// CreatedAt Webhook 创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`
@@ -165,7 +165,7 @@ type WebhookMessage struct {
 	// 指针类型表示可为 nil（尚未发送或发送失败无响应）
 	// 2xx: 成功
 	// 4xx/5xx: 失败
-	ResponseCode *int `json:"response_code"`
+	ResponseCode *int `gorm:"type:integer" json:"response_code"`
 
 	// ResponseBody 响应体
 	// 目标服务器返回的响应内容
@@ -186,7 +186,7 @@ type WebhookMessage struct {
 	// SentAt 发送时间（可选）
 	// 指针类型表示可为 nil（尚未发送）
 	// 非 nil: 实际发送的时间
-	SentAt *time.Time `json:"sent_at"`
+	SentAt *time.Time `gorm:"index" json:"sent_at"`
 
 	// CreatedAt 消息创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`
@@ -231,18 +231,18 @@ type WebhookDelivery struct {
 	// 指针类型表示可为 nil（尚未发送或网络错误无响应）
 	// 2xx: 成功
 	// 4xx/5xx: 失败
-	StatusCode *int `json:"status_code,omitempty"`
+	StatusCode *int `gorm:"type:integer" json:"status_code,omitempty"`
 
 	// ErrorMessage 错误信息（可选）
 	// 指针类型表示可为 nil（无错误）
 	// 非 nil: 记录推送失败的错误信息
 	// 如："connection refused"、"timeout"
-	ErrorMessage *string `json:"error_message,omitempty"`
+	ErrorMessage *string `gorm:"size:500" json:"error_message,omitempty"`
 
 	// DeliveredAt 投递时间（可选）
 	// 指针类型表示可为 nil（尚未投递）
 	// 非 nil: 实际投递成功的时间
-	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
+	DeliveredAt *time.Time `gorm:"index" json:"delivered_at,omitempty"`
 
 	// CreatedAt 投递记录创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`

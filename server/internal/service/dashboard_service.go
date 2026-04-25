@@ -93,6 +93,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		return nil, errcode.ErrInternal
 	}
 	// 第3步：计算预算预警（使用率>=80%为warning，>=100%为overspent）
+	// 只统计withdrawal类型的交易，避免将deposit/transfer计入预算支出
 	budgetAlerts := make([]response.BudgetAlertResp, 0)
 	for _, b := range budgets {
 		if !b.IsEnabled {
@@ -101,17 +102,21 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		// Calculate spent for this budget's categories
 		spent := decimal.Zero
 		for _, cat := range b.Categories {
+			catID := cat.ID
 			catFilter := repository.TransactionFilter{
 				StartDate:  monthStart.Format("2006-01-02"),
 				EndDate:    now.Format("2006-01-02"),
-				CategoryID: &cat.ID,
+				CategoryID: &catID,
 			}
 			catTxns, err := s.txnRepo.List(userID, catFilter, 0, 10000)
 			if err != nil {
 				continue
 			}
 			for _, txn := range catTxns {
-				spent = spent.Add(txn.Amount)
+				// 只统计支出交易，收入和转账不应计入预算支出
+				if txn.Type == model.TransactionTypeWithdrawal {
+					spent = spent.Add(txn.Amount)
+				}
 			}
 		}
 

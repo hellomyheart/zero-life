@@ -67,12 +67,12 @@ const repeatRuleOptions = [
 async function fetchBills() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size } as any)
+    const res = await list()
     const data = res as unknown as { items: Bill[]; total: number }
     bills.value = data.items || (res as unknown as Bill[])
     pagination.total = data.total || 0
   } catch {
-    // handle error
+    ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -115,8 +115,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchBills()
-  } catch {
-    // cancelled or error
+  } catch (err) {
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 

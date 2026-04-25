@@ -150,3 +150,16 @@ func (r *AccountRepository) HasTransactions(accountID, userID uint64) (bool, err
 	}
 	return count > 0, nil
 }
+
+// CountByCurrency 统计使用指定货币的账户数量
+// 用于禁用货币前的校验：如果有账户正在使用该货币，则不允许禁用
+// 执行 SQL: SELECT COUNT(*) FROM accounts WHERE currency_id = ?
+// 参数 currencyID: 货币ID
+// 返回: 使用该货币的账户数量，查询失败时返回错误
+func (r *AccountRepository) CountByCurrency(currencyID uint64) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.Account{}).Where("currency_id = ?", currencyID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
