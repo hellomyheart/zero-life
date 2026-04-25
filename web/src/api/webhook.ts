@@ -24,7 +24,7 @@ export function list(params: WebhookListReq) {
  * @returns Webhook详细信息
  * @endpoint GET /webhooks/:id
  */
-export function getWebhook(id: string) { return get<Webhook>(`/webhooks/${id}`) }
+export function getWebhook(id: number) { return get<Webhook>(`/webhooks/${id}`) }
 
 /**
  * 创建新Webhook
@@ -41,14 +41,14 @@ export function create(data: CreateWebhookReq) { return post<Webhook>('/webhooks
  * @returns 更新后的Webhook信息
  * @endpoint PUT /webhooks/:id
  */
-export function update(id: string, data: UpdateWebhookReq) { return put<Webhook>(`/webhooks/${id}`, data) }
+export function update(id: number, data: UpdateWebhookReq) { return put<Webhook>(`/webhooks/${id}`, data) }
 
 /**
  * 删除Webhook
  * @param id - Webhook ID
  * @endpoint DELETE /webhooks/:id
  */
-export function remove(id: string) { return del<void>(`/webhooks/${id}`) }
+export function remove(id: number) { return del<void>(`/webhooks/${id}`) }
 
 /**
  * 获取Webhook的投递记录
@@ -57,4 +57,4 @@ export function remove(id: string) { return del<void>(`/webhooks/${id}`) }
  * @returns 投递记录分页列表
  * @endpoint GET /webhooks/:id/deliveries
  */
-export function listDeliveries(id: string) { return get<PageResult<WebhookDelivery>>(`/webhooks/${id}/deliveries`) }
+export function listDeliveries(id: number) { return get<PageResult<WebhookDelivery>>(`/webhooks/${id}/deliveries`) }

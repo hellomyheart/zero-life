@@ -8,7 +8,7 @@
  * 表示系统中的一个用户
  */
 export interface User {
-  id: string                   // 用户唯一标识
+  id: number                    // 用户唯一标识
   email: string                // 用户邮箱（也用作登录名）
   nickname: string             // 用户昵称
   role: string                 // 用户角色，如"admin"（管理员）、"user"（普通用户）

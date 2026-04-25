@@ -22,7 +22,7 @@ export function list() {
  * @returns 规则详细信息（含条件和动作列表）
  * @endpoint GET /rules/:id
  */
-export function getRule(id: string) {
+export function getRule(id: number) {
   return get<Rule>(`/rules/${id}`)
 }
 
@@ -43,7 +43,7 @@ export function create(data: CreateRuleReq) {
  * @returns 更新后的规则信息
  * @endpoint PUT /rules/:id
  */
-export function update(id: string, data: UpdateRuleReq) {
+export function update(id: number, data: UpdateRuleReq) {
   return put<Rule>(`/rules/${id}`, data)
 }
 
@@ -52,7 +52,7 @@ export function update(id: string, data: UpdateRuleReq) {
  * @param id - 规则ID
  * @endpoint DELETE /rules/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/rules/${id}`)
 }
 
@@ -63,7 +63,7 @@ export function remove(id: string) {
  * @returns 更新后的规则信息
  * @endpoint PUT /rules/:id/toggle
  */
-export function toggleStatus(id: string) {
+export function toggleStatus(id: number) {
   return put<Rule>(`/rules/${id}/toggle`)
 }
 
@@ -74,6 +74,6 @@ export function toggleStatus(id: string) {
  * @param data - 执行请求参数（要应用规则的交易ID列表）
  * @endpoint POST /rules/:id/execute
  */
-export function execute(id: string, data: ExecuteRuleReq) {
+export function execute(id: number, data: ExecuteRuleReq) {
   return post<void>(`/rules/${id}/execute`, data)
 }

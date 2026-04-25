@@ -19,7 +19,7 @@ const dialogVisible = ref(false)
 /** 对话框标题 */
 const dialogTitle = ref('')
 /** 当前编辑的Webhook ID，null表示新建 */
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 /** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
@@ -81,7 +81,7 @@ function handleEdit(row: Webhook) {
   dialogVisible.value = true
 }
 
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('webhook.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

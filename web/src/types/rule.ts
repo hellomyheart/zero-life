@@ -29,7 +29,7 @@ export interface RuleAction {
  * 表示一个完整的自动化规则
  */
 export interface Rule {
-  id: string                   // 规则唯一标识
+  id: number                    // 规则唯一标识
   name: string                 // 规则名称，如"自动分类餐饮消费"
   conditions: RuleCondition[]  // 触发条件列表（所有条件需同时满足）
   actions: RuleAction[]        // 执行动作列表（条件满足时依次执行）
@@ -85,5 +85,5 @@ export interface UpdateRuleReq {
  * 手动对指定交易应用规则
  */
 export interface ExecuteRuleReq {
-  transaction_ids: string[]    // 要应用规则的交易ID列表
+  transaction_ids: number[]     // 要应用规则的交易ID列表
 }

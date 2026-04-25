@@ -37,7 +37,7 @@ const dialogVisible = ref(false)
 // 对话框标题（新增 / 编辑）
 const dialogTitle = ref('')
 // 当前正在编辑的汇率 ID，为 null 时表示新增模式
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 
 // 新增/编辑表单数据
 const form = ref({
@@ -109,7 +109,7 @@ function handleCreate() {
 // 点击编辑按钮，填充表单数据并打开编辑对话框
 function handleEdit(row: ExchangeRate) {
   dialogTitle.value = t('common.edit')
-  editingId.value = String(row.id)
+  editingId.value = row.id
   form.value = {
     from_currency_id: row.from_currency_id,
     to_currency_id: row.to_currency_id,
@@ -129,7 +129,7 @@ async function handleSubmit() {
   try {
     if (editingId.value) {
       // 编辑模式：调用更新 API
-      await update(String(editingId.value), {
+      await update(editingId.value, {
         from_currency_id: Number(form.value.from_currency_id),
         to_currency_id: Number(form.value.to_currency_id),
         date: form.value.date,
@@ -154,7 +154,7 @@ async function handleSubmit() {
 }
 
 // 删除汇率记录（带确认弹窗）
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     // 弹出确认框，用户确认后才执行删除
     await ElMessageBox.confirm(t('exchangeRate.deleteConfirm'), t('common.confirm'), { type: 'warning' })

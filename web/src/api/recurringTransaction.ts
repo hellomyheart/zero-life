@@ -24,7 +24,7 @@ export function list(params: RecurringTransactionListReq) {
  * @returns 循环交易详细信息
  * @endpoint GET /recurring-transactions/:id
  */
-export function getRecurringTransaction(id: string) { return get<RecurringTransaction>(`/recurring-transactions/${id}`) }
+export function getRecurringTransaction(id: number) { return get<RecurringTransaction>(`/recurring-transactions/${id}`) }
 
 /**
  * 创建新循环交易
@@ -41,14 +41,14 @@ export function create(data: CreateRecurringTransactionReq) { return post<Recurr
  * @returns 更新后的循环交易信息
  * @endpoint PUT /recurring-transactions/:id
  */
-export function update(id: string, data: UpdateRecurringTransactionReq) { return put<RecurringTransaction>(`/recurring-transactions/${id}`, data) }
+export function update(id: number, data: UpdateRecurringTransactionReq) { return put<RecurringTransaction>(`/recurring-transactions/${id}`, data) }
 
 /**
  * 删除循环交易
  * @param id - 循环交易ID
  * @endpoint DELETE /recurring-transactions/:id
  */
-export function remove(id: string) { return del<void>(`/recurring-transactions/${id}`) }
+export function remove(id: number) { return del<void>(`/recurring-transactions/${id}`) }
 
 /**
  * 处理到期的循环交易

@@ -86,7 +86,7 @@ function handleCreate() {
  * 跳转到编辑账户页面
  * @param id 账户ID
  */
-function handleEdit(id: string) {
+function handleEdit(id: number) {
   router.push(`/accounts/${id}/edit`)
 }
 
@@ -95,7 +95,7 @@ function handleEdit(id: string) {
  * 弹出确认框，确认后调用API删除
  * @param id 账户ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('account.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

@@ -19,13 +19,13 @@ const budgets = ref<Budget[]>([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 
 const form = ref({
   name: '',
   amount: '0',
   period: 'monthly' as BudgetPeriod,
-  category_ids: [] as string[],
+  category_ids: [] as number[],
   start_date: '',
 })
 
@@ -60,11 +60,11 @@ function handleEdit(budget: Budget) {
   dialogVisible.value = true
 }
 
-function handleDetail(id: string) {
+function handleDetail(id: number) {
   router.push(`/budgets/${id}`)
 }
 
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('budget.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

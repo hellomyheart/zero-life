@@ -24,7 +24,7 @@ export function list(params: AccountListReq) {
  * @returns 账户详细信息
  * @endpoint GET /accounts/:id
  */
-export function getAccount(id: string) {
+export function getAccount(id: number) {
   return get<Account>(`/accounts/${id}`)
 }
 
@@ -45,7 +45,7 @@ export function create(data: CreateAccountReq) {
  * @returns 更新后的账户信息
  * @endpoint PUT /accounts/:id
  */
-export function update(id: string, data: UpdateAccountReq) {
+export function update(id: number, data: UpdateAccountReq) {
   return put<Account>(`/accounts/${id}`, data)
 }
 
@@ -54,6 +54,6 @@ export function update(id: string, data: UpdateAccountReq) {
  * @param id - 要删除的账户ID
  * @endpoint DELETE /accounts/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/accounts/${id}`)
 }

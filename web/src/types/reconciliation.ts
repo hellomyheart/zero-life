@@ -8,8 +8,8 @@
  * 表示一次对账操作的完整信息
  */
 export interface Reconciliation {
-  id: string                   // 对账记录唯一标识
-  account_id: string           // 对账的账户ID
+  id: number                    // 对账记录唯一标识
+  account_id: number            // 对账的账户ID
   start_date: string           // 对账期间起始日期
   end_date: string             // 对账期间结束日期
   start_balance: string        // 期初余额（对账期间开始时的账面余额）
@@ -26,7 +26,7 @@ export interface Reconciliation {
  * 创建对账记录请求接口
  */
 export interface CreateReconciliationReq {
-  account_id: string           // 对账的账户ID（必填）
+  account_id: number            // 对账的账户ID（必填）
   start_date: string           // 起始日期（必填）
   end_date: string             // 结束日期（必填）
   start_balance: string        // 期初余额（必填）
@@ -48,7 +48,7 @@ export interface UpdateReconciliationReq {
  * 对账记录列表查询请求接口
  */
 export interface ReconciliationListReq {
-  account_id?: string          // 按账户ID筛选
+  account_id?: number           // 按账户ID筛选
   page?: number                // 页码（从1开始）
   page_size?: number           // 每页数量
 }

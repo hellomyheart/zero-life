@@ -33,7 +33,7 @@ export function upload(formData: FormData) { return post<Attachment>('/attachmen
  * @param id - 附件ID
  * @endpoint GET /attachments/:id/download
  */
-export function download(id: string) { return get<void>(`/attachments/${id}/download`) }
+export function download(id: number) { return get<void>(`/attachments/${id}/download`) }
 
 /**
  * 在线预览附件
@@ -41,11 +41,11 @@ export function download(id: string) { return get<void>(`/attachments/${id}/down
  * @param id - 附件ID
  * @endpoint GET /attachments/:id/view
  */
-export function view(id: string) { return get<void>(`/attachments/${id}/view`) }
+export function view(id: number) { return get<void>(`/attachments/${id}/view`) }
 
 /**
  * 删除附件
  * @param id - 附件ID
  * @endpoint DELETE /attachments/:id
  */
-export function remove(id: string) { return del<void>(`/attachments/${id}`) }
+export function remove(id: number) { return del<void>(`/attachments/${id}`) }

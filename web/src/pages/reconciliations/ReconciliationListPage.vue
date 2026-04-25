@@ -38,13 +38,13 @@ const dialogVisible = ref(false)
 // 对话框标题
 const dialogTitle = ref('')
 // 当前编辑的对账记录 ID
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 /** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
 // 表单数据
 const form = ref<CreateReconciliationReq>({
-  account_id: '',
+  account_id: 0,
   start_date: '',
   end_date: '',
   start_balance: '0',
@@ -95,7 +95,7 @@ function handleSizeChange(size: number) {
 function handleCreate() {
   dialogTitle.value = t('reconciliation.create')
   editingId.value = null
-  form.value = { account_id: '', start_date: '', end_date: '', start_balance: '0', end_balance: '0', notes: '' }
+  form.value = { account_id: 0, start_date: '', end_date: '', start_balance: '0', end_balance: '0', notes: '' }
   dialogVisible.value = true
 }
 
@@ -121,7 +121,7 @@ function handleEdit(row: Reconciliation) {
  * 删除对账记录
  * @param id 对账记录 ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('reconciliation.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

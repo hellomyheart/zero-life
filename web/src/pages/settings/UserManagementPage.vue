@@ -12,7 +12,7 @@ const { t } = useI18n()
 const users = ref<User[]>([])
 const loading = ref(false)
 const dialogVisible = ref(false)
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 const editForm = ref<UpdateUserReq>({})
 
 async function fetchUsers() {
@@ -45,7 +45,7 @@ async function handleSubmit() {
   }
 }
 
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('user.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)
@@ -56,7 +56,7 @@ async function handleDelete(id: string) {
   }
 }
 
-async function handleLock(id: string) {
+async function handleLock(id: number) {
   try {
     await lock(id)
     ElMessage.success(t('common.success'))
@@ -66,7 +66,7 @@ async function handleLock(id: string) {
   }
 }
 
-async function handleUnlock(id: string) {
+async function handleUnlock(id: number) {
   try {
     await unlock(id)
     ElMessage.success(t('common.success'))

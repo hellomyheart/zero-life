@@ -11,8 +11,8 @@ export interface ReportReq {
   start_date: string           // 查询起始日期（必填）
   end_date: string             // 查询结束日期（必填）
   currency?: string            // 货币代码（可选，用于多币种报表）
-  account_ids?: string[]       // 账户ID列表（可选，筛选特定账户的数据）
-  category_ids?: string[]      // 分类ID列表（可选，筛选特定分类的数据）
+  account_ids?: number[]        // 账户ID列表（可选，筛选特定账户的数据）
+  category_ids?: number[]       // 分类ID列表（可选，筛选特定分类的数据）
 }
 
 /**
@@ -24,14 +24,14 @@ export interface IncomeExpenseResp {
   total_expense: string        // 总支出
   net_income: string           // 净收入（收入 - 支出）
   income_by_account: {         // 按账户分组的收入明细
-    account_id: string         // 账户ID
-    account_name: string       // 账户名称
-    amount: string             // 收入金额
+    account_id: number          // 账户ID
+    account_name: string        // 账户名称
+    amount: string              // 收入金额
   }[]
   expense_by_account: {        // 按账户分组的支出明细
-    account_id: string         // 账户ID
-    account_name: string       // 账户名称
-    amount: string             // 支出金额
+    account_id: number          // 账户ID
+    account_name: string        // 账户名称
+    amount: string              // 支出金额
   }[]
 }
 
@@ -40,7 +40,7 @@ export interface IncomeExpenseResp {
  * 单个分类的汇总数据
  */
 export interface CategoryItemResp {
-  category_id: string          // 分类ID
+  category_id: number           // 分类ID
   category_name: string        // 分类名称
   amount: string               // 该分类的金额
   percentage: number           // 占比百分比（0-100）
@@ -61,7 +61,7 @@ export interface CategoryReportResp {
  */
 export interface BudgetReportResp {
   budgets: {                   // 预算列表
-    budget_id: string          // 预算ID
+    budget_id: number           // 预算ID
     budget_name: string        // 预算名称
     amount: string             // 预算金额上限
     spent: string              // 已花费金额
@@ -89,7 +89,7 @@ export interface NetWorthResp {
  * 收支随时间的变化趋势，用于绘制趋势图
  */
 export interface TagItemResp {
-  tag_id: string
+  tag_id: number
   tag_name: string
   income: string
   expense: string

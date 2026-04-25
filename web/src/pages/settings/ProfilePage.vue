@@ -16,7 +16,7 @@ const { t } = useI18n()
 
 // 用户信息
 const user = ref<User>({
-  id: '',
+  id: 0,
   email: '',
   nickname: '',
   role: '',

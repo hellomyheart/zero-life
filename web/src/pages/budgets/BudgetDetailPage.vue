@@ -17,7 +17,7 @@ const history = ref<BudgetHistory[]>([])
 const loading = ref(true)
 
 onMounted(async () => {
-  const id = route.params.id as string
+  const id = Number(route.params.id)
   try {
     budget.value = await getBudget(id) as unknown as Budget
     history.value = await getHistory(id) as unknown as BudgetHistory[]

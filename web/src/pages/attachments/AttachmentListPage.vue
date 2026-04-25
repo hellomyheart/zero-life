@@ -84,7 +84,7 @@ async function handleUpload() {
  * 弹出确认框后调用API删除指定附件
  * @param id 附件ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('attachment.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

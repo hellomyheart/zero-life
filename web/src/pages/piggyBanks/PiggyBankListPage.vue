@@ -22,7 +22,7 @@ const dialogVisible = ref(false)
 /** 对话框标题 */
 const dialogTitle = ref('')
 /** 当前编辑的存钱罐 ID，null表示新建 */
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 /** 存取款对话框显示状态 */
 const amountDialogVisible = ref(false)
 /** 存取款对话框标题 */
@@ -30,7 +30,7 @@ const amountDialogTitle = ref('')
 /** 存取款对话框类型：add=存入, remove=取出 */
 const amountDialogType = ref<'add' | 'remove'>('add')
 /** 当前操作的存钱罐 ID */
-const amountDialogId = ref<string>('')
+const amountDialogId = ref<number>(0)
 /** 存取款表单数据 */
 const amountForm = ref<AddAmountReq>({ amount: '0', note: '' })
 /** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
@@ -39,7 +39,7 @@ const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 /** 存钱罐创建/编辑表单数据 */
 const form = ref<CreatePiggyBankReq>({
   name: '',
-  account_id: '',
+  account_id: 0,
   target_amount: '0',
   target_date: '',
   notes: '',
@@ -88,7 +88,7 @@ function handleSizeChange(size: number) {
 function handleCreate() {
   dialogTitle.value = t('piggyBank.create')
   editingId.value = null
-  form.value = { name: '', account_id: '', target_amount: '0', target_date: '', notes: '' }
+  form.value = { name: '', account_id: 0, target_amount: '0', target_date: '', notes: '' }
   dialogVisible.value = true
 }
 
@@ -114,7 +114,7 @@ function handleEdit(row: PiggyBank) {
  * 弹出确认框后调用API删除
  * @param id 存钱罐ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('piggyBank.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

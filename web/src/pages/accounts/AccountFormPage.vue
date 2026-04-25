@@ -54,7 +54,7 @@ onMounted(async () => {
   }
   if (isEdit.value) {
     try {
-      const account = (await getAccount(route.params.id as string)) as unknown as Account
+      const account = (await getAccount(Number(route.params.id))) as unknown as Account
       form.name = account.name
       form.type = account.type
       form.currency_id = account.currency_id
@@ -80,7 +80,7 @@ async function handleSubmit() {
         notes: form.notes,
         is_virtual: form.is_virtual,
       }
-      await update(route.params.id as string, req)
+      await update(Number(route.params.id), req)
     } else {
       // 创建模式：提交所有字段
       const req: CreateAccountReq = {

@@ -8,7 +8,7 @@
  * 表示一个Webhook配置
  */
 export interface Webhook {
-  id: string                   // Webhook唯一标识
+  id: number                    // Webhook唯一标识
   name: string                 // Webhook名称，如"Slack通知"
   url: string                  // 回调URL，事件触发时向此地址发送POST请求
   trigger: string              // 触发事件类型，如"transaction.created"、"bill.due"
@@ -24,8 +24,8 @@ export interface Webhook {
  * 记录每次Webhook通知的发送结果
  */
 export interface WebhookDelivery {
-  id: string                   // 投递记录唯一标识
-  webhook_id: string           // 关联的Webhook ID
+  id: number                    // 投递记录唯一标识
+  webhook_id: number            // 关联的Webhook ID
   url: string                  // 请求的目标URL
   status_code: number          // HTTP响应状态码（如200、404、500等）
   success: boolean             // 是否投递成功（状态码2xx视为成功）

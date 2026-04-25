@@ -21,7 +21,7 @@ export function list() {
  * @returns 预算详细信息（含已花费金额和使用率）
  * @endpoint GET /budgets/:id
  */
-export function getBudget(id: string) {
+export function getBudget(id: number) {
   return get<Budget>(`/budgets/${id}`)
 }
 
@@ -42,7 +42,7 @@ export function create(data: CreateBudgetReq) {
  * @returns 更新后的预算信息
  * @endpoint PUT /budgets/:id
  */
-export function update(id: string, data: UpdateBudgetReq) {
+export function update(id: number, data: UpdateBudgetReq) {
   return put<Budget>(`/budgets/${id}`, data)
 }
 
@@ -51,7 +51,7 @@ export function update(id: string, data: UpdateBudgetReq) {
  * @param id - 要删除的预算ID
  * @endpoint DELETE /budgets/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/budgets/${id}`)
 }
 
@@ -62,6 +62,6 @@ export function remove(id: string) {
  * @returns 预算历史记录数组
  * @endpoint GET /budgets/:id/history
  */
-export function getHistory(id: string) {
+export function getHistory(id: number) {
   return get<BudgetHistory[]>(`/budgets/${id}/history`)
 }

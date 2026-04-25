@@ -23,7 +23,7 @@ export function list(params: ExchangeRateListParams) {
  * @returns 汇率详细信息
  * @endpoint GET /exchange-rates/:id
  */
-export function getRate(id: string) {
+export function getRate(id: number) {
   return get<ExchangeRate>(`/exchange-rates/${id}`)
 }
 
@@ -44,7 +44,7 @@ export function create(data: CreateExchangeRateReq) {
  * @returns 更新后的汇率信息
  * @endpoint PUT /exchange-rates/:id
  */
-export function update(id: string, data: UpdateExchangeRateReq) {
+export function update(id: number, data: UpdateExchangeRateReq) {
   return put<ExchangeRate>(`/exchange-rates/${id}`, data)
 }
 
@@ -53,7 +53,7 @@ export function update(id: string, data: UpdateExchangeRateReq) {
  * @param id - 要删除的汇率记录ID
  * @endpoint DELETE /exchange-rates/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/exchange-rates/${id}`)
 }
 

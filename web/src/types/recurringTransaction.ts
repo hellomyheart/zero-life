@@ -24,13 +24,13 @@ export enum RecurrenceType {
  * 表示一个定期重复的交易模板
  */
 export interface RecurringTransaction {
-  id: string                   // 循环交易唯一标识
-  title: string                // 交易标题，如"每月房租"
-  type: string                 // 交易类型，如"deposit"、"withdrawal"、"transfer"
-  amount: string               // 交易金额
-  source_account_id: string    // 源账户ID（资金流出的账户）
-  destination_account_id: string // 目标账户ID（资金流入的账户，转账时使用）
-  category_id: string          // 关联分类ID
+  id: number                    // 循环交易唯一标识
+  title: string                 // 交易标题，如"每月房租"
+  type: string                  // 交易类型，如"deposit"、"withdrawal"、"transfer"
+  amount: string                // 交易金额
+  source_account_id: number     // 源账户ID（资金流出的账户）
+  destination_account_id: number | null // 目标账户ID（资金流入的账户，转账时使用）
+  category_id: number | null    // 关联分类ID
   recurrence_type: RecurrenceType // 重复类型（每天/每周/每月/每年）
   repeat_interval: number      // 重复间隔（如 recurrence_type=Monthly 且 repeat_interval=2 表示每两月一次）
   start_date: string           // 首次执行日期
@@ -50,9 +50,9 @@ export interface CreateRecurringTransactionReq {
   title: string                // 交易标题（必填）
   type: string                 // 交易类型（必填）
   amount: string               // 交易金额（必填）
-  source_account_id: string    // 源账户ID（必填）
-  destination_account_id?: string // 目标账户ID（转账时必填）
-  category_id?: string         // 关联分类ID（可选）
+  source_account_id: number     // 源账户ID（必填）
+  destination_account_id?: number | null // 目标账户ID（转账时必填）
+  category_id?: number | null   // 关联分类ID（可选）
   recurrence_type: RecurrenceType // 重复类型（必填）
   repeat_interval: number      // 重复间隔（必填）
   start_date: string           // 首次执行日期（必填）

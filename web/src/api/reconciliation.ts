@@ -23,7 +23,7 @@ export function list(params: ReconciliationListReq) {
  * @returns 对账记录详细信息
  * @endpoint GET /reconciliations/:id
  */
-export function getReconciliation(id: string) { return get<Reconciliation>(`/reconciliations/${id}`) }
+export function getReconciliation(id: number) { return get<Reconciliation>(`/reconciliations/${id}`) }
 
 /**
  * 创建新对账记录
@@ -40,11 +40,11 @@ export function create(data: CreateReconciliationReq) { return post<Reconciliati
  * @returns 更新后的对账记录
  * @endpoint PUT /reconciliations/:id
  */
-export function update(id: string, data: UpdateReconciliationReq) { return put<Reconciliation>(`/reconciliations/${id}`, data) }
+export function update(id: number, data: UpdateReconciliationReq) { return put<Reconciliation>(`/reconciliations/${id}`, data) }
 
 /**
  * 删除对账记录
  * @param id - 对账记录ID
  * @endpoint DELETE /reconciliations/:id
  */
-export function remove(id: string) { return del<void>(`/reconciliations/${id}`) }
+export function remove(id: number) { return del<void>(`/reconciliations/${id}`) }

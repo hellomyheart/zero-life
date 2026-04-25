@@ -24,7 +24,7 @@ export function list(params: UserListReq) {
  * @returns 用户详细信息
  * @endpoint GET /users/:id
  */
-export function getUser(id: string) { return get<User>(`/users/${id}`) }
+export function getUser(id: number) { return get<User>(`/users/${id}`) }
 
 /**
  * 更新用户信息
@@ -33,14 +33,14 @@ export function getUser(id: string) { return get<User>(`/users/${id}`) }
  * @returns 更新后的用户信息
  * @endpoint PUT /users/:id
  */
-export function update(id: string, data: UpdateUserReq) { return put<User>(`/users/${id}`, data) }
+export function update(id: number, data: UpdateUserReq) { return put<User>(`/users/${id}`, data) }
 
 /**
  * 删除用户
  * @param id - 用户ID
  * @endpoint DELETE /users/:id
  */
-export function remove(id: string) { return del<void>(`/users/${id}`) }
+export function remove(id: number) { return del<void>(`/users/${id}`) }
 
 /**
  * 变更用户角色
@@ -48,7 +48,7 @@ export function remove(id: string) { return del<void>(`/users/${id}`) }
  * @param role - 新角色名称（如 'admin'、'user' 等）
  * @endpoint PUT /users/:id/role
  */
-export function changeRole(id: string, role: string) { return put<void>(`/users/${id}/role`, { role }) }
+export function changeRole(id: number, role: string) { return put<void>(`/users/${id}/role`, { role }) }
 
 /**
  * 锁定用户账户
@@ -56,7 +56,7 @@ export function changeRole(id: string, role: string) { return put<void>(`/users/
  * @param id - 用户ID
  * @endpoint POST /users/:id/lock
  */
-export function lock(id: string) { return post<void>(`/users/${id}/lock`) }
+export function lock(id: number) { return post<void>(`/users/${id}/lock`) }
 
 /**
  * 解锁用户账户
@@ -64,4 +64,4 @@ export function lock(id: string) { return post<void>(`/users/${id}/lock`) }
  * @param id - 用户ID
  * @endpoint POST /users/:id/unlock
  */
-export function unlock(id: string) { return post<void>(`/users/${id}/unlock`) }
+export function unlock(id: number) { return post<void>(`/users/${id}/unlock`) }

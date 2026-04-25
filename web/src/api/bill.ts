@@ -21,7 +21,7 @@ export function list() {
  * @returns 账单详细信息（含下次到期日和是否逾期）
  * @endpoint GET /bills/:id
  */
-export function getBill(id: string) {
+export function getBill(id: number) {
   return get<Bill>(`/bills/${id}`)
 }
 
@@ -42,7 +42,7 @@ export function create(data: CreateBillReq) {
  * @returns 更新后的账单信息
  * @endpoint PUT /bills/:id
  */
-export function update(id: string, data: UpdateBillReq) {
+export function update(id: number, data: UpdateBillReq) {
   return put<Bill>(`/bills/${id}`, data)
 }
 
@@ -51,6 +51,6 @@ export function update(id: string, data: UpdateBillReq) {
  * @param id - 要删除的账单ID
  * @endpoint DELETE /bills/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/bills/${id}`)
 }

@@ -24,7 +24,7 @@ export function list(params: PiggyBankListReq) {
  * @returns 存钱罐详细信息（含当前金额和完成百分比）
  * @endpoint GET /piggy-banks/:id
  */
-export function getPiggyBank(id: string) { return get<PiggyBank>(`/piggy-banks/${id}`) }
+export function getPiggyBank(id: number) { return get<PiggyBank>(`/piggy-banks/${id}`) }
 
 /**
  * 创建新存钱罐
@@ -41,14 +41,14 @@ export function create(data: CreatePiggyBankReq) { return post<PiggyBank>('/pigg
  * @returns 更新后的存钱罐信息
  * @endpoint PUT /piggy-banks/:id
  */
-export function update(id: string, data: UpdatePiggyBankReq) { return put<PiggyBank>(`/piggy-banks/${id}`, data) }
+export function update(id: number, data: UpdatePiggyBankReq) { return put<PiggyBank>(`/piggy-banks/${id}`, data) }
 
 /**
  * 删除存钱罐
  * @param id - 存钱罐ID
  * @endpoint DELETE /piggy-banks/:id
  */
-export function remove(id: string) { return del<void>(`/piggy-banks/${id}`) }
+export function remove(id: number) { return del<void>(`/piggy-banks/${id}`) }
 
 /**
  * 向存钱罐存入金额
@@ -57,7 +57,7 @@ export function remove(id: string) { return del<void>(`/piggy-banks/${id}`) }
  * @param data - 存入请求参数（金额、可选备注）
  * @endpoint POST /piggy-banks/:id/add
  */
-export function addAmount(id: string, data: AddAmountReq) { return post<void>(`/piggy-banks/${id}/add`, data) }
+export function addAmount(id: number, data: AddAmountReq) { return post<void>(`/piggy-banks/${id}/add`, data) }
 
 /**
  * 从存钱罐取出金额
@@ -66,7 +66,7 @@ export function addAmount(id: string, data: AddAmountReq) { return post<void>(`/
  * @param data - 取出请求参数（金额、可选备注）
  * @endpoint POST /piggy-banks/:id/remove
  */
-export function removeAmount(id: string, data: AddAmountReq) { return post<void>(`/piggy-banks/${id}/remove`, data) }
+export function removeAmount(id: number, data: AddAmountReq) { return post<void>(`/piggy-banks/${id}/remove`, data) }
 
 /**
  * 获取存钱罐的事件记录
@@ -75,4 +75,4 @@ export function removeAmount(id: string, data: AddAmountReq) { return post<void>
  * @returns 事件记录数组
  * @endpoint GET /piggy-banks/:id/events
  */
-export function getEvents(id: string) { return get<PiggyEvent[]>(`/piggy-banks/${id}/events`) }
+export function getEvents(id: number) { return get<PiggyEvent[]>(`/piggy-banks/${id}/events`) }

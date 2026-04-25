@@ -77,13 +77,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 加载当前用户信息
-   * 获取失败时清除Token（可能Token已失效）
+   * 获取失败时不清除Token（Token可能仍然有效，只是profile接口暂时不可用）
+   * 只有明确收到401且token刷新也失败时，才清除Token（由响应拦截器处理）
    */
   async function loadProfile() {
     try {
       user.value = await getProfile() as unknown as ProfileResp
     } catch {
-      clearTokens()
+      // 不清除Token，只标记用户信息为null
+      // Token有效性由响应拦截器的401处理逻辑判断
+      user.value = null
     }
   }
 

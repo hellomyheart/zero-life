@@ -8,9 +8,9 @@
  * 表示一个储蓄目标的完整信息
  */
 export interface PiggyBank {
-  id: string                   // 存钱罐唯一标识
-  name: string                 // 存钱罐名称，如"旅行基金"
-  account_id: string           // 关联的资产账户ID（存取款从该账户操作）
+  id: number                    // 存钱罐唯一标识
+  name: string                  // 存钱罐名称，如"旅行基金"
+  account_id: number            // 关联的资产账户ID（存取款从该账户操作）
   target_amount: string        // 目标金额
   current_amount: string       // 当前已存金额
   start_date: string           // 开始存款日期
@@ -27,8 +27,8 @@ export interface PiggyBank {
  * 记录存钱罐的每次存入或取出操作
  */
 export interface PiggyEvent {
-  id: string                   // 事件唯一标识
-  piggy_bank_id: string        // 关联的存钱罐ID
+  id: number                    // 事件唯一标识
+  piggy_bank_id: number         // 关联的存钱罐ID
   amount: string               // 操作金额
   type: string                 // 操作类型，如"add"（存入）、"remove"（取出）
   note: string                 // 操作备注
@@ -40,7 +40,7 @@ export interface PiggyEvent {
  */
 export interface CreatePiggyBankReq {
   name: string                 // 存钱罐名称（必填）
-  account_id: string           // 关联账户ID（必填）
+  account_id: number            // 关联账户ID（必填）
   target_amount: string        // 目标金额（必填）
   target_date?: string         // 目标完成日期（可选）
   notes?: string               // 备注说明（可选）

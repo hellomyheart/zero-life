@@ -42,7 +42,7 @@ const dialogVisible = ref(false)
 // 对话框标题
 const dialogTitle = ref('')
 // 当前编辑的循环交易 ID
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 /** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
@@ -59,9 +59,9 @@ const form = ref<CreateRecurringTransactionReq>({
   title: '',
   type: 'withdrawal',
   amount: '0',
-  source_account_id: '',
-  destination_account_id: '',
-  category_id: '',
+  source_account_id: 0,
+  destination_account_id: null,
+  category_id: null,
   recurrence_type: RecurrenceType.Monthly,
   repeat_interval: 1,
   start_date: '',
@@ -115,9 +115,9 @@ function handleCreate() {
     title: '',
     type: 'withdrawal',
     amount: '0',
-    source_account_id: '',
-    destination_account_id: '',
-    category_id: '',
+    source_account_id: 0,
+    destination_account_id: null,
+    category_id: null,
     recurrence_type: RecurrenceType.Monthly,
     repeat_interval: 1,
     start_date: '',
@@ -153,7 +153,7 @@ function handleEdit(row: RecurringTransaction) {
  * 删除循环交易
  * @param id 循环交易 ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('recurringTransaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

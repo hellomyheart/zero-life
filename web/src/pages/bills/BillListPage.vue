@@ -31,7 +31,7 @@ const dialogVisible = ref(false)
 /** 对话框标题 */
 const dialogTitle = ref('')
 /** 当前编辑的账单ID，null表示新建模式 */
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 
 /** 分页参数 */
 const pagination = reactive({
@@ -44,8 +44,8 @@ const pagination = reactive({
 const form = ref<CreateBillReq>({
   name: '',
   amount: '0',
-  account_id: '',
-  category_id: '',
+  account_id: 0,
+  category_id: null,
   repeat_rule: RepeatRule.Monthly,
   next_due_date: '',
   description: '',
@@ -82,7 +82,7 @@ async function fetchBills() {
 function handleCreate() {
   dialogTitle.value = t('bill.create')
   editingId.value = null
-  form.value = { name: '', amount: '0', account_id: '', category_id: '', repeat_rule: RepeatRule.Monthly, next_due_date: '', description: '' }
+  form.value = { name: '', amount: '0', account_id: 0, category_id: null, repeat_rule: RepeatRule.Monthly, next_due_date: '', description: '' }
   dialogVisible.value = true
 }
 
@@ -109,7 +109,7 @@ function handleEdit(bill: Bill) {
  * 删除账单
  * @param id 账单ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('bill.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)
