@@ -123,11 +123,11 @@ onMounted(fetchCategories)
         <el-form-item :label="t('category.name')">
           <el-input v-model="form.name" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
-        <el-form-item label="图标">
+        <el-form-item :label="t('category.icon')">
           <IconSelect :model-value="form.icon ?? ''" @update:model-value="form.icon = $event" />
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.notes" type="textarea" :rows="2" placeholder="输入备注" />
+        <el-form-item :label="t('category.notes')">
+          <el-input v-model="form.notes" type="textarea" :rows="2" :placeholder="t('category.notesPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>

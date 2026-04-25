@@ -84,13 +84,12 @@ const destinationAccountOptions = computed(() => {
 })
 const showDestination = computed(() => true)
 const sourceAccountLabel = computed(() => {
-  if (form.type === TransactionType.Deposit) return t('transaction.sourceAccount') + ' (' + t('transaction.revenueAccount') + ')'
-  return t('transaction.sourceAccount') + ' (' + t('transaction.assetAccount') + ')'
+  if (form.type === TransactionType.Deposit) return t('transaction.sourceAccount') + '（' + t('transaction.revenueAccount') + '）'
+  return t('transaction.sourceAccount') + '（' + t('transaction.assetAccount') + '）'
 })
 const destinationAccountLabel = computed(() => {
-  if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + ' (' + t('transaction.expenseAccount') + ')'
-  if (form.type === TransactionType.Transfer) return t('transaction.destinationAccount') + ' (' + t('transaction.assetAccount') + ')'
-  return t('transaction.destinationAccount') + ' (' + t('transaction.assetAccount') + ')'
+  if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + '（' + t('transaction.expenseAccount') + '）'
+  return t('transaction.destinationAccount') + '（' + t('transaction.assetAccount') + '）'
 })
 
 function handleTypeChange() {

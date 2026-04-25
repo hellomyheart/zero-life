@@ -119,7 +119,10 @@
     "deleteConfirm": "Are you sure you want to delete this transaction?",
     "notes": "Notes",
     "addSplit": "Add Split",
-    "removeSplit": "Remove Split"
+    "removeSplit": "Remove Split",
+    "assetAccount": "Asset Account",
+    "expenseAccount": "Expense Account",
+    "revenueAccount": "Revenue Account"
   },
   "category": {
     "title": "Category Management",
@@ -130,7 +133,11 @@
     "parent": "Parent Category",
     "deleteConfirm": "Are you sure you want to delete this category?",
     "icon": "Icon",
-    "noParent": "No Parent"
+    "noParent": "No Parent",
+    "notes": "Notes",
+    "notesPlaceholder": "Enter notes",
+    "selectIcon": "Select Icon",
+    "searchIcon": "Search icons..."
   },
   "tag": {
     "title": "Tag Management",
@@ -451,7 +458,8 @@
     "email": "Email",
     "name": "Name",
     "language": "Language",
-    "registeredAt": "Registered At"
+    "registeredAt": "Registered At",
+    "langZhCN": "Chinese"
   },
   "objectGroup": {
     "title": "Object Groups",

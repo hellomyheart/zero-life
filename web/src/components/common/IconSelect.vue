@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as Icons from '@element-plus/icons-vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: string
@@ -35,7 +38,7 @@ function handleClear() {
       <el-icon v-if="modelValue" :size="18">
         <component :is="(Icons as any)[modelValue]" />
       </el-icon>
-      <span v-else class="icon-placeholder">选择图标</span>
+      <span v-else class="icon-placeholder">{{ t('category.selectIcon') }}</span>
       <el-icon v-if="modelValue" class="icon-clear" @click.stop="handleClear" :size="14">
         <Icons.CircleClose />
       </el-icon>
@@ -49,7 +52,7 @@ function handleClear() {
       <div class="icon-picker">
         <el-input
           v-model="search"
-          placeholder="搜索图标..."
+          :placeholder="t('category.searchIcon')"
           clearable
           size="small"
           class="icon-search"

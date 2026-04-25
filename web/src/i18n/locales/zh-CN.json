@@ -119,7 +119,10 @@
     "deleteConfirm": "确定要删除该交易吗？",
     "notes": "备注",
     "addSplit": "添加拆分",
-    "removeSplit": "移除拆分"
+    "removeSplit": "移除拆分",
+    "assetAccount": "资产账户",
+    "expenseAccount": "支出账户",
+    "revenueAccount": "收入账户"
   },
   "category": {
     "title": "分类管理",
@@ -130,7 +133,11 @@
     "parent": "父级分类",
     "deleteConfirm": "确定要删除该分类吗？",
     "icon": "图标",
-    "noParent": "无父级分类"
+    "noParent": "无父级分类",
+    "notes": "备注",
+    "notesPlaceholder": "输入备注",
+    "selectIcon": "选择图标",
+    "searchIcon": "搜索图标..."
   },
   "tag": {
     "title": "标签管理",
@@ -451,7 +458,8 @@
     "email": "邮箱",
     "name": "姓名",
     "language": "语言",
-    "registeredAt": "注册时间"
+    "registeredAt": "注册时间",
+    "langZhCN": "中文"
   },
   "objectGroup": {
     "title": "对象分组管理",

@@ -119,7 +119,7 @@ onMounted(fetchUsers)
         </el-form-item>
         <el-form-item :label="t('profile.language')">
           <el-select v-model="editForm.language">
-            <el-option label="中文" value="zh-CN" />
+            <el-option :label="t('user.langZhCN')" value="zh-CN" />
             <el-option label="English" value="en-US" />
           </el-select>
         </el-form-item>
