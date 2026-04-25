@@ -37,18 +37,11 @@ export interface SetCurrencyStatusReq {
 }
 
 /**
- * 设置默认货币请求接口
- */
-export interface SetDefaultCurrencyReq {
-  currency_id: number          // 要设为默认的货币ID（后端 uint64）
-}
-
-/**
  * 设置汇率请求接口
  * 创建或更新两种货币之间的汇率
  */
 export interface SetExchangeRateReq {
-  source_currency: string      // 源货币代码
-  target_currency: string      // 目标货币代码
+  from_currency_id: number     // 源货币ID
+  to_currency_id: number       // 目标货币ID
   rate: string                 // 汇率值
 }

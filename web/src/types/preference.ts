@@ -23,11 +23,3 @@ export interface SetPreferenceRequest {
   /** 偏好值 */
   value: string;
 }
-
-/**
- * 获取偏好请求参数
- */
-export interface GetPreferenceParams {
-  /** 偏好键名 */
-  key: string;
-}

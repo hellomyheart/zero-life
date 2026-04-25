@@ -84,5 +84,5 @@ export function updateProfile(data: UpdateProfileReq) {
  * @endpoint PUT /auth/change-password
  */
 export function changePassword(data: ChangePasswordReq) {
-  return put<void>('/auth/change-password', data)
+  return put<void>('/auth/password', data)
 }

@@ -14,8 +14,8 @@ const loading = ref(false)
 const rateDialogVisible = ref(false)
 
 const rateForm = ref<SetExchangeRateReq>({
-  source_currency: '',
-  target_currency: '',
+  from_currency_id: 0,
+  to_currency_id: 0,
   rate: '1',
 })
 
@@ -48,7 +48,7 @@ async function handleSetDefault(currency: Currency) {
       t('common.confirm'),
       { type: 'info' }
     )
-    await setDefault({ currency_id: currency.id })
+    await setDefault(currency.id)
     ElMessage.success(t('common.success'))
     await fetchData()
   } catch (err) {
@@ -57,7 +57,7 @@ async function handleSetDefault(currency: Currency) {
 }
 
 function handleAddRate() {
-  rateForm.value = { source_currency: '', target_currency: '', rate: '1' }
+  rateForm.value = { from_currency_id: 0, to_currency_id: 0, rate: '1' }
   rateDialogVisible.value = true
 }
 
@@ -117,13 +117,13 @@ onMounted(fetchData)
     <el-dialog v-model="rateDialogVisible" :title="t('currency.exchangeRate')" width="400px">
       <el-form :model="rateForm" label-width="120px">
         <el-form-item :label="t('currency.sourceCurrency')">
-          <el-select v-model="rateForm.source_currency" filterable>
-            <el-option v-for="c in currencies" :key="c.code" :label="c.code" :value="c.code" />
+          <el-select v-model="rateForm.from_currency_id" filterable>
+            <el-option v-for="c in currencies" :key="c.id" :label="c.code" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('currency.targetCurrency')">
-          <el-select v-model="rateForm.target_currency" filterable>
-            <el-option v-for="c in currencies" :key="c.code" :label="c.code" :value="c.code" />
+          <el-select v-model="rateForm.to_currency_id" filterable>
+            <el-option v-for="c in currencies" :key="c.id" :label="c.code" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('currency.rate')">

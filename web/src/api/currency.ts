@@ -4,7 +4,7 @@
  * 货币是账户和交易的基础，支持多币种记账
  */
 import { get, put, post } from '@/utils/request'
-import type { Currency, ExchangeRate, SetCurrencyStatusReq, SetDefaultCurrencyReq, SetExchangeRateReq } from '@/types/currency'
+import type { Currency, ExchangeRate, SetCurrencyStatusReq, SetExchangeRateReq } from '@/types/currency'
 
 /**
  * 获取所有货币列表
@@ -30,12 +30,12 @@ export function updateStatus(id: number, data: SetCurrencyStatusReq) {
 /**
  * 设置默认货币
  * 默认货币用于新建账户时的默认选项和系统展示
- * @param data - 默认货币设置请求（货币ID）
+ * @param id - 要设为默认的货币ID（路径参数）
  * @returns 更新后的货币信息
- * @endpoint PUT /currencies/default
+ * @endpoint PUT /currencies/:id/default
  */
-export function setDefault(data: SetDefaultCurrencyReq) {
-  return put<Currency>('/currencies/default', data)
+export function setDefault(id: number) {
+  return put<Currency>(`/currencies/${id}/default`)
 }
 
 /**

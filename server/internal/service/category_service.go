@@ -90,6 +90,24 @@ func (s *CategoryService) List(userID uint64) ([]response.CategoryResp, error) {
 	return s.buildTree(categories), nil
 }
 
+// Get 获取单个分类详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 分类ID
+// 返回：
+//   - *response.CategoryResp: 分类信息
+//   - error: 错误信息
+func (s *CategoryService) Get(userID, id uint64) (*response.CategoryResp, error) {
+	category, err := s.categoryRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+	return s.toResp(category), nil
+}
+
 // Update 更新分类信息
 // 支持更新名称、图标、备注、排序
 // 参数：

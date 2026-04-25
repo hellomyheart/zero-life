@@ -91,6 +91,32 @@ func (ctrl *CategoryController) List(c *gin.Context) {
 	Success(c, result)
 }
 
+// Get 获取单个分类详情
+// @Summary      Get category
+// @Description  Get category by ID
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Category ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/categories/{id} [get]
+// @Security     BearerAuth
+func (ctrl *CategoryController) Get(c *gin.Context) {
+	userID := c.GetUint64("user_id")
+	id := parseIDParam(c, "id")
+
+	result, err := ctrl.categoryService.Get(userID, id)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
 // Update 更新分类
 // 根据URL路径中的分类ID和请求体中的更新字段，修改分类信息
 // 参数：

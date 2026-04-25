@@ -144,8 +144,8 @@ func (c *AttachmentController) View(ctx *gin.Context) {
 // @Tags         attachments
 // @Accept       json
 // @Produce      json
-// @Param        attachable_type query string true "Attachable object type"
-// @Param        attachable_id query uint64 true "Attachable object ID"
+// @Param        attachable_type query string false "Attachable object type"
+// @Param        attachable_id query uint64 false "Attachable object ID"
 // @Success      200  {object} map[string]interface{}
 // @Failure      401  {object} map[string]string
 // @Failure      500  {object} map[string]string

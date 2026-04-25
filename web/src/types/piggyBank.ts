@@ -59,10 +59,19 @@ export interface UpdatePiggyBankReq {
 
 /**
  * 存取款请求接口
- * 存入和取出操作共用此接口
+ * 存入操作使用此接口
  */
 export interface AddAmountReq {
-  amount: string               // 存入/取出金额（必填）
+  amount: string               // 存入金额（必填）
+  note?: string                // 操作备注（可选）
+}
+
+/**
+ * 取款请求接口
+ * 取出操作使用此接口
+ */
+export interface RemoveAmountReq {
+  amount: string               // 取出金额（必填）
   note?: string                // 操作备注（可选）
 }
 

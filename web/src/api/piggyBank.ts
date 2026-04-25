@@ -4,7 +4,7 @@
  * 存钱罐用于设定储蓄目标，跟踪存款进度（如旅行基金、应急储备金等）
  */
 import { get, post, put, del } from '@/utils/request'
-import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, PiggyBankListReq } from '@/types/piggyBank'
+import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, RemoveAmountReq, PiggyBankListReq } from '@/types/piggyBank'
 import type { PiggyEvent } from '@/types/piggyBank'
 import type { PageResult } from '@/types/common'
 
@@ -66,7 +66,7 @@ export function addAmount(id: number, data: AddAmountReq) { return post<void>(`/
  * @param data - 取出请求参数（金额、可选备注）
  * @endpoint POST /piggy-banks/:id/remove
  */
-export function removeAmount(id: number, data: AddAmountReq) { return post<void>(`/piggy-banks/${id}/remove`, data) }
+export function removeAmount(id: number, data: RemoveAmountReq) { return post<void>(`/piggy-banks/${id}/remove`, data) }
 
 /**
  * 获取存钱罐的事件记录

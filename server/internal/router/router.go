@@ -190,6 +190,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 		{
 			categories.POST("", r.categoryCtrl.Create)
 			categories.GET("", r.categoryCtrl.List)
+			categories.GET("/:id", r.categoryCtrl.Get)
 			categories.PUT("/:id", r.categoryCtrl.Update)
 			categories.DELETE("/:id", r.categoryCtrl.Delete)
 		}
