@@ -278,6 +278,17 @@ cd web
 npm run build
 ```
 
+### 更新 Swagger API 文档
+
+修改后端接口后，需重新生成 Swagger 文档：
+
+```bash
+cd server
+swag init -g cmd/server/main.go -o docs --outputTypes go,json
+```
+
+启动后端后访问 `http://localhost:8080/swagger/index.html` 查看完整 API 文档。
+
 ## License
 
 MIT
