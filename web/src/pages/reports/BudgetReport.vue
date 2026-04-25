@@ -13,6 +13,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { budget } from '@/api/report'
 import { formatAmount } from '@/utils/format'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import type { BudgetReportResp, ReportReq } from '@/types/report'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
@@ -39,8 +40,8 @@ async function fetchData() {
   loading.value = true
   try {
     data.value = await budget(params) as unknown as BudgetReportResp
-  } catch (error) {
-    console.error('Failed to fetch budget data:', error)
+  } catch {
+    ElMessage.error(t('common.operationFailed') || 'Failed to load data')
   } finally {
     loading.value = false
   }

@@ -233,7 +233,9 @@
     "step1": "上传文件",
     "step2": "列映射",
     "step3": "数据预览",
-    "step4": "确认导入"
+    "step4": "确认导入",
+    "completed": "导入完成",
+    "uploadAnother": "上传另一个文件"
   },
   "dashboard": {
     "income": "本月收入",
@@ -305,7 +307,9 @@
     "enable": "启用",
     "disable": "禁用",
     "active": "启用",
-    "inactive": "禁用"
+    "inactive": "禁用",
+    "operationFailed": "操作失败",
+    "previous": "上一步"
   },
   "profile": {
     "title": "个人设置",

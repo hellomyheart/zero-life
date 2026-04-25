@@ -84,11 +84,23 @@ func (r *TransactionLinkRepository) Count(userID uint64, transactionID *uint64) 
 	return count, nil
 }
 
-// Delete 根据 ID 删除一条交易链接记录。
-// 注意：此方法不做用户权限校验，仅按 ID 删除，调用方需自行确保权限。
-// 执行 SQL: DELETE FROM transaction_journal_links WHERE id = ?
+// Delete 根据 ID 和用户 ID 删除一条交易链接记录。
+// 通过 JOIN transactions 表验证该链接属于指定用户（权限校验），防止越权删除。
+// 执行 SQL: DELETE FROM transaction_journal_links WHERE id = ? AND transaction_id IN (SELECT id FROM transactions WHERE user_id = ?)
 // 参数 id: 要删除的交易链接 ID。
+// 参数 userID: 当前登录用户 ID，用于权限校验。
 // 返回: 删除失败时返回错误。
-func (r *TransactionLinkRepository) Delete(id uint64) error {
+func (r *TransactionLinkRepository) Delete(id, userID uint64) error {
+	// 先验证该链接属于当前用户，防止越权删除
+	var count int64
+	if err := r.db.Model(&model.TransactionJournalLink{}).
+		Joins("JOIN transactions ON transactions.id = transaction_journal_links.transaction_id").
+		Where("transaction_journal_links.id = ? AND transactions.user_id = ?", id, userID).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return gorm.ErrRecordNotFound
+	}
 	return r.db.Delete(&model.TransactionJournalLink{}, id).Error
 }

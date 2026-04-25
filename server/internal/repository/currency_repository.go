@@ -19,6 +19,13 @@ func NewCurrencyRepository(db *gorm.DB) *CurrencyRepository {
 	return &CurrencyRepository{db: db}
 }
 
+// Transaction 在事务中执行数据库操作，用于需要原子性的场景（如设置默认货币）。
+// 参数 fn: 事务内执行的函数，接收 *gorm.DB 作为参数。
+// 返回: 事务执行失败时返回错误。
+func (r *CurrencyRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	return r.db.Transaction(fn)
+}
+
 // List 获取所有货币列表，按 ID 升序排列。
 // 执行 SQL: SELECT * FROM currencies ORDER BY id ASC
 // 返回: 货币列表。

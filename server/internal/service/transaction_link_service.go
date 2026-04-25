@@ -100,7 +100,7 @@ func (s *TransactionLinkService) Delete(userID, id uint64) error {
 		}
 		return errcode.ErrInternal
 	}
-	return s.linkRepo.Delete(id)
+	return s.linkRepo.Delete(id, userID)
 }
 
 // toResp 将交易关联模型转换为响应对象

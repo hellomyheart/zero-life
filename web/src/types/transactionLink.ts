@@ -37,6 +37,15 @@ export interface CreateTransactionLinkRequest {
   linked_journal_id: number;
 }
 
+export interface UpdateTransactionLinkRequest {
+  /** 源交易 ID */
+  transaction_id?: number;
+  /** 关联类型 */
+  link_type?: TransactionLinkType;
+  /** 目标交易日志 ID */
+  linked_journal_id?: number;
+}
+
 /**
  * 交易关联列表查询参数
  */

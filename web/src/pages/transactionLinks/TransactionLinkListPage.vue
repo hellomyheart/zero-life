@@ -1,11 +1,8 @@
-<!--
-  交易关联管理页面
-  功能：管理交易之间的关联关系（如回滚、对账、关联等）
-  对应后端 API：/api/v1/transaction-links
--->
+<!-- 交易关联页面 - 管理交易之间的关联关系（冲销、对账、关联），支持筛选、新增、编辑和删除 -->
 <template>
   <div class="transaction-links-page">
     <el-card>
+      <!-- 页面标题和新增按钮 -->
       <template #header>
         <div class="card-header">
           <span>{{ t('transactionLink.title') }}</span>
@@ -15,7 +12,7 @@
         </div>
       </template>
 
-      <!-- 筛选条件 -->
+      <!-- 筛选条件表单 -->
       <el-form :inline="true" :model="filters" class="filter-form">
         <el-form-item :label="t('transactionLink.transaction')">
           <el-input-number
@@ -30,10 +27,11 @@
         </el-form-item>
       </el-form>
 
-      <!-- 关联列表 -->
+      <!-- 交易关联数据表格 -->
       <el-table :data="links" v-loading="loading" style="width: 100%">
         <el-table-column prop="id" :label="t('common.id')" width="80" />
         <el-table-column prop="transaction_id" :label="t('transactionLink.transaction')" width="120" />
+        <!-- 关联类型列，使用标签展示不同颜色 -->
         <el-table-column prop="link_type" :label="t('transactionLink.type')" width="150">
           <template #default="{ row }">
             <el-tag :type="getLinkTypeTag(row.link_type)">
@@ -47,14 +45,16 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.actions')" width="120" fixed="right">
+        <!-- 操作列：编辑和删除 -->
+        <el-table-column :label="t('common.actions')" width="160" fixed="right">
           <template #default="{ row }">
+            <el-button link type="primary" @click="handleEdit(row)">{{ t('common.edit') }}</el-button>
             <el-button link type="danger" @click="handleDelete(row)">{{ t('common.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
+      <!-- 分页组件 -->
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.page_size"
@@ -67,9 +67,10 @@
       />
     </el-card>
 
-    <!-- 创建对话框 -->
-    <el-dialog v-model="dialogVisible" :title="t('common.create')" width="500px">
+    <!-- 新增/编辑交易关联对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
+        <!-- 关联的交易 ID -->
         <el-form-item :label="t('transactionLink.transaction')" prop="transaction_id">
           <el-input-number
             v-model="form.transaction_id"
@@ -78,6 +79,7 @@
             style="width: 100%"
           />
         </el-form-item>
+        <!-- 关联类型选择 -->
         <el-form-item :label="t('transactionLink.type')" prop="link_type">
           <el-select v-model="form.link_type" :placeholder="t('common.select')" style="width: 100%">
             <el-option
@@ -88,6 +90,7 @@
             />
           </el-select>
         </el-form-item>
+        <!-- 关联的日记账 ID -->
         <el-form-item :label="t('transactionLink.linkedJournal')" prop="linked_journal_id">
           <el-input-number
             v-model="form.linked_journal_id"
@@ -97,6 +100,7 @@
           />
         </el-form-item>
       </el-form>
+      <!-- 对话框底部按钮 -->
       <template #footer>
         <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ t('common.confirm') }}</el-button>
@@ -106,85 +110,85 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 交易关联管理页面
- * 提供交易关联的创建、查询、删除功能
- */
+// 导入 Vue 响应式、计算属性和生命周期 API
 import { ref, reactive, computed, onMounted } from 'vue';
+// 导入 Element Plus 消息提示和确认框组件
 import { ElMessage, ElMessageBox } from 'element-plus';
+// 导入表单类型定义
 import type { FormInstance, FormRules } from 'element-plus';
+// 导入国际化钩子函数
 import { useI18n } from 'vue-i18n';
+// 导入交易关联 API
 import * as transactionLinkApi from '@/api/transactionLink';
-import type { TransactionLink, CreateTransactionLinkRequest } from '@/types/transactionLink';
+// 导入交易关联类型定义
+import type { TransactionLink, CreateTransactionLinkRequest, UpdateTransactionLinkRequest } from '@/types/transactionLink';
+// 导入日期格式化工具
 import { formatDate } from '@/utils/format';
 
+// 国际化翻译函数
 const { t } = useI18n();
 
-/** 关联类型选项 - 使用i18n国际化 */
+// 关联类型下拉选项（冲销、对账、关联）
 const linkTypeOptions = computed(() => [
   { label: t('transactionLink.typeRolledBack'), value: 'rolled_back' },
   { label: t('transactionLink.typeReconciled'), value: 'reconciled' },
   { label: t('transactionLink.typeLinked'), value: 'linked' }
 ]);
 
-/** 加载状态 */
+// 列表加载状态
 const loading = ref(false);
-/** 提交状态 */
+// 提交加载状态（新增/编辑时使用）
 const submitting = ref(false);
-/** 对话框显示状态 */
+// 对话框是否可见
 const dialogVisible = ref(false);
+// 对话框标题
+const dialogTitle = ref('');
+// 当前编辑的关联 ID，null 表示新增模式
+const editingId = ref<number | null>(null);
 
-/** 关联列表数据 */
+// 交易关联列表数据
 const links = ref<TransactionLink[]>([]);
 
-/** 分页信息 */
+// 分页参数
 const pagination = reactive({
   page: 1,
   page_size: 20,
   total: 0
 });
 
-/** 筛选条件 */
+// 筛选条件
 const filters = reactive({
   transaction_id: undefined as number | undefined
 });
 
-/** 表单引用 */
+// 表单引用，用于调用验证方法
 const formRef = ref<FormInstance>();
 
-/** 表单数据 */
+// 新增/编辑表单数据
 const form = reactive<CreateTransactionLinkRequest>({
   transaction_id: 1,
   link_type: 'linked',
   linked_journal_id: 1
 });
 
-/** 表单验证规则 */
+// 表单验证规则
 const rules: FormRules = {
   transaction_id: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   link_type: [{ required: true, message: t('common.required'), trigger: 'change' }],
   linked_journal_id: [{ required: true, message: t('common.required'), trigger: 'blur' }]
 };
 
-/**
- * 获取关联类型标签颜色
- * @param type 关联类型
- * @returns 标签类型
- */
+// 根据关联类型返回对应的标签颜色类型
 function getLinkTypeTag(type: string): 'danger' | 'success' | 'info' {
   const typeMap: Record<string, 'danger' | 'success' | 'info'> = {
-    rolled_back: 'danger',
-    reconciled: 'success',
-    linked: 'info'
+    rolled_back: 'danger',    // 冲销 - 红色
+    reconciled: 'success',    // 对账 - 绿色
+    linked: 'info'            // 关联 - 蓝色
   };
   return typeMap[type] || 'info';
 }
 
-/**
- * 获取关联类型标签文本 - 使用i18n国际化
- * @param type 关联类型
- * @returns 类型标签文本
- */
+// 根据关联类型返回对应的显示文本
 function getLinkTypeLabel(type: string): string {
   const typeMap: Record<string, string> = {
     rolled_back: t('transactionLink.typeRolledBack'),
@@ -194,12 +198,11 @@ function getLinkTypeLabel(type: string): string {
   return typeMap[type] || type;
 }
 
-/**
- * 获取关联列表数据
- */
+// 获取交易关联列表数据
 async function fetchData() {
   loading.value = true;
   try {
+    // 构建查询参数，有筛选条件时才传
     const params: any = {
       page: pagination.page,
       page_size: pagination.page_size
@@ -207,7 +210,7 @@ async function fetchData() {
     if (filters.transaction_id) {
       params.transaction_id = filters.transaction_id;
     }
-    
+
     const res = await transactionLinkApi.list(params);
     links.value = res.items;
     pagination.total = res.total;
@@ -218,19 +221,17 @@ async function fetchData() {
   }
 }
 
-/**
- * 重置筛选条件
- */
+// 重置筛选条件并重新查询
 function handleReset() {
   filters.transaction_id = undefined;
   pagination.page = 1;
   fetchData();
 }
 
-/**
- * 打开创建对话框
- */
+// 点击新增按钮，重置表单并打开对话框
 function handleCreate() {
+  dialogTitle.value = t('common.create');
+  editingId.value = null;
   Object.assign(form, {
     transaction_id: 1,
     link_type: 'linked',
@@ -239,10 +240,19 @@ function handleCreate() {
   dialogVisible.value = true;
 }
 
-/**
- * 删除关联
- * @param row 选中的关联数据
- */
+// 点击编辑按钮，填充表单数据并打开对话框
+function handleEdit(row: TransactionLink) {
+  dialogTitle.value = t('common.edit');
+  editingId.value = row.id;
+  Object.assign(form, {
+    transaction_id: row.transaction_id,
+    link_type: row.link_type,
+    linked_journal_id: row.linked_journal_id
+  });
+  dialogVisible.value = true;
+}
+
+// 删除交易关联（带确认弹窗）
 function handleDelete(row: TransactionLink) {
   ElMessageBox.confirm(
     t('common.confirmDelete'),
@@ -256,23 +266,25 @@ function handleDelete(row: TransactionLink) {
     } catch (error) {
       ElMessage.error(t('common.deleteError'));
     }
-  }).catch(() => {
-    // 用户取消
-  });
+  }).catch(() => {});
 }
 
-/**
- * 提交表单数据
- */
+// 提交新增/编辑表单
 async function handleSubmit() {
   if (!formRef.value) return;
-  
+
   await formRef.value.validate(async (valid) => {
     if (!valid) return;
-    
+
     submitting.value = true;
     try {
-      await transactionLinkApi.create(form);
+      if (editingId.value) {
+        // 编辑模式：调用更新 API
+        await transactionLinkApi.update(editingId.value, form as UpdateTransactionLinkRequest);
+      } else {
+        // 新增模式：调用创建 API
+        await transactionLinkApi.create(form);
+      }
       ElMessage.success(t('common.success'));
       dialogVisible.value = false;
       fetchData();
@@ -284,6 +296,7 @@ async function handleSubmit() {
   });
 }
 
+// 页面挂载时加载数据
 onMounted(() => {
   fetchData();
 });

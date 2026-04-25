@@ -2,8 +2,8 @@
  * 交易关联 API 接口
  * 提供交易关联的查询、创建和删除功能
  */
-import { get, post, del } from '@/utils/request'
-import type { TransactionLink, CreateTransactionLinkRequest, TransactionLinkListParams } from '@/types/transactionLink'
+import { get, post, put, del } from '@/utils/request'
+import type { TransactionLink, CreateTransactionLinkRequest, UpdateTransactionLinkRequest, TransactionLinkListParams } from '@/types/transactionLink'
 import type { PageResult } from '@/types/common'
 
 /**
@@ -27,11 +27,10 @@ export function create(data: CreateTransactionLinkRequest) {
   return post<TransactionLink>('/transaction-links', data)
 }
 
-/**
- * 删除交易关联
- * @param id - 关联记录ID
- * @endpoint DELETE /transaction-links/:id
- */
+export function update(id: number, data: UpdateTransactionLinkRequest) {
+  return put<TransactionLink>(`/transaction-links/${id}`, data)
+}
+
 export function remove(id: number) {
   return del<void>(`/transaction-links/${id}`)
 }

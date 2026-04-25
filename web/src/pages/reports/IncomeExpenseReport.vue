@@ -13,6 +13,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { incomeExpense } from '@/api/report'
 import { formatAmount } from '@/utils/format'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import type { IncomeExpenseResp, ReportReq } from '@/types/report'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
@@ -38,8 +39,8 @@ async function fetchData() {
   loading.value = true
   try {
     data.value = await incomeExpense(params) as unknown as IncomeExpenseResp
-  } catch (error) {
-    console.error('Failed to fetch income expense data:', error)
+  } catch {
+    ElMessage.error(t('common.operationFailed') || 'Failed to load data')
   } finally {
     loading.value = false
   }

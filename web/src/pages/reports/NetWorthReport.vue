@@ -13,6 +13,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { netWorth } from '@/api/report'
 import { formatAmount } from '@/utils/format'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import type { NetWorthResp, ReportReq } from '@/types/report'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
@@ -39,8 +40,8 @@ async function fetchData() {
   loading.value = true
   try {
     data.value = await netWorth(params) as unknown as NetWorthResp
-  } catch (error) {
-    console.error('Failed to fetch net worth data:', error)
+  } catch {
+    ElMessage.error(t('common.operationFailed') || 'Failed to load data')
   } finally {
     loading.value = false
   }

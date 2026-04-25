@@ -141,7 +141,11 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 
 	expenseItems := make([]response.CategoryItemResp, 0)
 	for catID, amount := range expenseByCategory {
-		pct, _ := amount.Div(totalExpense).Mul(decimal.NewFromInt(100)).Float64()
+		var pct float64
+		// 修复除以零：当总支出为零时，百分比为0
+		if !totalExpense.IsZero() {
+			pct, _ = amount.Div(totalExpense).Mul(decimal.NewFromInt(100)).Float64()
+		}
 		expenseItems = append(expenseItems, response.CategoryItemResp{
 			CategoryID:   catID,
 			CategoryName: categoryNames[catID],
@@ -152,7 +156,11 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 
 	incomeItems := make([]response.CategoryItemResp, 0)
 	for catID, amount := range incomeByCategory {
-		pct, _ := amount.Div(totalIncome).Mul(decimal.NewFromInt(100)).Float64()
+		var pct float64
+		// 修复除以零：当总收入为零时，百分比为0
+		if !totalIncome.IsZero() {
+			pct, _ = amount.Div(totalIncome).Mul(decimal.NewFromInt(100)).Float64()
+		}
 		incomeItems = append(incomeItems, response.CategoryItemResp{
 			CategoryID:   catID,
 			CategoryName: categoryNames[catID],
@@ -497,7 +505,7 @@ func (s *ReportService) AuditReport(userID uint64, accountID uint64, startDate, 
 		return nil, errcode.ErrInternal
 	}
 
-	txns, err := s.txnRepo.GetForAudit(accountID, startDate, endDate, reconciled)
+	txns, err := s.txnRepo.GetForAudit(userID, accountID, startDate, endDate, reconciled)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}

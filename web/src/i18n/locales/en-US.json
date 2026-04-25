@@ -233,7 +233,9 @@
     "step1": "Upload",
     "step2": "Column Mapping",
     "step3": "Preview",
-    "step4": "Confirm Import"
+    "step4": "Confirm Import",
+    "completed": "Import Completed",
+    "uploadAnother": "Upload Another File"
   },
   "dashboard": {
     "income": "Monthly Income",
@@ -305,7 +307,9 @@
     "enable": "Enable",
     "disable": "Disable",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "operationFailed": "Operation failed",
+    "previous": "Previous"
   },
   "profile": {
     "title": "Profile Settings",

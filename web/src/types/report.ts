@@ -88,11 +88,22 @@ export interface NetWorthResp {
  * 趋势报表响应接口
  * 收支随时间的变化趋势，用于绘制趋势图
  */
+export interface TagItemResp {
+  tag_id: string
+  tag_name: string
+  income: string
+  expense: string
+}
+
+export interface TagReportResp {
+  items: TagItemResp[]
+}
+
 export interface TrendResp {
-  items: {                     // 按日期的趋势数据列表
-    date: string               // 日期
-    income: string             // 当日收入
-    expense: string            // 当日支出
-    net: string                // 当日净额（收入 - 支出）
+  items: {
+    date: string
+    income: string
+    expense: string
+    net: string
   }[]
 }

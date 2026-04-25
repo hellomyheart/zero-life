@@ -13,6 +13,8 @@ import { useRouter } from 'vue-router'
 import { list, remove } from '@/api/transaction'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAccountStore } from '@/stores/account'
+import { useCategoryStore } from '@/stores/category'
 import type { Transaction } from '@/types/transaction'
 import { TransactionType } from '@/types/transaction'
 import Pagination from '@/components/common/Pagination.vue'
@@ -20,6 +22,8 @@ import DateRangePicker from '@/components/common/DateRangePicker.vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const accountStore = useAccountStore()
+const categoryStore = useCategoryStore()
 
 // 响应式数据
 const transactions = ref<Transaction[]>([]) // 交易列表数据
@@ -122,7 +126,10 @@ function resetFilter() {
   fetchTransactions()
 }
 
-onMounted(fetchTransactions)
+onMounted(async () => {
+  await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
+  fetchTransactions()
+})
 </script>
 
 <template>
@@ -146,6 +153,16 @@ onMounted(fetchTransactions)
             v-model:start-date="filter.start_date"
             v-model:end-date="filter.end_date"
           />
+        </el-form-item>
+        <el-form-item :label="t('transaction.sourceAccount')">
+          <el-select v-model="filter.source_account_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
+            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('transaction.category')">
+          <el-select v-model="filter.category_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
+            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.search')">
           <el-input v-model="filter.keyword" clearable :placeholder="t('common.inputPlaceholder')" />

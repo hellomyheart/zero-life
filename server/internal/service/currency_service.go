@@ -82,6 +82,7 @@ func (s *CurrencyService) UpdateStatus(id uint64, isEnabled bool) error {
 
 // SetDefault 设置默认货币
 // 业务规则：只能将已启用的货币设为默认；会先取消当前默认货币的默认标记
+// 修复：使用数据库事务确保"取消旧默认+设置新默认"的原子性，避免并发竞态条件
 // 参数：
 //   - id: 货币ID
 // 返回：
@@ -99,16 +100,21 @@ func (s *CurrencyService) SetDefault(id uint64) error {
 		return errcode.ErrDefaultCurrency
 	}
 
-	// 先取消当前默认货币的默认标记（确保系统中只有一个默认货币）
-	currentDefault, err := s.currencyRepo.GetDefault()
-	if err == nil && currentDefault != nil {
-		currentDefault.IsDefault = false
-		s.currencyRepo.Update(currentDefault)
-	}
+	// 使用事务确保"取消旧默认+设置新默认"的原子性，防止并发竞态条件
+	return s.currencyRepo.Transaction(func(tx *gorm.DB) error {
+		// 先取消当前默认货币的默认标记（确保系统中只有一个默认货币）
+		currentDefault, err := s.currencyRepo.GetDefault()
+		if err == nil && currentDefault != nil {
+			currentDefault.IsDefault = false
+			if err := tx.Save(currentDefault).Error; err != nil {
+				return err
+			}
+		}
 
-	// 然后设置新货币为默认
-	currency.IsDefault = true
-	return s.currencyRepo.Update(currency)
+		// 然后设置新货币为默认
+		currency.IsDefault = true
+		return tx.Save(currency).Error
+	})
 }
 
 // GetExchangeRates 获取所有汇率列表

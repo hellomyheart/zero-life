@@ -212,7 +212,11 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 
 	items := make([]response.BudgetHistoryResp, 0, len(history))
 	for _, h := range history {
-		usageRate, _ := h.Spent.Div(h.Amount).Float64()
+		var usageRate float64
+		// 修复除以零：当预算金额为零时，使用率为0
+		if !h.Amount.IsZero() {
+			usageRate, _ = h.Spent.Div(h.Amount).Float64()
+		}
 		items = append(items, response.BudgetHistoryResp{
 			ID:          h.ID,
 			PeriodStart: h.PeriodStart,
@@ -279,7 +283,11 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 func (s *BudgetService) toRespWithUsage(budget *model.Budget, userID uint64) (*response.BudgetResp, error) {
 	spent := s.calculateSpent(budget, userID)
 	remaining := budget.Amount.Sub(spent)
-	usageRate, _ := spent.Div(budget.Amount).Float64()
+	// 修复除以零：当预算金额为零时，使用率为0
+	var usageRate float64
+	if !budget.Amount.IsZero() {
+		usageRate, _ = spent.Div(budget.Amount).Float64()
+	}
 
 // 计算预算状态：使用率>=100%为超支(overspent)，>=80%为预警(warning)，否则正常(normal)
 	status := "normal"

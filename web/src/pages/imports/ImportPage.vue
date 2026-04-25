@@ -90,6 +90,7 @@ async function handleExecute() {
         </el-form-item>
       </el-form>
       <el-button type="primary" @click="handleParse" :loading="loading">{{ t('import.parse') }}</el-button>
+      <el-button @click="step = 1">{{ t('common.previous') }}</el-button>
     </el-card>
 
     <el-card v-if="step === 3">
@@ -99,11 +100,15 @@ async function handleExecute() {
       </el-table>
       <div style="margin-top: 16px">
         <el-button type="primary" @click="handleExecute" :loading="loading">{{ t('import.execute') }}</el-button>
+        <el-button @click="step = 2">{{ t('common.previous') }}</el-button>
       </div>
     </el-card>
 
     <el-card v-if="step === 4">
-      <el-result icon="success" title="Import Completed" />
+      <el-result icon="success" :title="t('import.completed')" />
+      <div style="text-align: center; margin-top: 16px">
+        <el-button @click="step = 1; fileId = ''; parsedData = []; Object.keys(columnMapping).forEach(k => delete columnMapping[k])">{{ t('import.uploadAnother') }}</el-button>
+      </div>
     </el-card>
   </div>
 </template>

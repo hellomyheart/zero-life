@@ -78,8 +78,8 @@ async function fetchList() {
     const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: RecurringTransaction[], total: number }
     items.value = res.items || []
     pagination.total = res.total || 0
-  } catch (error) {
-    console.error('Failed to fetch recurring transaction list:', error)
+  } catch {
+    ElMessage.error(t('common.operationFailed') || 'Failed to load data')
   } finally {
     loading.value = false
   }
@@ -159,8 +159,8 @@ async function handleDelete(id: string) {
     await remove(id)
     ElMessage.success(t('common.success'))
     await fetchList()
-  } catch (error) {
-    console.error('Failed to delete recurring transaction:', error)
+  } catch {
+    ElMessage.error(t('common.operationFailed') || 'Failed to delete')
   }
 }
 
