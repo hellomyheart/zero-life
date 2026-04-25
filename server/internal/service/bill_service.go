@@ -29,6 +29,16 @@ func NewBillService(billRepo *repository.BillRepository, txnService *Transaction
 }
 
 // Create 创建账单
+// 业务流程：
+// 1. 解析并验证金额（必须大于0）
+// 2. 解析并验证下次到期日期
+// 3. 创建账单记录
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建账单请求参数（名称、金额、重复规则、下次到期日、源账户、分类、备注）
+// 返回：
+//   - *response.BillResp: 创建成功的账单信息
+//   - error: 错误信息（如金额无效、日期格式错误）
 func (s *BillService) Create(userID uint64, req *request.CreateBillReq) (*response.BillResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
@@ -59,6 +69,12 @@ func (s *BillService) Create(userID uint64, req *request.CreateBillReq) (*respon
 }
 
 // Get 获取单个账单详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 账单ID
+// 返回：
+//   - *response.BillResp: 账单信息
+//   - error: 错误信息（如账单不存在）
 func (s *BillService) Get(userID, id uint64) (*response.BillResp, error) {
 	bill, err := s.billRepo.GetByID(id, userID)
 	if err != nil {
@@ -71,6 +87,11 @@ func (s *BillService) Get(userID, id uint64) (*response.BillResp, error) {
 }
 
 // List 获取用户所有账单列表
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - []response.BillResp: 账单列表
+//   - error: 错误信息
 func (s *BillService) List(userID uint64) ([]response.BillResp, error) {
 	bills, err := s.billRepo.List(userID)
 	if err != nil {
@@ -86,6 +107,15 @@ func (s *BillService) List(userID uint64) ([]response.BillResp, error) {
 }
 
 // Update 更新账单信息
+// 支持部分更新：名称、金额、重复规则、下次到期日、源账户、分类、备注
+// 更新金额时会重新验证金额有效性
+// 参数：
+//   - userID: 用户ID
+//   - id: 账单ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.BillResp: 更新后的账单信息
+//   - error: 错误信息
 func (s *BillService) Update(userID, id uint64, req *request.UpdateBillReq) (*response.BillResp, error) {
 	bill, err := s.billRepo.GetByID(id, userID)
 	if err != nil {
@@ -133,6 +163,11 @@ func (s *BillService) Update(userID, id uint64, req *request.UpdateBillReq) (*re
 }
 
 // Delete 删除账单
+// 参数：
+//   - userID: 用户ID
+//   - id: 账单ID
+// 返回：
+//   - error: 错误信息（如账单不存在）
 func (s *BillService) Delete(userID, id uint64) error {
 	_, err := s.billRepo.GetByID(id, userID)
 	if err != nil {

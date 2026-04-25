@@ -52,11 +52,13 @@ func (s *AccountService) Create(userID uint64, req *request.CreateAccountReq) (*
 		}
 	}
 
+	// 解析初始余额字符串为decimal类型，避免浮点精度问题
 	initialBalance, err := decimal.NewFromString(req.InitialBalance)
 	if err != nil {
 		return nil, errcode.ErrBadRequest
 	}
 
+	// 创建账户时，初始余额即为当前余额（后续交易会更新当前余额）
 	account := &model.Account{
 		UserID:         userID,
 		Name:           req.Name,

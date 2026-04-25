@@ -16,13 +16,14 @@
  * 数据来源：后端 /api/v1/reconciliations 接口
  * 使用 Store：accountStore（获取账户列表）
  */
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/reconciliation'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
 import type { Reconciliation, CreateReconciliationReq, UpdateReconciliationReq } from '@/types/reconciliation'
+import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 // 账户状态管理 - 用于获取账户下拉选项
@@ -38,6 +39,8 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('')
 // 当前编辑的对账记录 ID
 const editingId = ref<string | null>(null)
+/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
 // 表单数据
 const form = ref<CreateReconciliationReq>({
@@ -51,18 +54,38 @@ const form = ref<CreateReconciliationReq>({
 
 /**
  * 获取对账记录列表
- * 从后端 API 获取所有对账记录
+ * 传入分页参数，从后端获取当前页的数据和总记录数
  */
 async function fetchList() {
   loading.value = true
   try {
-    const res = await list({}) as unknown as { items: Reconciliation[] }
+    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Reconciliation[], total: number }
     items.value = res.items || []
+    pagination.total = res.total || 0
   } catch (error) {
     console.error('Failed to fetch reconciliation list:', error)
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 页码变化处理函数
+ * @param page 新的页码
+ */
+function handlePageChange(page: number) {
+  pagination.page = page
+  fetchList()
+}
+
+/**
+ * 每页数量变化处理函数
+ * @param size 新的每页数量
+ */
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchList()
 }
 
 /**
@@ -169,6 +192,14 @@ onMounted(async () => {
         </template>
       </el-table-column>
     </el-table>
+
+    <Pagination
+      :total="pagination.total"
+      :page="pagination.page"
+      :page-size="pagination.page_size"
+      @update:page="handlePageChange"
+      @update:page-size="handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">

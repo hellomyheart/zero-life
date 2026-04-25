@@ -1,9 +1,9 @@
 /**
- * 用户资料API接口
+ * 用户资料 API 接口
  * 提供当前登录用户个人资料的查看、修改和密码变更功能
- * 注意：此模块与 auth.ts 中的 profile 接口功能重叠，后续可能会合并
  */
-import request from '@/utils/request'
+import { get, put, post } from '@/utils/request'
+import type { ProfileResp, UpdateProfileReq, ChangePasswordReq } from '@/types/auth'
 
 /**
  * 获取当前登录用户的个人资料
@@ -11,16 +11,17 @@ import request from '@/utils/request'
  * @endpoint GET /profile
  */
 export function getProfile() {
-  return request.get('/profile')
+  return get<ProfileResp>('/profile')
 }
 
 /**
  * 更新当前登录用户的个人资料
- * @param data - 更新内容（昵称、语言、时区等）
+ * @param data - 更新内容（昵称、语言、时区等，均为可选）
+ * @returns 更新后的用户资料信息
  * @endpoint PUT /profile
  */
-export function updateProfile(data: any) {
-  return request.put('/profile', data)
+export function updateProfile(data: UpdateProfileReq) {
+  return put<ProfileResp>('/profile', data)
 }
 
 /**
@@ -28,6 +29,6 @@ export function updateProfile(data: any) {
  * @param data - 密码修改信息（旧密码 + 新密码）
  * @endpoint POST /profile/password
  */
-export function changePassword(data: any) {
-  return request.post('/profile/password', data)
+export function changePassword(data: ChangePasswordReq) {
+  return post<void>('/profile/password', data)
 }

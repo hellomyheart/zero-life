@@ -1,24 +1,36 @@
 <script setup lang="ts">
 // 附件管理页面 - 上传下载和删除附件文件
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, upload, download, remove } from '@/api/attachment'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Attachment } from '@/types/attachment'
+import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 
+/** 附件列表数据 */
 const attachments = ref<Attachment[]>([])
+/** 加载状态 */
 const loading = ref(false)
+/** 上传对话框显示状态 */
 const uploadVisible = ref(false)
+/** 上传文件列表 */
 const fileList = ref<File[]>([])
+/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
+/**
+ * 获取附件列表
+ * 传入分页参数，从后端获取当前页的数据和总记录数
+ */
 async function fetchAttachments() {
   loading.value = true
   try {
-    const res = await list({}) as unknown as { items: Attachment[] }
+    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Attachment[], total: number }
     attachments.value = res.items || []
+    pagination.total = res.total || 0
   } catch {
     // handle error
   } finally {
@@ -26,6 +38,29 @@ async function fetchAttachments() {
   }
 }
 
+/**
+ * 页码变化处理函数
+ * @param page 新的页码
+ */
+function handlePageChange(page: number) {
+  pagination.page = page
+  fetchAttachments()
+}
+
+/**
+ * 每页数量变化处理函数
+ * @param size 新的每页数量
+ */
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchAttachments()
+}
+
+/**
+ * 上传附件
+ * 将选中的文件通过FormData上传到后端，上传成功后关闭对话框并刷新列表
+ */
 async function handleUpload() {
   if (!fileList.value.length) {
     ElMessage.warning(t('common.required'))
@@ -44,6 +79,11 @@ async function handleUpload() {
   }
 }
 
+/**
+ * 删除附件
+ * 弹出确认框后调用API删除指定附件
+ * @param id 附件ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('attachment.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -73,6 +113,11 @@ async function handleDownload(row: Attachment) {
   }
 }
 
+/**
+ * 文件选择变化处理
+ * 只保留最新选择的文件（单文件上传）
+ * @param file 用户选择的文件
+ */
 function handleFileChange(file: File) {
   fileList.value = [file]
 }
@@ -91,6 +136,7 @@ onMounted(fetchAttachments)
       <el-table-column prop="filename" :label="t('attachment.filename')" />
       <el-table-column prop="mime" :label="t('attachment.mime')" width="150" />
       <el-table-column prop="size" :label="t('attachment.size')" width="100">
+        <!-- 文件大小从字节转换为KB显示，保留1位小数 -->
         <template #default="{ row }">{{ (row.size / 1024).toFixed(1) }} KB</template>
       </el-table-column>
       <el-table-column prop="created_at" :label="t('attachment.createdAt')" width="160">
@@ -103,6 +149,14 @@ onMounted(fetchAttachments)
         </template>
       </el-table-column>
     </el-table>
+
+    <Pagination
+      :total="pagination.total"
+      :page="pagination.page"
+      :page-size="pagination.page_size"
+      @update:page="handlePageChange"
+      @update:page-size="handleSizeChange"
+    />
 
     <el-dialog v-model="uploadVisible" :title="t('attachment.upload')" width="400px">
       <el-upload :auto-upload="false" :limit="1" :on-change="handleFileChange as any">

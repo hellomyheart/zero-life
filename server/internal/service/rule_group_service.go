@@ -49,6 +49,12 @@ func NewRuleGroupService(
 }
 
 // Create 创建规则组
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建请求参数（名称、排序、启用状态）
+// 返回：
+//   - *response.RuleGroupResp: 创建成功的规则组信息
+//   - error: 错误信息
 func (s *RuleGroupService) Create(userID uint64, req *request.CreateRuleGroupReq) (*response.RuleGroupResp, error) {
 	isActive := true
 	if req.IsActive != nil {
@@ -69,7 +75,13 @@ func (s *RuleGroupService) Create(userID uint64, req *request.CreateRuleGroupReq
 	return s.toResp(group, 0), nil
 }
 
-// Get 获取单个规则组详情
+// Get 获取单个规则组详情（含规则数量）
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则组ID
+// 返回：
+//   - *response.RuleGroupResp: 规则组信息
+//   - error: 错误信息
 func (s *RuleGroupService) Get(userID, id uint64) (*response.RuleGroupResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -87,7 +99,12 @@ func (s *RuleGroupService) Get(userID, id uint64) (*response.RuleGroupResp, erro
 	return s.toResp(group, ruleCount), nil
 }
 
-// List 获取用户所有规则组列表
+// List 获取用户所有规则组列表（每个规则组含规则数量）
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - []response.RuleGroupResp: 规则组列表
+//   - error: 错误信息
 func (s *RuleGroupService) List(userID uint64) ([]response.RuleGroupResp, error) {
 	groups, err := s.ruleGroupRepo.List(userID)
 	if err != nil {
@@ -107,6 +124,14 @@ func (s *RuleGroupService) List(userID uint64) ([]response.RuleGroupResp, error)
 }
 
 // Update 更新规则组信息
+// 支持更新名称、排序、启用状态
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则组ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.RuleGroupResp: 更新后的规则组信息
+//   - error: 错误信息
 func (s *RuleGroupService) Update(userID, id uint64, req *request.UpdateRuleGroupReq) (*response.RuleGroupResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -138,7 +163,13 @@ func (s *RuleGroupService) Update(userID, id uint64, req *request.UpdateRuleGrou
 	return s.toResp(group, ruleCount), nil
 }
 
-// Delete 删除规则组（仅当组内无规则时可删除）
+// Delete 删除规则组
+// 业务规则：如果规则组内还有规则，则不允许删除（需先移除或删除组内规则）
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则组ID
+// 返回：
+//   - error: 错误信息（如规则组不存在、组内有规则）
 func (s *RuleGroupService) Delete(userID, id uint64) error {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -160,6 +191,18 @@ func (s *RuleGroupService) Delete(userID, id uint64) error {
 }
 
 // ExecuteGroup 执行规则组：对匹配的交易应用规则操作
+// 业务流程：
+// 1. 获取规则组信息，检查是否启用
+// 2. 获取规则组内所有启用的规则（按优先级排序）
+// 3. 获取指定时间范围内的交易（默认最近一个月）
+// 4. 对每笔交易逐条匹配规则条件，匹配成功则执行规则动作
+// 参数：
+//   - userID: 用户ID
+//   - id: 规则组ID
+//   - req: 执行请求参数（含日期范围）
+// 返回：
+//   - *response.RuleGroupExecuteResultResp: 执行结果（匹配数、成功数、失败数）
+//   - error: 错误信息
 func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteRuleGroupReq) (*response.RuleGroupExecuteResultResp, error) {
 	group, err := s.ruleGroupRepo.GetByID(id, userID)
 	if err != nil {
@@ -222,6 +265,12 @@ func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteR
 }
 
 // matchTransaction 判断交易是否匹配规则的所有条件
+// AND逻辑：所有条件都满足才匹配；OR逻辑：任一条件满足即匹配
+// 参数：
+//   - rule: 规则（含条件和逻辑类型）
+//   - txn: 待匹配的交易
+// 返回：
+//   - bool: 是否匹配
 func (s *RuleGroupService) matchTransaction(rule *model.Rule, txn *model.Transaction) bool {
 	if rule.LogicType == model.LogicTypeAnd {
 		for _, cond := range rule.Conditions {
@@ -241,6 +290,13 @@ func (s *RuleGroupService) matchTransaction(rule *model.Rule, txn *model.Transac
 }
 
 // matchCondition 判断交易是否匹配单个条件
+// 根据条件字段（描述、金额、账户、分类、标签、日期等）提取交易字段值，再用运算符比较
+// 特殊处理：标签字段需遍历所有标签逐个匹配；日期字段直接比较字符串
+// 参数：
+//   - condition: 规则条件
+//   - txn: 待匹配的交易
+// 返回：
+//   - bool: 是否匹配
 func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *model.Transaction) bool {
 	var fieldValue string
 
@@ -290,6 +346,14 @@ func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *mo
 }
 
 // matchString 根据运算符比较字段值和条件值
+// 支持：包含、等于、开头是、结尾是、不包含、不等于、小于、大于、为空、不为空
+// 字符串比较不区分大小写，数值比较使用decimal精确计算
+// 参数：
+//   - operator: 比较运算符
+//   - fieldValue: 交易字段值
+//   - conditionValue: 条件值
+// 返回：
+//   - bool: 是否匹配
 func (s *RuleGroupService) matchString(operator model.ConditionOperator, fieldValue, conditionValue string) bool {
 	fv := strings.ToLower(fieldValue)
 	cv := strings.ToLower(conditionValue)
@@ -444,6 +508,11 @@ func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.T
 }
 
 // toResp 将规则组模型转换为响应DTO
+// 参数：
+//   - g3: 规则组模型
+//   - ruleCount: 规则组内的规则数量
+// 返回：
+//   - *response.RuleGroupResp: 规则组响应对象
 func (s *RuleGroupService) toResp(g *model.RuleGroup, ruleCount int64) *response.RuleGroupResp {
 	return &response.RuleGroupResp{
 		ID:        g.ID,

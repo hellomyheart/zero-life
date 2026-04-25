@@ -19,10 +19,10 @@
       <el-form :inline="true" :model="filters" class="filter-form">
         <el-form-item :label="t('objectGroup.type')">
           <el-select v-model="filters.groupable_type" clearable :placeholder="t('common.all')">
-            <el-option label="交易" value="transaction" />
-            <el-option label="账单" value="bill" />
-            <el-option label="预算" value="budget" />
-            <el-option label="储蓄罐" value="piggy_bank" />
+            <el-option :label="t('objectGroup.typeTransaction')" value="transaction" />
+            <el-option :label="t('objectGroup.typeBill')" value="bill" />
+            <el-option :label="t('objectGroup.typeBudget')" value="budget" />
+            <el-option :label="t('objectGroup.typePiggyBank')" value="piggy_bank" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -67,10 +67,10 @@
         </el-form-item>
         <el-form-item :label="t('objectGroup.type')" prop="groupable_type">
           <el-select v-model="form.groupable_type" :placeholder="t('common.select')" style="width: 100%">
-            <el-option label="交易" value="transaction" />
-            <el-option label="账单" value="bill" />
-            <el-option label="预算" value="budget" />
-            <el-option label="储蓄罐" value="piggy_bank" />
+            <el-option :label="t('objectGroup.typeTransaction')" value="transaction" />
+            <el-option :label="t('objectGroup.typeBill')" value="bill" />
+            <el-option :label="t('objectGroup.typeBudget')" value="budget" />
+            <el-option :label="t('objectGroup.typePiggyBank')" value="piggy_bank" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('objectGroup.entityId')" prop="groupable_id">
@@ -142,16 +142,16 @@ const rules: FormRules = {
 };
 
 /**
- * 获取类型标签文本
+ * 获取类型标签文本 - 使用i18n国际化
  * @param type 类型值
  * @returns 类型标签文本
  */
 function getTypeLabel(type: string): string {
   const typeMap: Record<string, string> = {
-    transaction: '交易',
-    bill: '账单',
-    budget: '预算',
-    piggy_bank: '储蓄罐'
+    transaction: t('objectGroup.typeTransaction'),
+    bill: t('objectGroup.typeBill'),
+    budget: t('objectGroup.typeBudget'),
+    piggy_bank: t('objectGroup.typePiggyBank')
   };
   return typeMap[type] || type;
 }

@@ -23,6 +23,13 @@ type DashboardService struct {
 }
 
 // NewDashboardService 创建仪表盘服务实例
+// 参数：
+//   - txnRepo: 交易数据访问对象
+//   - accountRepo: 账户数据访问对象
+//   - budgetRepo: 预算数据访问对象
+//   - billRepo: 账单数据访问对象
+// 返回：
+//   - *DashboardService: 仪表盘服务实例
 func NewDashboardService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -58,6 +65,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		return nil, errcode.ErrInternal
 	}
 
+	// 第1步：计算当月收入和支出
 	monthIncome := decimal.Zero
 	monthExpense := decimal.Zero
 	for _, txn := range monthTxns {
@@ -69,7 +77,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 	}
 
-	// Total balance (all asset accounts)
+	// 第2步：计算总资产余额（所有资产账户的当前余额之和）
 	assetAccounts, err := s.accountRepo.List(userID, string(model.AccountTypeAsset), "", "name", 0, 1000)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -84,6 +92,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
+	// 第3步：计算预算预警（使用率>=80%为warning，>=100%为overspent）
 	budgetAlerts := make([]response.BudgetAlertResp, 0)
 	for _, b := range budgets {
 		if !b.IsEnabled {
@@ -126,7 +135,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 	}
 
-	// Bill reminders (upcoming 7 days)
+	// 第4步：获取7天内到期的账单提醒
 	bills, err := s.billRepo.GetUpcoming(userID, 7)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -141,7 +150,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		})
 	}
 
-	// Recent transactions (last 5)
+	// 第5步：获取最近5笔交易
 	recentTxns, err := s.txnRepo.List(userID, repository.TransactionFilter{}, 0, 5)
 	if err != nil {
 		return nil, errcode.ErrInternal

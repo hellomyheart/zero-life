@@ -198,6 +198,7 @@ func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountRe
 		return nil, errcode.ErrInternal
 	}
 
+	// 业务规则：存入后当前金额不能超过目标金额（防止超额存入）
 	newAmount := piggyBank.CurrentAmount.Add(amount)
 	if newAmount.GreaterThan(piggyBank.TargetAmount) {
 		return nil, errcode.ErrBadRequest
@@ -208,6 +209,7 @@ func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountRe
 		return nil, errcode.ErrInternal
 	}
 
+	// 创建存入事件记录（正数金额）
 	event := &model.PiggyEvent{
 		PiggyBankID: id,
 		Amount:      amount,
@@ -245,6 +247,8 @@ func (s *PiggyBankService) RemoveAmount(userID, id uint64, req *request.RemoveAm
 		return nil, errcode.ErrInternal
 	}
 
+	// 业务规则：取出金额不能超过当前已存金额（防止超额取出）
+	// 业务规则：取出金额不能超过当前已存金额（防止超额取出）
 	if amount.GreaterThan(piggyBank.CurrentAmount) {
 		return nil, errcode.ErrBadRequest
 	}
@@ -254,6 +258,7 @@ func (s *PiggyBankService) RemoveAmount(userID, id uint64, req *request.RemoveAm
 		return nil, errcode.ErrInternal
 	}
 
+	// 创建取出事件记录（负数金额，使用Neg()将正数转为负数）
 	event := &model.PiggyEvent{
 		PiggyBankID: id,
 		Amount:      amount.Neg(),

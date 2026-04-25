@@ -179,9 +179,13 @@ func (s *WebhookService) Trigger(userID uint64, trigger model.WebhookTrigger, pa
 }
 
 // deliver 投递Webhook通知
-// 计算HMAC-SHA256签名，发送HTTP POST请求，记录投递结果
+// 业务流程：
+// 1. 计算HMAC-SHA256签名（用于接收方验证请求完整性和真实性）
+// 2. 构建HTTP POST请求，设置Content-Type和自定义签名头
+// 3. 发送请求（超时10秒）
+// 4. 记录投递结果（HTTP状态码、错误信息）
+// 5. 更新Webhook的最后投递时间
 // 请求头包含：Content-Type、X-Webhook-Signature（签名）、X-Webhook-Trigger（触发类型）
-// 超时时间为10秒
 func (s *WebhookService) deliver(webhook *model.Webhook, payload []byte) {
 	signature := computeHMAC(webhook.Secret, payload)
 

@@ -1,58 +1,44 @@
 /**
  * 用户偏好 API 接口
- * 提供用户偏好的 CRUD 操作
+ * 提供用户偏好的查询、设置和删除功能
  */
-import request from '@/utils/request';
-import type {
-  Preference,
-  SetPreferenceRequest,
-  GetPreferenceParams
-} from '@/types/preference';
+import { get, post, del } from '@/utils/request'
+import type { Preference, SetPreferenceRequest, GetPreferenceParams } from '@/types/preference'
 
 /**
  * 获取所有用户偏好
  * @returns 偏好列表
+ * @endpoint GET /preferences
  */
 export function list() {
-  return request<Preference[]>({
-    url: '/preferences',
-    method: 'get'
-  });
+  return get<Preference[]>('/preferences')
 }
 
 /**
  * 获取单个偏好值
- * @param params 查询参数（包含 key）
- * @returns 偏好值
+ * @param params - 查询参数（包含偏好键名）
+ * @returns 偏好信息
+ * @endpoint GET /preferences
  */
 export function get(params: GetPreferenceParams) {
-  return request<Preference>({
-    url: '/preferences',
-    method: 'get',
-    params
-  });
+  return get<Preference>('/preferences', params as Record<string, unknown>)
 }
 
 /**
- * 设置偏好值
- * @param data 设置请求参数
- * @returns 设置后的偏好
+ * 设置偏好值（创建或更新）
+ * @param data - 设置请求参数（键名和值）
+ * @returns 设置后的偏好信息
+ * @endpoint POST /preferences
  */
 export function set(data: SetPreferenceRequest) {
-  return request<Preference>({
-    url: '/preferences',
-    method: 'post',
-    data
-  });
+  return post<Preference>('/preferences', data)
 }
 
 /**
  * 删除偏好
- * @param key 偏好键名
+ * @param key - 偏好键名
+ * @endpoint DELETE /preferences/:key
  */
 export function remove(key: string) {
-  return request({
-    url: `/preferences/${key}`,
-    method: 'delete'
-  });
+  return del<void>(`/preferences/${key}`)
 }

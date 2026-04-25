@@ -197,34 +197,38 @@ func (s *ImportService) Execute(userID uint64, fileID string, mapping map[string
 			}
 		}
 
-		// Map fields
+		// 步骤1：根据字段映射提取日期、金额、描述和交易类型
 		dateStr := s.getMappedValue(rowData, mapping, "date")
 		amountStr := s.getMappedValue(rowData, mapping, "amount")
 		description := s.getMappedValue(rowData, mapping, "description")
 		txnType := s.getMappedValue(rowData, mapping, "type")
 
+		// 步骤2：跳过缺少日期或金额的行
 		if dateStr == "" || amountStr == "" {
 			result.Skipped++
 			continue
 		}
 
+		// 步骤3：验证日期格式
 		_, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
 			result.Failed++
 			continue
 		}
 
+		// 步骤4：验证金额格式和有效性（必须大于0）
 		amountVal, err := decimal.NewFromString(amountStr)
 		if err != nil || amountVal.LessThanOrEqual(decimal.Zero) {
 			result.Failed++
 			continue
 		}
 
+		// 步骤5：如果未指定交易类型，默认为支出（withdrawal）
 		if txnType == "" {
 			txnType = "withdrawal"
 		}
 
-		// Get source account (use first account as default)
+		// 步骤6：获取用户的第一个账户作为默认源账户
 		accounts, err := s.accountRepo.List(userID, "", "", "name", 0, 1)
 		if err != nil || len(accounts) == 0 {
 			result.Failed++
@@ -239,6 +243,7 @@ func (s *ImportService) Execute(userID uint64, fileID string, mapping map[string
 			SourceID:    accounts[0].ID,
 		}
 
+		// 步骤7：通过txnService.Create创建交易（确保余额更新、规则触发和Webhook通知）
 		if _, err := s.txnService.Create(userID, txn); err != nil {
 			result.Failed++
 			continue

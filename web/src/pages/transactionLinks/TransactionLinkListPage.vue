@@ -110,7 +110,7 @@
  * 交易关联管理页面
  * 提供交易关联的创建、查询、删除功能
  */
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 import { useI18n } from 'vue-i18n';
@@ -120,12 +120,12 @@ import { formatDate } from '@/utils/format';
 
 const { t } = useI18n();
 
-/** 关联类型选项 */
-const linkTypeOptions = [
-  { label: '回滚', value: 'rolled_back' },
-  { label: '已对账', value: 'reconciled' },
-  { label: '已关联', value: 'linked' }
-];
+/** 关联类型选项 - 使用i18n国际化 */
+const linkTypeOptions = computed(() => [
+  { label: t('transactionLink.typeRolledBack'), value: 'rolled_back' },
+  { label: t('transactionLink.typeReconciled'), value: 'reconciled' },
+  { label: t('transactionLink.typeLinked'), value: 'linked' }
+]);
 
 /** 加载状态 */
 const loading = ref(false);
@@ -181,15 +181,15 @@ function getLinkTypeTag(type: string): 'danger' | 'success' | 'info' {
 }
 
 /**
- * 获取关联类型标签文本
+ * 获取关联类型标签文本 - 使用i18n国际化
  * @param type 关联类型
  * @returns 类型标签文本
  */
 function getLinkTypeLabel(type: string): string {
   const typeMap: Record<string, string> = {
-    rolled_back: '回滚',
-    reconciled: '已对账',
-    linked: '已关联'
+    rolled_back: t('transactionLink.typeRolledBack'),
+    reconciled: t('transactionLink.typeReconciled'),
+    linked: t('transactionLink.typeLinked')
   };
   return typeMap[type] || type;
 }
@@ -209,7 +209,7 @@ async function fetchData() {
     }
     
     const res = await transactionLinkApi.list(params);
-    links.value = res.list;
+    links.value = res.items;
     pagination.total = res.total;
   } catch (error) {
     ElMessage.error(t('common.fetchError'));

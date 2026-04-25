@@ -228,6 +228,10 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 }
 
 // calculateSpent 计算预算在当前周期内已花费金额
+// 业务流程：
+// 1. 根据预算周期（月度/年度）计算当前周期的起止时间
+// 2. 只统计支出类型(withdrawal)交易，预算追踪的是支出而非收入
+// 3. 遍历预算关联的所有分类，查询每个分类下的支出交易并累加金额
 // 修复：添加交易类型过滤，只统计支出类型(withdrawal)交易，避免将收入交易计入预算支出
 func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) decimal.Decimal {
 	now := time.Now()
@@ -277,6 +281,7 @@ func (s *BudgetService) toRespWithUsage(budget *model.Budget, userID uint64) (*r
 	remaining := budget.Amount.Sub(spent)
 	usageRate, _ := spent.Div(budget.Amount).Float64()
 
+// 计算预算状态：使用率>=100%为超支(overspent)，>=80%为预警(warning)，否则正常(normal)
 	status := "normal"
 	if usageRate >= 1.0 {
 		status = "overspent"

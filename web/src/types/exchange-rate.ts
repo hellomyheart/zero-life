@@ -22,6 +22,49 @@ export interface ExchangeRate {
 }
 
 /**
+ * 汇率列表查询参数
+ */
+export interface ExchangeRateListParams {
+  from_currency_id?: number     // 按源货币ID筛选
+  to_currency_id?: number       // 按目标货币ID筛选
+  start_date?: string           // 日期范围起始
+  end_date?: string             // 日期范围结束
+  page?: number                 // 页码（从1开始）
+  page_size?: number            // 每页数量
+}
+
+/**
+ * 创建汇率请求参数
+ */
+export interface CreateExchangeRateReq {
+  from_currency_id: number      // 源货币ID
+  to_currency_id: number        // 目标货币ID
+  date: string                  // 汇率日期
+  rate: string                  // 汇率值
+}
+
+/**
+ * 更新汇率请求参数
+ */
+export interface UpdateExchangeRateReq {
+  from_currency_id?: number     // 源货币ID
+  to_currency_id?: number       // 目标货币ID
+  date?: string                 // 汇率日期
+  rate?: string                 // 汇率值
+}
+
+/**
+ * 货币转换结果
+ */
+export interface ConvertResult {
+  from: string                  // 源货币代码
+  to: string                    // 目标货币代码
+  amount: string                // 原始金额
+  converted_amount: string      // 转换后金额
+  rate: string                  // 使用的汇率
+}
+
+/**
  * 货币信息接口
  * 汇率模块中使用的货币基本信息
  */

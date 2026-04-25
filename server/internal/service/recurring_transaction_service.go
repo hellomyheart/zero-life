@@ -49,6 +49,18 @@ func NewRecurringTransactionService(
 }
 
 // Create 创建循环交易
+// 业务流程：
+// 1. 解析并验证金额（必须大于0）
+// 2. 解析并验证开始日期和可选的结束日期
+// 3. 设置重复间隔（默认为1）
+// 4. 计算下次执行日期
+// 5. 创建循环交易记录
+// 参数：
+//   - userID: 用户ID
+//   - req: 创建请求参数（描述、金额、账户、分类、重复类型、间隔、日期等）
+// 返回：
+//   - *response.RecurringTransactionResp: 创建成功的循环交易信息
+//   - error: 错误信息
 func (s *RecurringTransactionService) Create(userID uint64, req *request.CreateRecurringTransactionReq) (*response.RecurringTransactionResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
@@ -105,6 +117,12 @@ func (s *RecurringTransactionService) Create(userID uint64, req *request.CreateR
 }
 
 // Get 获取单个循环交易详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 循环交易ID
+// 返回：
+//   - *response.RecurringTransactionResp: 循环交易信息
+//   - error: 错误信息
 func (s *RecurringTransactionService) Get(userID, id uint64) (*response.RecurringTransactionResp, error) {
 	rt, err := s.rtRepo.GetByID(id, userID)
 	if err != nil {
@@ -117,6 +135,13 @@ func (s *RecurringTransactionService) Get(userID, id uint64) (*response.Recurrin
 }
 
 // List 获取循环交易分页列表
+// 支持按活跃状态过滤
+// 参数：
+//   - userID: 用户ID
+//   - req: 列表查询参数（含分页、活跃状态过滤）
+// 返回：
+//   - *pagination.Result: 分页结果
+//   - error: 错误信息
 func (s *RecurringTransactionService) List(userID uint64, req *request.RecurringTransactionListReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -140,6 +165,15 @@ func (s *RecurringTransactionService) List(userID uint64, req *request.Recurring
 }
 
 // Update 更新循环交易信息
+// 支持更新描述、金额、账户、分类、重复类型、间隔、日期、结束条件等
+// 更新后会重新计算下次执行日期
+// 参数：
+//   - userID: 用户ID
+//   - id: 循环交易ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.RecurringTransactionResp: 更新后的循环交易信息
+//   - error: 错误信息
 func (s *RecurringTransactionService) Update(userID, id uint64, req *request.UpdateRecurringTransactionReq) (*response.RecurringTransactionResp, error) {
 	rt, err := s.rtRepo.GetByID(id, userID)
 	if err != nil {
@@ -210,6 +244,11 @@ func (s *RecurringTransactionService) Update(userID, id uint64, req *request.Upd
 }
 
 // Delete 删除循环交易
+// 参数：
+//   - userID: 用户ID
+//   - id: 循环交易ID
+// 返回：
+//   - error: 错误信息
 func (s *RecurringTransactionService) Delete(userID, id uint64) error {
 	_, err := s.rtRepo.GetByID(id, userID)
 	if err != nil {
@@ -222,7 +261,16 @@ func (s *RecurringTransactionService) Delete(userID, id uint64) error {
 }
 
 // ProcessDue 处理所有到期的循环交易
-// 遍历到期循环交易，为每个创建对应交易并推进下次执行日期
+// 业务流程：
+// 1. 获取用户所有到期的循环交易
+// 2. 为每个到期循环交易创建实际交易（通过txnService确保余额更新）
+// 3. 推进下次执行日期
+// 4. 如果超过结束日期，自动停用循环交易
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - int: 成功创建的交易数
+//   - error: 错误信息
 func (s *RecurringTransactionService) ProcessDue(userID uint64) (int, error) {
 	rts, err := s.rtRepo.GetDueRecurringTransactions(userID)
 	if err != nil {

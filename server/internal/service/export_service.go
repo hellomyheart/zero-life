@@ -302,6 +302,13 @@ func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, strin
 }
 
 // ExportBudgets 导出预算数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportBudgets(userID uint64, format string) ([]byte, string, error) {
 	budgets, err := s.budgetRepo.List(userID)
 	if err != nil {
@@ -319,6 +326,13 @@ func (s *ExportService) ExportBudgets(userID uint64, format string) ([]byte, str
 }
 
 // ExportCategories 导出分类数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportCategories(userID uint64, format string) ([]byte, string, error) {
 	categories, err := s.categoryRepo.List(userID)
 	if err != nil {
@@ -336,6 +350,13 @@ func (s *ExportService) ExportCategories(userID uint64, format string) ([]byte, 
 }
 
 // ExportTags 导出标签数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportTags(userID uint64, format string) ([]byte, string, error) {
 	tags, err := s.tagRepo.List(userID)
 	if err != nil {
@@ -353,6 +374,13 @@ func (s *ExportService) ExportTags(userID uint64, format string) ([]byte, string
 }
 
 // ExportPiggyBanks 导出存钱罐数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportPiggyBanks(userID uint64, format string) ([]byte, string, error) {
 	piggyBanks, err := s.piggyBankRepo.List(userID)
 	if err != nil {
@@ -370,6 +398,13 @@ func (s *ExportService) ExportPiggyBanks(userID uint64, format string) ([]byte, 
 }
 
 // ExportRules 导出规则数据
+// 参数：
+//   - userID: 用户ID
+//   - format: 导出格式（csv/json）
+// 返回：
+//   - []byte: 导出数据
+//   - string: 文件名
+//   - error: 错误信息
 func (s *ExportService) ExportRules(userID uint64, format string) ([]byte, string, error) {
 	rules, err := s.ruleRepo.List(userID)
 	if err != nil {

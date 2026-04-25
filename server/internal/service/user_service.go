@@ -1,5 +1,5 @@
-// Package service 业务逻辑层
-// 实现核心业务逻辑，调用Repository层进行数据操作
+// Package service 业务逻辑层，实现核心业务逻辑
+// UserService 用户业务逻辑，处理用户管理和角色权限
 package service
 
 import (
@@ -16,13 +16,19 @@ import (
 )
 
 // UserService 用户服务
-// 处理用户管理相关业务逻辑
+// 处理用户管理相关业务逻辑，包括用户列表、详情、更新、删除、角色管理、锁定/解锁和密码重置
+// 依赖userRepo查询用户数据，依赖db执行直接更新操作（角色、锁定、密码等）
 type UserService struct {
-	userRepo *repository.UserRepository
-	db       *gorm.DB
+	userRepo *repository.UserRepository // 用户数据访问对象
+	db       *gorm.DB                   // 数据库连接，用于直接更新用户字段
 }
 
 // NewUserService 创建用户服务实例
+// 参数：
+//   - userRepo: 用户数据访问对象
+//   - db: 数据库连接
+// 返回：
+//   - *UserService: 用户服务实例
 func NewUserService(userRepo *repository.UserRepository, db *gorm.DB) *UserService {
 	return &UserService{
 		userRepo: userRepo,
@@ -30,7 +36,12 @@ func NewUserService(userRepo *repository.UserRepository, db *gorm.DB) *UserServi
 	}
 }
 
-// List 获取用户列表
+// List 获取用户列表（分页）
+// 参数：
+//   - req: 列表查询参数（含分页）
+// 返回：
+//   - *pagination.Result: 分页结果
+//   - error: 错误信息
 func (s *UserService) List(req *request.UserListReq) (*pagination.Result, error) {
 	params := pagination.Params{Page: req.Page, PageSize: req.PageSize}
 	params.Normalize()
@@ -49,6 +60,11 @@ func (s *UserService) List(req *request.UserListReq) (*pagination.Result, error)
 }
 
 // Get 获取用户详情
+// 参数：
+//   - id: 用户ID
+// 返回：
+//   - *response.UserResp: 用户信息
+//   - error: 错误信息（如用户不存在）
 func (s *UserService) Get(id uint64) (*response.UserResp, error) {
 	user, err := s.userRepo.GetByID(id)
 	if err != nil {
@@ -62,6 +78,13 @@ func (s *UserService) Get(id uint64) (*response.UserResp, error) {
 }
 
 // Update 更新用户信息
+// 支持更新昵称、语言、时区（部分更新）
+// 参数：
+//   - id: 用户ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.UserResp: 更新后的用户信息
+//   - error: 错误信息
 func (s *UserService) Update(id uint64, req *request.UpdateUserReq) (*response.UserResp, error) {
 	user, err := s.userRepo.GetByID(id)
 	if err != nil {
@@ -90,7 +113,11 @@ func (s *UserService) Update(id uint64, req *request.UpdateUserReq) (*response.U
 	return s.toResp(user), nil
 }
 
-// Delete 删除用户
+// Delete 删除用户（软删除）
+// 参数：
+//   - id: 用户ID
+// 返回：
+//   - error: 错误信息
 func (s *UserService) Delete(id uint64) error {
 	// 软删除
 	if err := s.db.Delete(&model.User{}, id).Error; err != nil {
@@ -100,6 +127,12 @@ func (s *UserService) Delete(id uint64) error {
 }
 
 // ChangeRole 修改用户角色
+// 业务规则：角色只能是"user"或"admin"，其他值返回错误
+// 参数：
+//   - id: 用户ID
+//   - role: 新角色（user/admin）
+// 返回：
+//   - error: 错误信息（如角色无效）
 func (s *UserService) ChangeRole(id uint64, role string) error {
 	// 验证角色
 	if role != "user" && role != "admin" {
@@ -120,6 +153,11 @@ func (s *UserService) ChangeRole(id uint64, role string) error {
 }
 
 // Lock 锁定用户
+// 将用户角色设为"locked"，锁定后用户无法登录
+// 参数：
+//   - id: 用户ID
+// 返回：
+//   - error: 错误信息
 func (s *UserService) Lock(id uint64) error {
 	// 这里可以通过设置一个锁定标记或修改角色来实现
 	// 简单实现：将角色改为 "locked"
@@ -137,6 +175,11 @@ func (s *UserService) Lock(id uint64) error {
 }
 
 // Unlock 解锁用户
+// 将用户角色恢复为"user"
+// 参数：
+//   - id: 用户ID
+// 返回：
+//   - error: 错误信息
 func (s *UserService) Unlock(id uint64) error {
 	now := time.Now()
 	if err := s.db.Model(&model.User{}).
@@ -152,6 +195,15 @@ func (s *UserService) Unlock(id uint64) error {
 }
 
 // ResetPassword 重置用户密码（管理员操作）
+// 业务流程：
+// 1. 验证新密码长度（至少8位）
+// 2. 使用bcrypt加密密码
+// 3. 更新用户密码
+// 参数：
+//   - id: 用户ID
+//   - newPassword: 新密码
+// 返回：
+//   - error: 错误信息（如密码太短）
 func (s *UserService) ResetPassword(id uint64, newPassword string) error {
 	// 验证密码长度
 	if len(newPassword) < 8 {
@@ -177,7 +229,11 @@ func (s *UserService) ResetPassword(id uint64, newPassword string) error {
 	return nil
 }
 
-// toResp 转换为响应格式
+// toResp 将用户模型转换为响应对象
+// 参数：
+//   - u: 用户模型
+// 返回：
+//   - *response.UserResp: 用户响应对象
 func (s *UserService) toResp(u *model.User) *response.UserResp {
 	return &response.UserResp{
 		ID:         u.ID,

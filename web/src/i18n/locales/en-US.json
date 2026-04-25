@@ -20,7 +20,11 @@
     "webhooks": "Webhooks",
     "attachments": "Attachments",
     "reconciliations": "Reconciliations",
-    "settings": "Settings"
+    "settings": "Settings",
+    "exchangeRates": "Exchange Rates",
+    "objectGroups": "Object Groups",
+    "transactionLinks": "Transaction Links",
+    "preferences": "Preferences"
   },
   "report": {
     "incomeExpense": "Income & Expense",
@@ -28,13 +32,28 @@
     "budget": "Budget Report",
     "netWorth": "Net Worth",
     "trend": "Trend Report",
-    "tag": "Tag Report"
+    "tag": "Tag Report",
+    "incomeByAccount": "Income by Account",
+    "expenseByAccount": "Expense by Account",
+    "incomeByCategory": "Income by Category",
+    "expenseByCategory": "Expense by Category",
+    "incomeByTag": "Income by Tag",
+    "expenseByTag": "Expense by Tag",
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities",
+    "netWorthTrend": "Net Worth Trend",
+    "income": "Income",
+    "expense": "Expense",
+    "netIncome": "Net Income",
+    "percentage": "Percentage",
+    "date": "Date"
   },
   "setting": {
     "profile": "Profile",
     "currencies": "Currencies",
     "mfa": "Two-Factor Auth",
-    "users": "User Management"
+    "users": "User Management",
+    "preferences": "Preferences"
   },
   "auth": {
     "login": "Login",
@@ -74,7 +93,8 @@
     "expense": "Expense",
     "income": "Income",
     "liability": "Liability",
-    "deleteConfirm": "Are you sure you want to delete this account?"
+    "deleteConfirm": "Are you sure you want to delete this account?",
+    "notes": "Notes"
   },
   "transaction": {
     "title": "Transaction Management",
@@ -96,7 +116,10 @@
     "enableSplits": "Enable Splits",
     "search": "Search Transactions",
     "filter": "Filter",
-    "deleteConfirm": "Are you sure you want to delete this transaction?"
+    "deleteConfirm": "Are you sure you want to delete this transaction?",
+    "notes": "Notes",
+    "addSplit": "Add Split",
+    "removeSplit": "Remove Split"
   },
   "category": {
     "title": "Category Management",
@@ -105,7 +128,9 @@
     "delete": "Delete Category",
     "name": "Category Name",
     "parent": "Parent Category",
-    "deleteConfirm": "Are you sure you want to delete this category?"
+    "deleteConfirm": "Are you sure you want to delete this category?",
+    "icon": "Icon",
+    "noParent": "No Parent"
   },
   "tag": {
     "title": "Tag Management",
@@ -137,7 +162,9 @@
     "normal": "Normal",
     "warning": "Warning",
     "exceeded": "Exceeded",
-    "deleteConfirm": "Are you sure you want to delete this budget?"
+    "deleteConfirm": "Are you sure you want to delete this budget?",
+    "detail": "Detail",
+    "remaining": "Remaining"
   },
   "bill": {
     "title": "Bill Management",
@@ -154,7 +181,8 @@
     "monthly": "Monthly",
     "quarterly": "Quarterly",
     "yearly": "Yearly",
-    "deleteConfirm": "Are you sure you want to delete this bill?"
+    "deleteConfirm": "Are you sure you want to delete this bill?",
+    "description": "Description"
   },
   "currency": {
     "title": "Currency Management",
@@ -167,7 +195,8 @@
     "exchangeRate": "Exchange Rate",
     "sourceCurrency": "Source Currency",
     "targetCurrency": "Target Currency",
-    "rate": "Rate"
+    "rate": "Rate",
+    "decimalPlaces": "Decimal Places"
   },
   "rule": {
     "title": "Rule Management",
@@ -186,7 +215,11 @@
     "operator": "Operator",
     "value": "Value",
     "actionType": "Action Type",
-    "deleteConfirm": "Are you sure you want to delete this rule?"
+    "deleteConfirm": "Are you sure you want to delete this rule?",
+    "addCondition": "Add Condition",
+    "addAction": "Add Action",
+    "group": "Rule Group",
+    "stopProcessing": "Stop Processing"
   },
   "import": {
     "title": "Data Import",
@@ -195,7 +228,12 @@
     "execute": "Confirm Import",
     "columnMapping": "Column Mapping",
     "preview": "Data Preview",
-    "fileType": "CSV File"
+    "fileType": "CSV File",
+    "dragTip": "Drop file here, or click to upload",
+    "step1": "Upload",
+    "step2": "Column Mapping",
+    "step3": "Preview",
+    "step4": "Confirm Import"
   },
   "dashboard": {
     "income": "Monthly Income",
@@ -227,17 +265,67 @@
     "inputPlaceholder": "Please input",
     "required": "This field is required",
     "startDate": "Start Date",
-    "endDate": "End Date"
+    "endDate": "End Date",
+    "add": "Add",
+    "actions": "Actions",
+    "id": "ID",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "fetchError": "Failed to fetch data",
+    "submitError": "Submit failed",
+    "deleteError": "Delete failed",
+    "confirmDelete": "Are you sure you want to delete this?",
+    "warning": "Warning",
+    "select": "Please select",
+    "date": "Date",
+    "passwordMismatch": "Passwords do not match",
+    "detail": "Detail",
+    "all": "All",
+    "name": "Name",
+    "status": "Status",
+    "type": "Type",
+    "description": "Description",
+    "notes": "Notes",
+    "amount": "Amount",
+    "page": "Page",
+    "pageSize": "Page Size",
+    "loading": "Loading...",
+    "noMoreData": "No more data",
+    "operationConfirm": "Are you sure you want to proceed?",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous",
+    "finish": "Finish",
+    "refresh": "Refresh",
+    "download": "Download",
+    "upload": "Upload",
+    "view": "View",
+    "copy": "Copy",
+    "enable": "Enable",
+    "disable": "Disable",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "profile": {
     "title": "Profile Settings",
     "nickname": "Nickname",
+    "name": "Name",
+    "email": "Email",
     "language": "Language",
     "timezone": "Timezone",
     "changePassword": "Change Password",
     "oldPassword": "Old Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "passwordMismatch": "Passwords do not match",
+    "nameRequired": "Please enter your name",
+    "emailRequired": "Please enter your email",
+    "emailInvalid": "Please enter a valid email address",
+    "oldPasswordRequired": "Please enter old password",
+    "newPasswordRequired": "Please enter new password",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "confirmPasswordRequired": "Please confirm new password"
   },
   "piggyBank": {
     "title": "Piggy Banks",
@@ -252,7 +340,11 @@
     "amount": "Amount",
     "addMoney": "Add Money",
     "removeMoney": "Remove Money",
-    "deleteConfirm": "Are you sure you want to delete this piggy bank?"
+    "deleteConfirm": "Are you sure you want to delete this piggy bank?",
+    "account": "Account",
+    "events": "Events",
+    "resetHistory": "Reset History",
+    "reorder": "Reorder"
   },
   "recurringTransaction": {
     "title": "Recurring Transactions",
@@ -272,7 +364,8 @@
     "weekly": "Weekly",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "deleteConfirm": "Are you sure you want to delete this recurring transaction?"
+    "deleteConfirm": "Are you sure you want to delete this recurring transaction?",
+    "inactive": "Inactive"
   },
   "webhook": {
     "title": "Webhooks",
@@ -283,7 +376,11 @@
     "trigger": "Trigger",
     "active": "Active",
     "lastDelivered": "Last Delivered",
-    "deleteConfirm": "Are you sure you want to delete this webhook?"
+    "deleteConfirm": "Are you sure you want to delete this webhook?",
+    "deliveries": "Deliveries",
+    "triggerCreate": "Transaction Created",
+    "triggerUpdate": "Transaction Updated",
+    "triggerDelete": "Transaction Deleted"
   },
   "export": {
     "title": "Data Export",
@@ -292,7 +389,10 @@
     "accounts": "Accounts",
     "budgets": "Budgets",
     "categories": "Categories",
-    "tags": "Tags"
+    "tags": "Tags",
+    "dateRange": "Date Range",
+    "exportSuccess": "Export successful",
+    "exportFailed": "Export failed"
   },
   "attachment": {
     "title": "Attachments",
@@ -303,7 +403,10 @@
     "size": "Size",
     "createdAt": "Created At",
     "download": "Download",
-    "deleteConfirm": "Are you sure you want to delete this attachment?"
+    "deleteConfirm": "Are you sure you want to delete this attachment?",
+    "dragTip": "Drop file here, or click to upload",
+    "attachableType": "Attachable Type",
+    "attachableId": "Attachable ID"
   },
   "reconciliation": {
     "title": "Reconciliations",
@@ -313,7 +416,10 @@
     "endBalance": "End Balance",
     "difference": "Difference",
     "status": "Status",
-    "deleteConfirm": "Are you sure you want to delete this reconciliation?"
+    "deleteConfirm": "Are you sure you want to delete this reconciliation?",
+    "account": "Account",
+    "completed": "Completed",
+    "pending": "Pending"
   },
   "mfa": {
     "title": "Two-Factor Authentication",
@@ -323,7 +429,11 @@
     "disable": "Disable",
     "scanQR": "Scan the QR code with your authenticator app",
     "secret": "Secret",
-    "enterCode": "Enter verification code"
+    "enterCode": "Enter verification code",
+    "enabled": "Enabled",
+    "disabled": "Not Enabled",
+    "verifyCode": "Verification Code",
+    "disableConfirm": "Are you sure you want to disable 2FA? This will reduce your account security."
   },
   "user": {
     "title": "User Management",
@@ -331,7 +441,13 @@
     "locked": "Locked",
     "lock": "Lock",
     "unlock": "Unlock",
-    "deleteConfirm": "Are you sure you want to delete this user?"
+    "deleteConfirm": "Are you sure you want to delete this user?",
+    "admin": "Admin",
+    "user": "User",
+    "email": "Email",
+    "name": "Name",
+    "language": "Language",
+    "registeredAt": "Registered At"
   },
   "objectGroup": {
     "title": "Object Groups",
@@ -343,7 +459,11 @@
     "entityId": "Entity ID",
     "namePlaceholder": "Enter group name",
     "entityIdPlaceholder": "Enter entity ID",
-    "deleteConfirm": "Are you sure you want to delete this group?"
+    "deleteConfirm": "Are you sure you want to delete this group?",
+    "typeTransaction": "Transaction",
+    "typeBill": "Bill",
+    "typeBudget": "Budget",
+    "typePiggyBank": "Piggy Bank"
   },
   "transactionLink": {
     "title": "Transaction Links",
@@ -353,7 +473,10 @@
     "linkedJournal": "Linked Journal ID",
     "transactionPlaceholder": "Enter transaction ID",
     "linkedJournalPlaceholder": "Enter linked journal ID",
-    "deleteConfirm": "Are you sure you want to delete this link?"
+    "deleteConfirm": "Are you sure you want to delete this link?",
+    "typeRolledBack": "Rolled Back",
+    "typeReconciled": "Reconciled",
+    "typeLinked": "Linked"
   },
   "preference": {
     "title": "Preferences",
@@ -361,6 +484,20 @@
     "value": "Preference Value",
     "keyPlaceholder": "Enter preference key (e.g., list_page_size)",
     "valuePlaceholder": "Enter preference value",
-    "deleteConfirm": "Are you sure you want to delete this preference?"
+    "deleteConfirm": "Are you sure you want to delete this preference?",
+    "keyPattern": "Key can only contain lowercase letters, numbers and underscores"
+  },
+  "exchangeRate": {
+    "title": "Exchange Rates",
+    "create": "Create Exchange Rate",
+    "edit": "Edit Exchange Rate",
+    "delete": "Delete Exchange Rate",
+    "fromCurrency": "From Currency",
+    "toCurrency": "Target Currency",
+    "date": "Date",
+    "rate": "Rate",
+    "deleteConfirm": "Are you sure you want to delete this exchange rate?",
+    "fromCurrencyId": "From Currency ID",
+    "toCurrencyId": "To Currency ID"
   }
 }

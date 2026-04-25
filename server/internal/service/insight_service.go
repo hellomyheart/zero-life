@@ -1,4 +1,5 @@
-// Package service 业务逻辑层
+// Package service 业务逻辑层，实现核心业务逻辑
+// InsightService 数据洞察业务逻辑，提供深度数据分析功能
 package service
 
 import (
@@ -9,14 +10,21 @@ import (
 )
 
 // InsightService 数据洞察服务
-// 提供深度数据分析功能
+// 提供深度数据分析功能，包括支出洞察、收入洞察和转账洞察
+// 依赖txnRepo查询交易数据，依赖accountRepo查询账户名称，依赖categoryRepo查询分类名称
 type InsightService struct {
-	txnRepo     *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	categoryRepo *repository.CategoryRepository
+	txnRepo     *repository.TransactionRepository // 交易数据访问对象
+	accountRepo *repository.AccountRepository     // 账户数据访问对象
+	categoryRepo *repository.CategoryRepository   // 分类数据访问对象
 }
 
 // NewInsightService 创建数据洞察服务实例
+// 参数：
+//   - txnRepo: 交易数据访问对象
+//   - accountRepo: 账户数据访问对象
+//   - categoryRepo: 分类数据访问对象
+// 返回：
+//   - *InsightService: 数据洞察服务实例
 func NewInsightService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -99,6 +107,19 @@ type TransferPair struct {
 }
 
 // ExpenseInsight 支出洞察分析
+// 业务流程：
+// 1. 获取指定时间范围内的支出交易
+// 2. 计算基础统计：总支出、平均支出、最大/最小单笔支出、交易笔数
+// 3. 按分类汇总：每个分类的支出金额、笔数、百分比
+// 4. 按账户汇总：每个支出账户的支出金额、笔数、百分比
+// 5. 按日期汇总：每天的支出金额和笔数
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - *ExpenseInsightData: 支出洞察数据
+//   - error: 错误信息
 func (s *InsightService) ExpenseInsight(userID uint64, startDate, endDate time.Time) (*ExpenseInsightData, error) {
 	// 获取支出交易
 	txns, err := s.txnRepo.GetByTypeAndDateRange(userID, "withdrawal", startDate, endDate)
@@ -202,6 +223,16 @@ func (s *InsightService) ExpenseInsight(userID uint64, startDate, endDate time.T
 }
 
 // IncomeInsight 收入洞察分析
+// 业务流程：
+// 1. 获取指定时间范围内的收入交易
+// 2. 计算基础统计：总收入、平均收入、最大/最小单笔收入、交易笔数
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - *IncomeInsightData: 收入洞察数据
+//   - error: 错误信息
 func (s *InsightService) IncomeInsight(userID uint64, startDate, endDate time.Time) (*IncomeInsightData, error) {
 	// 获取收入交易
 	txns, err := s.txnRepo.GetByTypeAndDateRange(userID, "deposit", startDate, endDate)
@@ -242,6 +273,17 @@ func (s *InsightService) IncomeInsight(userID uint64, startDate, endDate time.Ti
 }
 
 // TransferInsight 转账洞察分析
+// 业务流程：
+// 1. 获取指定时间范围内的转账交易
+// 2. 计算总转账金额和笔数
+// 3. 统计频繁转账对：按"源账户->目标账户"分组，记录每对的转账次数和总金额
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - *TransferInsightData: 转账洞察数据
+//   - error: 错误信息
 func (s *InsightService) TransferInsight(userID uint64, startDate, endDate time.Time) (*TransferInsightData, error) {
 	// 获取转账交易
 	txns, err := s.txnRepo.GetByTypeAndDateRange(userID, "transfer", startDate, endDate)

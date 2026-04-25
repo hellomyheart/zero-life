@@ -1,3 +1,5 @@
+// Package service 业务逻辑层，实现核心业务逻辑
+// RecurrenceService 循环交易业务逻辑，按指定频率自动创建交易
 package service
 
 import (

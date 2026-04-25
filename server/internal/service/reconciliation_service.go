@@ -76,7 +76,9 @@ func (s *ReconciliationService) Create(userID uint64, req *request.CreateReconci
 		return nil, errcode.ErrNotFound
 	}
 
+	// 获取账户当前余额作为账面余额
 	bookBalance := account.CurrentBalance
+	// 计算差额 = 实际期末余额 - 账面余额（正数表示账面少记，负数表示账面多记）
 	difference := endingBalance.Sub(bookBalance)
 
 	rec := &model.TransactionReconciliation{
@@ -176,6 +178,7 @@ func (s *ReconciliationService) Update(userID, id uint64, req *request.UpdateRec
 			return nil, errcode.ErrBadRequest
 		}
 		rec.EndingBalance = endingBalance.StringFixed(4)
+		// 重新计算差额 = 新的期末余额 - 账面余额
 		bookBalance, _ := decimal.NewFromString(rec.BookBalance)
 		rec.Difference = endingBalance.Sub(bookBalance).StringFixed(4)
 	}

@@ -580,7 +580,20 @@ func tagModelToResp(t *model.Tag) response.TagResp {
 }
 
 // Split 拆分交易
-// 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
+// 将一笔交易拆分为多笔子交易，子交易金额之和必须等于父交易金额
+// 业务流程：
+// 1. 获取父交易，验证不能是子交易（子交易不能再拆分）
+// 2. 验证父交易没有已有的拆分（需先合并才能重新拆分）
+// 3. 验证拆分金额之和等于父交易金额
+// 4. 为每个拆分创建子交易（继承父交易的类型、日期、账户，可自定义分类和描述）
+// 5. 为拆分交易添加标签
+// 参数：
+//   - userID: 用户ID
+//   - parentID: 父交易ID
+//   - req: 拆分请求参数（含拆分列表，每个拆分含金额、分类、描述、备注、标签）
+// 返回：
+//   - *response.TransactionResp: 包含拆分信息的父交易
+//   - error: 错误信息
 func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTransactionReq) (*response.TransactionResp, error) {
 	// 获取父交易
 	parent, err := s.txnRepo.GetByID(parentID, userID)
@@ -588,7 +601,7 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		return nil, err
 	}
 
-	// 妫€鏌ユ槸鍚﹀凡缁忔槸拆分交易
+	// 检查是否已经是拆分交易（子交易不能再拆分）
 	if parent.ParentID != nil {
 		return nil, errcode.WithMessage(errcode.ErrBadRequest, "cannot split a child transaction")
 	}
@@ -671,6 +684,12 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 }
 
 // GetSplits 获取拆分交易列表
+// 参数：
+//   - userID: 用户ID
+//   - parentID: 父交易ID
+// 返回：
+//   - []*response.TransactionResp: 拆分交易列表
+//   - error: 错误信息
 func (s *TransactionService) GetSplits(userID uint64, parentID uint64) ([]*response.TransactionResp, error) {
 	splits, err := s.txnRepo.GetSplits(parentID, userID)
 	if err != nil {
@@ -687,6 +706,15 @@ func (s *TransactionService) GetSplits(userID uint64, parentID uint64) ([]*respo
 
 // MergeSplits 合并拆分交易
 // 删除所有子交易，保留父交易
+// 业务流程：
+// 1. 验证父交易存在且不是子交易
+// 2. 获取所有拆分子交易
+// 3. 批量删除所有子交易
+// 参数：
+//   - userID: 用户ID
+//   - parentID: 父交易ID
+// 返回：
+//   - error: 错误信息
 func (s *TransactionService) MergeSplits(userID, parentID uint64) error {
 	// 验证父交易存在
 	parent, err := s.txnRepo.GetByID(parentID, userID)

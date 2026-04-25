@@ -22,6 +22,14 @@ type CronService struct {
 }
 
 // NewCronService 创建定时任务服务实例
+// 参数：
+//   - recurrenceService: 循环交易服务，用于执行到期的循环交易
+//   - billService: 账单服务，用于处理到期账单
+//   - billRepo: 账单数据访问对象，用于获取所有用户的到期账单
+//   - recurrenceRepo: 循环交易数据访问对象，用于获取到期循环交易
+//   - txnService: 交易服务，用于从账单创建交易（确保余额更新）
+// 返回：
+//   - *CronService: 定时任务服务实例
 func NewCronService(
 	recurrenceService *RecurrenceService,
 	billService *BillService,

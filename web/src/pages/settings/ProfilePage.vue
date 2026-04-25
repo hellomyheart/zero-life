@@ -44,21 +44,21 @@ const passwordFormRef = ref()
 
 // 个人资料表单验证规则 - 姓名必填、邮箱格式校验
 const profileRules: FormRules = {
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  name: [{ required: true, message: t('profile.nameRequired'), trigger: 'blur' }],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+    { required: true, message: t('profile.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('profile.emailInvalid'), trigger: 'blur' },
   ],
 }
 
 // 密码表单验证规则 - 新密码最小长度6位
 const passwordRules: FormRules = {
-  old_password: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  old_password: [{ required: true, message: t('profile.oldPasswordRequired'), trigger: 'blur' }],
   new_password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+    { required: true, message: t('profile.newPasswordRequired'), trigger: 'blur' },
+    { min: 6, message: t('profile.passwordMinLength'), trigger: 'blur' },
   ],
-  confirm_password: [{ required: true, message: '请确认新密码', trigger: 'blur' }],
+  confirm_password: [{ required: true, message: t('profile.confirmPasswordRequired'), trigger: 'blur' }],
 }
 
 /**

@@ -1,19 +1,28 @@
 <script setup lang="ts">
 // 规则列表页面 - 展示规则处理顺序支持启用禁用和手动执行
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, remove, toggleStatus, execute } from '@/api/rule'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Rule, CreateRuleReq } from '@/types/rule'
+import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 
+/** 规则列表数据 */
 const rules = ref<Rule[]>([])
+/** 加载状态 */
 const loading = ref(false)
+/** 对话框显示状态 */
 const dialogVisible = ref(false)
+/** 对话框标题 */
 const dialogTitle = ref('')
+/** 当前编辑的规则 ID，null表示新建 */
 const editingId = ref<string | null>(null)
+/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
+/** 规则创建/编辑表单数据 - 包含条件列表和动作列表 */
 const form = ref<CreateRuleReq>({
   name: '',
   conditions: [{ field: '', operator: '', value: '' }],
@@ -22,10 +31,16 @@ const form = ref<CreateRuleReq>({
   priority: 0,
 })
 
+/**
+ * 获取规则列表
+ * 传入分页参数，从后端获取当前页的数据和总记录数
+ */
 async function fetchRules() {
   loading.value = true
   try {
-    rules.value = await list() as unknown as Rule[]
+    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Rule[], total: number }
+    rules.value = res.items || []
+    pagination.total = res.total || 0
   } catch {
     // handle error
   } finally {
@@ -33,6 +48,29 @@ async function fetchRules() {
   }
 }
 
+/**
+ * 页码变化处理函数
+ * @param page 新的页码
+ */
+function handlePageChange(page: number) {
+  pagination.page = page
+  fetchRules()
+}
+
+/**
+ * 每页数量变化处理函数
+ * @param size 新的每页数量
+ */
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchRules()
+}
+
+/**
+ * 打开创建规则对话框
+ * 初始化表单，包含一个空条件和一个空动作
+ */
 function handleCreate() {
   dialogTitle.value = t('rule.create')
   editingId.value = null
@@ -46,6 +84,11 @@ function handleCreate() {
   dialogVisible.value = true
 }
 
+/**
+ * 打开编辑规则对话框
+ * 将现有规则的条件和动作映射到表单
+ * @param rule 要编辑的规则数据
+ */
 function handleEdit(rule: Rule) {
   dialogTitle.value = t('rule.edit')
   editingId.value = rule.id
@@ -59,6 +102,11 @@ function handleEdit(rule: Rule) {
   dialogVisible.value = true
 }
 
+/**
+ * 删除规则
+ * 弹出确认框后调用API删除
+ * @param id 规则ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('rule.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -163,6 +211,14 @@ function getActionSummary(rule: Rule): string {
         </template>
       </el-table-column>
     </el-table>
+
+    <Pagination
+      :total="pagination.total"
+      :page="pagination.page"
+      :page-size="pagination.page_size"
+      @update:page="handlePageChange"
+      @update:page-size="handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
       <el-form :model="form" label-width="80px">

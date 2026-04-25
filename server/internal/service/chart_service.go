@@ -1,4 +1,5 @@
-// Package service 业务逻辑层
+// Package service 业务逻辑层，实现核心业务逻辑
+// ChartService 图表业务逻辑，提供各类图表数据的计算和聚合
 package service
 
 import (
@@ -9,16 +10,26 @@ import (
 )
 
 // ChartService 图表服务
-// 提供各类图表数据的计算和聚合
+// 提供各类图表数据的计算和聚合，包括账户余额趋势、预算支出、分类分布、标签分布和交易趋势
+// 依赖txnRepo查询交易数据，依赖accountRepo查询账户信息，依赖budgetRepo查询预算数据
+// 依赖categoryRepo查询分类名称，依赖tagRepo查询标签名称
 type ChartService struct {
-	txnRepo     *repository.TransactionRepository
-	accountRepo *repository.AccountRepository
-	budgetRepo  *repository.BudgetRepository
-	categoryRepo *repository.CategoryRepository
-	tagRepo     *repository.TagRepository
+	txnRepo     *repository.TransactionRepository // 交易数据访问对象
+	accountRepo *repository.AccountRepository     // 账户数据访问对象
+	budgetRepo  *repository.BudgetRepository      // 预算数据访问对象
+	categoryRepo *repository.CategoryRepository   // 分类数据访问对象
+	tagRepo     *repository.TagRepository         // 标签数据访问对象
 }
 
 // NewChartService 创建图表服务实例
+// 参数：
+//   - txnRepo: 交易数据访问对象
+//   - accountRepo: 账户数据访问对象
+//   - budgetRepo: 预算数据访问对象
+//   - categoryRepo: 分类数据访问对象
+//   - tagRepo: 标签数据访问对象
+// 返回：
+//   - *ChartService: 图表服务实例
 func NewChartService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
@@ -49,7 +60,19 @@ type AccountBalanceData struct {
 }
 
 // AccountBalance 获取账户余额变化趋势
-// 计算指定时间范围内账户余额的变化
+// 业务流程：
+// 1. 获取账户信息（含初始余额）
+// 2. 获取时间范围内的所有交易
+// 3. 按日期计算每笔交易对账户余额的影响（支出/转出减少，收入/转入增加）
+// 4. 从初始余额开始，逐日累加生成余额趋势数据点
+// 参数：
+//   - userID: 用户ID
+//   - accountID: 账户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - *AccountBalanceData: 账户余额趋势数据
+//   - error: 错误信息
 func (s *ChartService) AccountBalance(userID, accountID uint64, startDate, endDate time.Time) (*AccountBalanceData, error) {
 	// 获取账户信息
 	account, err := s.accountRepo.GetByID(accountID, userID)
@@ -118,6 +141,16 @@ type BudgetSpendingData struct {
 }
 
 // BudgetSpending 获取预算支出数据
+// 业务流程：
+// 1. 获取预算信息（含预算金额）
+// 2. 计算已花费金额
+// 3. 计算剩余金额和支出百分比
+// 参数：
+//   - userID: 用户ID
+//   - budgetID: 预算ID
+// 返回：
+//   - *BudgetSpendingData: 预算支出数据
+//   - error: 错误信息
 func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingData, error) {
 	budget, err := s.budgetRepo.GetByID(budgetID, userID)
 	if err != nil {
@@ -155,6 +188,18 @@ type CategoryDistributionData struct {
 }
 
 // CategoryDistribution 获取分类支出/收入分布
+// 业务流程：
+// 1. 获取时间范围内的所有交易
+// 2. 根据chartType过滤交易类型（expense=支出，income=收入）
+// 3. 按分类汇总金额和计算百分比
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+//   - chartType: 图表类型（expense=支出分布，income=收入分布）
+// 返回：
+//   - []CategoryDistributionData: 分类分布数据列表
+//   - error: 错误信息
 func (s *ChartService) CategoryDistribution(userID uint64, startDate, endDate time.Time, chartType string) ([]CategoryDistributionData, error) {
 	// 获取时间范围内的交易
 	txns, err := s.txnRepo.GetByDateRange(userID, startDate, endDate)
@@ -214,6 +259,16 @@ type TagDistributionData struct {
 }
 
 // TagDistribution 获取标签分布
+// 业务流程：
+// 1. 获取时间范围内的所有交易
+// 2. 按标签汇总金额和计算百分比
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - []TagDistributionData: 标签分布数据列表
+//   - error: 错误信息
 func (s *ChartService) TagDistribution(userID uint64, startDate, endDate time.Time) ([]TagDistributionData, error) {
 	// 获取时间范围内的交易
 	txns, err := s.txnRepo.GetByDateRange(userID, startDate, endDate)
@@ -264,6 +319,17 @@ type TransactionTrendData struct {
 }
 
 // TransactionTrend 获取交易趋势数据
+// 业务流程：
+// 1. 获取时间范围内的所有交易
+// 2. 按日期和交易类型（收入/支出/转账）汇总金额
+// 3. 为每个日期生成三种类型的数据点（无交易的日期值为0）
+// 参数：
+//   - userID: 用户ID
+//   - startDate: 开始日期
+//   - endDate: 结束日期
+// 返回：
+//   - *TransactionTrendData: 交易趋势数据（含收入、支出、转账三条曲线）
+//   - error: 错误信息
 func (s *ChartService) TransactionTrend(userID uint64, startDate, endDate time.Time) (*TransactionTrendData, error) {
 	// 获取时间范围内的交易
 	txns, err := s.txnRepo.GetByDateRange(userID, startDate, endDate)

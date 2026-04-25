@@ -144,26 +144,27 @@ func (s *CategoryService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
+	// 在数据库事务中执行删除操作，确保数据一致性
 	return s.db.Transaction(func(dbTx *gorm.DB) error {
-		// Get sub-categories
+		// 步骤1：获取所有子分类
 		subCategories, err := s.categoryRepo.GetSubCategories(id, userID)
 		if err != nil {
 			return err
 		}
 
-		// Delete sub-categories
+		// 步骤2：删除所有子分类
 		for _, sub := range subCategories {
 			if err := s.categoryRepo.Delete(sub.ID, userID); err != nil {
 				return err
 			}
 		}
 
-		// Nullify category_id on associated transactions
+		// 步骤3：将关联交易的分类ID设为NULL（避免外键约束错误）
 		if err := dbTx.Model(&model.Transaction{}).Where("category_id = ?", id).Update("category_id", nil).Error; err != nil {
 			return err
 		}
 
-		// Delete the category
+		// 步骤4：删除分类本身
 		return s.categoryRepo.Delete(id, userID)
 	})
 }

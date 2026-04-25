@@ -135,7 +135,7 @@ onMounted(async () => {
       </el-table-column>
       <el-table-column :label="t('common.edit')" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="handleDetail(row.id)">{{ t('common.confirm') }}</el-button>
+          <el-button link type="primary" @click="handleDetail(row.id)">{{ t('budget.detail') }}</el-button>
           <el-button link type="primary" @click="handleEdit(row)">{{ t('common.edit') }}</el-button>
           <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
         </template>
@@ -152,9 +152,9 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item :label="t('budget.period')">
           <el-select v-model="form.period">
-            <el-option label="Monthly" value="monthly" />
-            <el-option label="Quarterly" value="quarterly" />
-            <el-option label="Yearly" value="yearly" />
+            <el-option :label="t('budget.monthly')" value="monthly" />
+            <el-option :label="t('budget.quarterly')" value="quarterly" />
+            <el-option :label="t('budget.yearly')" value="yearly" />
           </el-select>
         </el-form-item>
         <!-- 分类多选下拉框 - 选择预算关联的多个分类 -->

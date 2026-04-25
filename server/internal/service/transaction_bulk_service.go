@@ -130,27 +130,27 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 
 	newType := model.TransactionType(req.Type)
 
-	// Calculate old balance changes
+	// 计算旧余额变更（转换前的余额影响）
 	oldChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
 
-	// Apply type conversion
+	// 根据转换类型更新交易字段
 	switch {
 	case txn.Type == model.TransactionTypeWithdrawal && newType == model.TransactionTypeDeposit:
-		// withdrawal -> deposit: source becomes destination, need a new source (revenue account)
+		// 支出转收入：源账户变为目标账户，需要指定新的源账户（收入类账户）
 		if req.SourceID != nil {
 			txn.SourceID = *req.SourceID
 		}
 		txn.Type = newType
 
 	case txn.Type == model.TransactionTypeDeposit && newType == model.TransactionTypeWithdrawal:
-		// deposit -> withdrawal: source stays, just change type
+		// 收入转支出：源账户保持不变，仅更改类型
 		if req.SourceID != nil {
 			txn.SourceID = *req.SourceID
 		}
 		txn.Type = newType
 
 	case newType == model.TransactionTypeTransfer:
-		// any -> transfer: need both source and destination
+		// 任意类型转转账：必须同时提供源账户和目标账户
 		if req.SourceID == nil || req.DestinationID == nil {
 			return nil, errcode.ErrInvalidTxnType
 		}
@@ -159,7 +159,7 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 		txn.Type = newType
 
 	case txn.Type == model.TransactionTypeTransfer && newType != model.TransactionTypeTransfer:
-		// transfer -> deposit/withdrawal
+		// 转账转支出/收入：移除目标账户
 		if req.SourceID != nil {
 			txn.SourceID = *req.SourceID
 		}
@@ -170,10 +170,11 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 		return nil, errcode.ErrInvalidTxnType
 	}
 
-	// Calculate new balance changes
+	// 计算新余额变更（转换后的余额影响）
 	newChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
 
-	// Net changes: new - old
+	// 计算净余额变更 = 新变更 - 旧变更
+	// 对每个受影响的账户，净变更 = 新影响 - 旧影响
 	netChanges := make(map[uint64]decimal.Decimal)
 	for accountID, change := range newChanges {
 		netChanges[accountID] = change

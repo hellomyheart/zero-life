@@ -187,8 +187,8 @@ onMounted(() => {
         :total="total"
         :page="filter.page"
         :page-size="filter.page_size"
-        @page-change="handlePageChange"
-        @size-change="handleSizeChange"
+        @update:page="handlePageChange"
+        @update:page-size="handleSizeChange"
       />
     </el-card>
 

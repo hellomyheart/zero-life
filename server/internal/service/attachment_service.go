@@ -71,14 +71,17 @@ func NewAttachmentService(attachmentRepo *repository.AttachmentRepository, stora
 //   - *response.AttachmentResp: 附件信息
 //   - error: 错误信息
 func (s *AttachmentService) Upload(userID uint64, attachableType string, attachableID uint64, fileHeader *multipart.FileHeader) (*response.AttachmentResp, error) {
+	// 步骤1：验证关联实体类型是否允许（transaction/account/bill/budget/piggy_bank）
 	if !allowedAttachableTypes[attachableType] {
 		return nil, errcode.ErrBadRequest
 	}
 
+	// 步骤2：验证文件大小不超过10MB
 	if fileHeader.Size > maxFileSize {
 		return nil, errcode.ErrBadRequest
 	}
 
+	// 步骤3：验证MIME类型是否允许（图片/PDF/CSV/OFX/QIF）
 	mime := fileHeader.Header.Get("Content-Type")
 	if !allowedMimeTypes[mime] {
 		return nil, errcode.ErrBadRequest
@@ -90,11 +93,13 @@ func (s *AttachmentService) Upload(userID uint64, attachableType string, attacha
 	}
 	defer file.Close()
 
+	// 步骤4：生成UUID文件名，按 用户ID/实体类型/实体ID 目录结构存储
 	ext := filepath.Ext(fileHeader.Filename)
 	fileUUID := uuid.New().String() + ext
 	relativePath := filepath.Join(fmt.Sprintf("%d", userID), attachableType, fmt.Sprintf("%d", attachableID), fileUUID)
 	fullPath := filepath.Join(s.storagePath, relativePath)
 
+	// 步骤5：保存文件到磁盘
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -110,6 +115,7 @@ func (s *AttachmentService) Upload(userID uint64, attachableType string, attacha
 		return nil, errcode.ErrInternal
 	}
 
+	// 步骤6：创建附件元数据记录到数据库
 	attachment := &model.Attachment{
 		UserID:         userID,
 		AttachableType: attachableType,

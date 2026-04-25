@@ -1,19 +1,27 @@
 <script setup lang="ts">
 // Webhook列表页面 - 配置事件通知发送到URL和触发条件
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/webhook'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Webhook, CreateWebhookReq, UpdateWebhookReq } from '@/types/webhook'
+import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 
+/** Webhook列表数据 */
 const webhooks = ref<Webhook[]>([])
+/** 加载状态 */
 const loading = ref(false)
+/** 对话框显示状态 */
 const dialogVisible = ref(false)
+/** 对话框标题 */
 const dialogTitle = ref('')
+/** 当前编辑的Webhook ID，null表示新建 */
 const editingId = ref<string | null>(null)
+/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
+const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
 const triggerOptions = [
   { value: 'STORE_TRANSACTION', label: 'Store Transaction' },
@@ -23,16 +31,40 @@ const triggerOptions = [
 
 const form = ref<CreateWebhookReq>({ name: '', url: '', trigger: 'STORE_TRANSACTION' })
 
+/**
+ * 获取Webhook列表
+ * 传入分页参数，从后端获取当前页的数据和总记录数
+ */
 async function fetchWebhooks() {
   loading.value = true
   try {
-    const res = await list({}) as unknown as { items: Webhook[] }
+    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Webhook[], total: number }
     webhooks.value = res.items || []
+    pagination.total = res.total || 0
   } catch {
     // handle error
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 页码变化处理函数
+ * @param page 新的页码
+ */
+function handlePageChange(page: number) {
+  pagination.page = page
+  fetchWebhooks()
+}
+
+/**
+ * 每页数量变化处理函数
+ * @param size 新的每页数量
+ */
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchWebhooks()
 }
 
 function handleCreate() {
@@ -108,6 +140,14 @@ onMounted(fetchWebhooks)
         </template>
       </el-table-column>
     </el-table>
+
+    <Pagination
+      :total="pagination.total"
+      :page="pagination.page"
+      :page-size="pagination.page_size"
+      @update:page="handlePageChange"
+      @update:page-size="handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="80px">

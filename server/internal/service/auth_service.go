@@ -103,17 +103,29 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 	}, nil
 }
 
+// Login 用户登录
+// 业务流程：
+// 1. 检查账户是否被锁定（Redis中存在锁定键则拒绝登录）
+// 2. 根据邮箱查找用户
+// 3. 验证密码是否正确
+// 4. 密码错误时：记录失败次数到Redis，连续失败5次则锁定账户30分钟
+// 5. 密码正确时：清除失败计数，生成JWT令牌对
+// 参数：
+//   - req: 登录请求（邮箱、密码）
+// 返回：
+//   - *response.LoginResp: 登录响应（包含访问令牌和刷新令牌）
+//   - error: 错误信息（如账户锁定、凭证错误）
 func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) {
 	ctx := context.Background()
 
-	// Check if account is locked
+	// 步骤1：检查账户是否被锁定（Redis中存在锁定键则拒绝登录）
 	lockKey := loginLockKeyPrefix + req.Email
 	locked, err := s.rdb.Exists(ctx, lockKey).Result()
 	if err == nil && locked > 0 {
 		return nil, errcode.ErrAccountLocked
 	}
 
-	// Find user
+	// 步骤2：根据邮箱查找用户
 	user, err := s.authRepo.FindByEmail(req.Email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -122,15 +134,17 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 		return nil, errcode.ErrInternal
 	}
 
-	// Check password
+	// 步骤3：验证密码
 	if !hash.CheckPassword(req.Password, user.Password) {
-		// Record failed attempt
+		// 步骤3a：密码错误，记录失败次数到Redis
 		failKey := loginFailKeyPrefix + req.Email
 		count, _ := s.rdb.Incr(ctx, failKey).Result()
 		if count == 1 {
+			// 首次失败，设置失败计数器的过期时间（与锁定时长相同）
 			s.rdb.Expire(ctx, failKey, loginLockDuration)
 		}
 		if count >= maxLoginFails {
+			// 连续失败5次，锁定账户30分钟，并清除失败计数器
 			s.rdb.Set(ctx, lockKey, "1", loginLockDuration)
 			s.rdb.Del(ctx, failKey)
 			return nil, errcode.ErrAccountLocked
@@ -138,11 +152,11 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 		return nil, errcode.ErrInvalidCredential
 	}
 
-	// Clear fail count on success
+	// 步骤4：密码正确，清除失败计数
 	failKey := loginFailKeyPrefix + req.Email
 	s.rdb.Del(ctx, failKey)
 
-	// Generate token pair
+	// 步骤5：生成JWT令牌对
 	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -155,6 +169,17 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 	}, nil
 }
 
+// RefreshToken 刷新访问令牌
+// 使用刷新令牌获取新的访问令牌对
+// 业务流程：
+// 1. 解析刷新令牌获取用户信息
+// 2. 验证用户仍然存在（防止已删除用户的令牌继续使用）
+// 3. 生成新的JWT令牌对
+// 参数：
+//   - refreshToken: 刷新令牌
+// 返回：
+//   - *response.LoginResp: 新的令牌对
+//   - error: 错误信息（如令牌无效）
 func (s *AuthService) RefreshToken(refreshToken string) (*response.LoginResp, error) {
 	claims, err := s.jwtService.ParseRefreshToken(refreshToken)
 	if err != nil {
@@ -179,6 +204,16 @@ func (s *AuthService) RefreshToken(refreshToken string) (*response.LoginResp, er
 	}, nil
 }
 
+// ForgotPassword 忘记密码
+// 业务流程：
+// 1. 查找用户（用户不存在时不暴露此信息，直接返回nil防止邮箱枚举攻击）
+// 2. 生成32字节随机令牌
+// 3. 将令牌存入Redis，有效期24小时，值为用户ID
+// 4. 发送包含重置链接的邮件（发送失败不阻断请求，令牌仍有效）
+// 参数：
+//   - emailAddr: 用户邮箱地址
+// 返回：
+//   - error: 错误信息（注意：用户不存在时也返回nil）
 func (s *AuthService) ForgotPassword(emailAddr string) error {
 	// Check user exists
 	user, err := s.authRepo.FindByEmail(emailAddr)
@@ -215,6 +250,17 @@ func (s *AuthService) ForgotPassword(emailAddr string) error {
 	return nil
 }
 
+// ResetPassword 重置密码
+// 业务流程：
+// 1. 从Redis中验证重置令牌，获取用户ID
+// 2. 验证用户存在
+// 3. 加密新密码并更新用户记录
+// 4. 删除已使用的令牌（防止重复使用）
+// 参数：
+//   - token: 密码重置令牌（由ForgotPassword生成）
+//   - newPassword: 新密码
+// 返回：
+//   - error: 错误信息（如令牌无效、用户不存在）
 func (s *AuthService) ResetPassword(token, newPassword string) error {
 	ctx := context.Background()
 	key := resetTokenKeyPrefix + token
@@ -250,6 +296,12 @@ func (s *AuthService) ResetPassword(token, newPassword string) error {
 	return nil
 }
 
+// GetProfile 获取用户个人资料
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - *response.ProfileResp: 用户资料信息
+//   - error: 错误信息
 func (s *AuthService) GetProfile(userID uint64) (*response.ProfileResp, error) {
 	user, err := s.authRepo.GetByID(userID)
 	if err != nil {
@@ -266,6 +318,14 @@ func (s *AuthService) GetProfile(userID uint64) (*response.ProfileResp, error) {
 	}, nil
 }
 
+// UpdateProfile 更新用户个人资料
+// 支持更新昵称、语言、时区（部分更新，仅更新提供的字段）
+// 参数：
+//   - userID: 用户ID
+//   - req: 更新请求参数
+// 返回：
+//   - *response.ProfileResp: 更新后的用户资料
+//   - error: 错误信息
 func (s *AuthService) UpdateProfile(userID uint64, req *request.UpdateProfileReq) (*response.ProfileResp, error) {
 	user, err := s.authRepo.GetByID(userID)
 	if err != nil {
@@ -296,6 +356,16 @@ func (s *AuthService) UpdateProfile(userID uint64, req *request.UpdateProfileReq
 	}, nil
 }
 
+// ChangePassword 修改密码
+// 业务流程：
+// 1. 验证旧密码是否正确
+// 2. 加密新密码
+// 3. 更新用户密码
+// 参数：
+//   - userID: 用户ID
+//   - req: 修改密码请求（含旧密码和新密码）
+// 返回：
+//   - error: 错误信息（如旧密码错误）
 func (s *AuthService) ChangePassword(userID uint64, req *request.ChangePasswordReq) error {
 	user, err := s.authRepo.GetByID(userID)
 	if err != nil {

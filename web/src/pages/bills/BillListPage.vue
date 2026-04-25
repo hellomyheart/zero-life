@@ -1,6 +1,13 @@
 <script setup lang="ts">
-// 账单列表页面 - 展示账单重复频率和到期日
-import { ref, onMounted } from 'vue'
+/**
+ * 账单列表页面
+ * 功能：
+ * - 展示账单列表，支持分页
+ * - 显示账单重复频率、到期日和逾期状态
+ * - 支持创建、编辑、删除账单
+ * - 关联账户和分类选择
+ */
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/bill'
 import { formatAmount, formatDate } from '@/utils/format'
@@ -9,19 +16,31 @@ import { useAccountStore } from '@/stores/account'
 import { useCategoryStore } from '@/stores/category'
 import type { Bill, CreateBillReq } from '@/types/bill'
 import { RepeatRule } from '@/types/bill'
+import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
-// 账户状态管理 - 用于获取账户下拉选项
 const accountStore = useAccountStore()
-// 分类状态管理 - 用于获取分类下拉选项
 const categoryStore = useCategoryStore()
 
+/** 账单列表数据 */
 const bills = ref<Bill[]>([])
+/** 加载状态 */
 const loading = ref(false)
+/** 对话框显示状态 */
 const dialogVisible = ref(false)
+/** 对话框标题 */
 const dialogTitle = ref('')
+/** 当前编辑的账单ID，null表示新建模式 */
 const editingId = ref<string | null>(null)
 
+/** 分页参数 */
+const pagination = reactive({
+  page: 1,
+  page_size: 20,
+  total: 0,
+})
+
+/** 表单数据 - 创建/编辑账单时使用 */
 const form = ref<CreateBillReq>({
   name: '',
   amount: '0',
@@ -32,6 +51,7 @@ const form = ref<CreateBillReq>({
   description: '',
 })
 
+/** 重复规则选项 */
 const repeatRuleOptions = [
   { value: RepeatRule.Daily, label: t('bill.daily') },
   { value: RepeatRule.Weekly, label: t('bill.weekly') },
@@ -40,10 +60,17 @@ const repeatRuleOptions = [
   { value: RepeatRule.Yearly, label: t('bill.yearly') },
 ]
 
+/**
+ * 获取账单列表
+ * 从后端API获取账单数据
+ */
 async function fetchBills() {
   loading.value = true
   try {
-    bills.value = await list() as unknown as Bill[]
+    const res = await list({ page: pagination.page, page_size: pagination.page_size } as any)
+    const data = res as unknown as { items: Bill[]; total: number }
+    bills.value = data.items || (res as unknown as Bill[])
+    pagination.total = data.total || 0
   } catch {
     // handle error
   } finally {
@@ -51,6 +78,7 @@ async function fetchBills() {
   }
 }
 
+/** 打开创建账单对话框 */
 function handleCreate() {
   dialogTitle.value = t('bill.create')
   editingId.value = null
@@ -58,6 +86,10 @@ function handleCreate() {
   dialogVisible.value = true
 }
 
+/**
+ * 打开编辑账单对话框
+ * @param bill 要编辑的账单数据
+ */
 function handleEdit(bill: Bill) {
   dialogTitle.value = t('bill.edit')
   editingId.value = bill.id
@@ -73,6 +105,10 @@ function handleEdit(bill: Bill) {
   dialogVisible.value = true
 }
 
+/**
+ * 删除账单
+ * @param id 账单ID
+ */
 async function handleDelete(id: string) {
   try {
     await ElMessageBox.confirm(t('bill.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -84,6 +120,10 @@ async function handleDelete(id: string) {
   }
 }
 
+/**
+ * 提交表单
+ * 根据editingId判断是创建还是编辑操作
+ */
 async function handleSubmit() {
   if (!form.value.name) {
     ElMessage.warning(t('common.required'))
@@ -103,8 +143,20 @@ async function handleSubmit() {
   }
 }
 
+/** 页码变化 */
+function handlePageChange(page: number) {
+  pagination.page = page
+  fetchBills()
+}
+
+/** 每页数量变化 */
+function handleSizeChange(size: number) {
+  pagination.page_size = size
+  pagination.page = 1
+  fetchBills()
+}
+
 onMounted(async () => {
-  // 打开页面时同时加载账户和分类列表，供下拉选择使用
   await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
   await fetchBills()
 })
@@ -142,6 +194,14 @@ onMounted(async () => {
         </template>
       </el-table-column>
     </el-table>
+
+    <Pagination
+      :total="pagination.total"
+      :page="pagination.page"
+      :page-size="pagination.page_size"
+      @update:page="handlePageChange"
+      @update:page-size="handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">

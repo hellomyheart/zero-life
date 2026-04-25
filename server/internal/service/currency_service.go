@@ -93,13 +93,14 @@ func (s *CurrencyService) SetDefault(id uint64) error {
 		return errcode.ErrDefaultCurrency
 	}
 
-	// Unset current default
+	// 先取消当前默认货币的默认标记（确保系统中只有一个默认货币）
 	currentDefault, err := s.currencyRepo.GetDefault()
 	if err == nil && currentDefault != nil {
 		currentDefault.IsDefault = false
 		s.currencyRepo.Update(currentDefault)
 	}
 
+	// 然后设置新货币为默认
 	currency.IsDefault = true
 	return s.currencyRepo.Update(currency)
 }

@@ -20,7 +20,11 @@
     "webhooks": "Webhook",
     "attachments": "附件",
     "reconciliations": "对账",
-    "settings": "设置"
+    "settings": "设置",
+    "exchangeRates": "汇率",
+    "objectGroups": "对象分组",
+    "transactionLinks": "交易关联",
+    "preferences": "偏好设置"
   },
   "report": {
     "incomeExpense": "收支概览",
@@ -28,13 +32,28 @@
     "budget": "预算报表",
     "netWorth": "净值报表",
     "trend": "趋势报表",
-    "tag": "标签报表"
+    "tag": "标签报表",
+    "incomeByAccount": "按账户收入",
+    "expenseByAccount": "按账户支出",
+    "incomeByCategory": "按分类收入",
+    "expenseByCategory": "按分类支出",
+    "incomeByTag": "按标签收入",
+    "expenseByTag": "按标签支出",
+    "totalAssets": "总资产",
+    "totalLiabilities": "总负债",
+    "netWorthTrend": "净值趋势",
+    "income": "收入",
+    "expense": "支出",
+    "netIncome": "净收入",
+    "percentage": "占比",
+    "date": "日期"
   },
   "setting": {
     "profile": "个人设置",
     "currencies": "货币管理",
     "mfa": "两步验证",
-    "users": "用户管理"
+    "users": "用户管理",
+    "preferences": "偏好设置"
   },
   "auth": {
     "login": "登录",
@@ -74,7 +93,8 @@
     "expense": "支出",
     "income": "收入",
     "liability": "负债",
-    "deleteConfirm": "确定要删除该账户吗？"
+    "deleteConfirm": "确定要删除该账户吗？",
+    "notes": "备注"
   },
   "transaction": {
     "title": "交易管理",
@@ -96,7 +116,10 @@
     "enableSplits": "启用拆分",
     "search": "搜索交易",
     "filter": "筛选",
-    "deleteConfirm": "确定要删除该交易吗？"
+    "deleteConfirm": "确定要删除该交易吗？",
+    "notes": "备注",
+    "addSplit": "添加拆分",
+    "removeSplit": "移除拆分"
   },
   "category": {
     "title": "分类管理",
@@ -105,7 +128,9 @@
     "delete": "删除分类",
     "name": "分类名称",
     "parent": "父级分类",
-    "deleteConfirm": "确定要删除该分类吗？"
+    "deleteConfirm": "确定要删除该分类吗？",
+    "icon": "图标",
+    "noParent": "无父级分类"
   },
   "tag": {
     "title": "标签管理",
@@ -137,7 +162,9 @@
     "normal": "正常",
     "warning": "预警",
     "exceeded": "超支",
-    "deleteConfirm": "确定要删除该预算吗？"
+    "deleteConfirm": "确定要删除该预算吗？",
+    "detail": "详情",
+    "remaining": "剩余"
   },
   "bill": {
     "title": "账单管理",
@@ -154,7 +181,8 @@
     "monthly": "每月",
     "quarterly": "每季度",
     "yearly": "每年",
-    "deleteConfirm": "确定要删除该账单吗？"
+    "deleteConfirm": "确定要删除该账单吗？",
+    "description": "描述"
   },
   "currency": {
     "title": "货币管理",
@@ -167,7 +195,8 @@
     "exchangeRate": "汇率",
     "sourceCurrency": "源货币",
     "targetCurrency": "目标货币",
-    "rate": "汇率"
+    "rate": "汇率",
+    "decimalPlaces": "小数位数"
   },
   "rule": {
     "title": "规则管理",
@@ -186,7 +215,11 @@
     "operator": "运算符",
     "value": "值",
     "actionType": "动作类型",
-    "deleteConfirm": "确定要删除该规则吗？"
+    "deleteConfirm": "确定要删除该规则吗？",
+    "addCondition": "添加条件",
+    "addAction": "添加动作",
+    "group": "规则组",
+    "stopProcessing": "停止后续处理"
   },
   "import": {
     "title": "数据导入",
@@ -195,7 +228,12 @@
     "execute": "确认导入",
     "columnMapping": "列映射",
     "preview": "数据预览",
-    "fileType": "CSV 文件"
+    "fileType": "CSV 文件",
+    "dragTip": "将文件拖到此处，或点击上传",
+    "step1": "上传文件",
+    "step2": "列映射",
+    "step3": "数据预览",
+    "step4": "确认导入"
   },
   "dashboard": {
     "income": "本月收入",
@@ -227,17 +265,67 @@
     "inputPlaceholder": "请输入",
     "required": "此项为必填项",
     "startDate": "开始日期",
-    "endDate": "结束日期"
+    "endDate": "结束日期",
+    "add": "添加",
+    "actions": "操作",
+    "id": "ID",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "fetchError": "获取数据失败",
+    "submitError": "提交失败",
+    "deleteError": "删除失败",
+    "confirmDelete": "确定要删除吗？",
+    "warning": "警告",
+    "select": "请选择",
+    "date": "日期",
+    "passwordMismatch": "两次输入的密码不一致",
+    "detail": "详情",
+    "all": "全部",
+    "name": "名称",
+    "status": "状态",
+    "type": "类型",
+    "description": "描述",
+    "notes": "备注",
+    "amount": "金额",
+    "page": "页码",
+    "pageSize": "每页数量",
+    "loading": "加载中...",
+    "noMoreData": "没有更多数据",
+    "operationConfirm": "确认执行此操作？",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "prev": "上一步",
+    "finish": "完成",
+    "refresh": "刷新",
+    "download": "下载",
+    "upload": "上传",
+    "view": "查看",
+    "copy": "复制",
+    "enable": "启用",
+    "disable": "禁用",
+    "active": "启用",
+    "inactive": "禁用"
   },
   "profile": {
     "title": "个人设置",
     "nickname": "昵称",
+    "name": "姓名",
+    "email": "邮箱",
     "language": "语言偏好",
     "timezone": "时区",
     "changePassword": "修改密码",
     "oldPassword": "旧密码",
     "newPassword": "新密码",
-    "confirmNewPassword": "确认新密码"
+    "confirmNewPassword": "确认新密码",
+    "passwordMismatch": "两次输入的密码不一致",
+    "nameRequired": "请输入姓名",
+    "emailRequired": "请输入邮箱",
+    "emailInvalid": "请输入有效的邮箱地址",
+    "oldPasswordRequired": "请输入旧密码",
+    "newPasswordRequired": "请输入新密码",
+    "passwordMinLength": "密码长度不能少于6位",
+    "confirmPasswordRequired": "请确认新密码"
   },
   "piggyBank": {
     "title": "储蓄罐管理",
@@ -252,7 +340,11 @@
     "amount": "金额",
     "addMoney": "存入",
     "removeMoney": "取出",
-    "deleteConfirm": "确定要删除该储蓄罐吗？"
+    "deleteConfirm": "确定要删除该储蓄罐吗？",
+    "account": "关联账户",
+    "events": "存取记录",
+    "resetHistory": "重置历史",
+    "reorder": "重新排序"
   },
   "recurringTransaction": {
     "title": "定期交易",
@@ -272,7 +364,8 @@
     "weekly": "每周",
     "monthly": "每月",
     "yearly": "每年",
-    "deleteConfirm": "确定要删除该定期交易吗？"
+    "deleteConfirm": "确定要删除该定期交易吗？",
+    "inactive": "已停用"
   },
   "webhook": {
     "title": "Webhook 管理",
@@ -283,7 +376,11 @@
     "trigger": "触发事件",
     "active": "启用",
     "lastDelivered": "最后推送",
-    "deleteConfirm": "确定要删除该 Webhook 吗？"
+    "deleteConfirm": "确定要删除该 Webhook 吗？",
+    "deliveries": "推送记录",
+    "triggerCreate": "交易创建",
+    "triggerUpdate": "交易更新",
+    "triggerDelete": "交易删除"
   },
   "export": {
     "title": "数据导出",
@@ -292,7 +389,10 @@
     "accounts": "账户数据",
     "budgets": "预算数据",
     "categories": "分类数据",
-    "tags": "标签数据"
+    "tags": "标签数据",
+    "dateRange": "日期范围",
+    "exportSuccess": "导出成功",
+    "exportFailed": "导出失败"
   },
   "attachment": {
     "title": "附件管理",
@@ -303,7 +403,10 @@
     "size": "大小",
     "createdAt": "上传时间",
     "download": "下载",
-    "deleteConfirm": "确定要删除该附件吗？"
+    "deleteConfirm": "确定要删除该附件吗？",
+    "dragTip": "将文件拖到此处，或点击上传",
+    "attachableType": "关联类型",
+    "attachableId": "关联ID"
   },
   "reconciliation": {
     "title": "对账管理",
@@ -313,7 +416,10 @@
     "endBalance": "结束余额",
     "difference": "差额",
     "status": "状态",
-    "deleteConfirm": "确定要删除该对账记录吗？"
+    "deleteConfirm": "确定要删除该对账记录吗？",
+    "account": "对账账户",
+    "completed": "已完成",
+    "pending": "进行中"
   },
   "mfa": {
     "title": "两步验证设置",
@@ -323,7 +429,11 @@
     "disable": "禁用",
     "scanQR": "请使用验证器App扫描以下二维码",
     "secret": "密钥",
-    "enterCode": "输入验证码"
+    "enterCode": "输入验证码",
+    "enabled": "已启用",
+    "disabled": "未启用",
+    "verifyCode": "验证码",
+    "disableConfirm": "确定要禁用两步验证吗？禁用后账户安全性将降低。"
   },
   "user": {
     "title": "用户管理",
@@ -331,7 +441,13 @@
     "locked": "已锁定",
     "lock": "锁定",
     "unlock": "解锁",
-    "deleteConfirm": "确定要删除该用户吗？"
+    "deleteConfirm": "确定要删除该用户吗？",
+    "admin": "管理员",
+    "user": "普通用户",
+    "email": "邮箱",
+    "name": "姓名",
+    "language": "语言",
+    "registeredAt": "注册时间"
   },
   "objectGroup": {
     "title": "对象分组管理",
@@ -343,7 +459,11 @@
     "entityId": "实体 ID",
     "namePlaceholder": "请输入分组名称",
     "entityIdPlaceholder": "请输入关联实体 ID",
-    "deleteConfirm": "确定要删除该分组吗？"
+    "deleteConfirm": "确定要删除该分组吗？",
+    "typeTransaction": "交易",
+    "typeBill": "账单",
+    "typeBudget": "预算",
+    "typePiggyBank": "储蓄罐"
   },
   "transactionLink": {
     "title": "交易关联管理",
@@ -353,7 +473,10 @@
     "linkedJournal": "关联交易日志 ID",
     "transactionPlaceholder": "请输入交易 ID",
     "linkedJournalPlaceholder": "请输入关联交易日志 ID",
-    "deleteConfirm": "确定要删除该关联吗？"
+    "deleteConfirm": "确定要删除该关联吗？",
+    "typeRolledBack": "回滚",
+    "typeReconciled": "已对账",
+    "typeLinked": "已关联"
   },
   "preference": {
     "title": "偏好设置管理",
@@ -361,6 +484,20 @@
     "value": "偏好值",
     "keyPlaceholder": "请输入偏好键（如：list_page_size）",
     "valuePlaceholder": "请输入偏好值",
-    "deleteConfirm": "确定要删除该偏好吗？"
+    "deleteConfirm": "确定要删除该偏好吗？",
+    "keyPattern": "偏好键只能包含小写字母、数字和下划线"
+  },
+  "exchangeRate": {
+    "title": "汇率管理",
+    "create": "新建汇率",
+    "edit": "编辑汇率",
+    "delete": "删除汇率",
+    "fromCurrency": "源货币",
+    "toCurrency": "目标货币",
+    "date": "日期",
+    "rate": "汇率",
+    "deleteConfirm": "确定要删除该汇率吗？",
+    "fromCurrencyId": "源货币ID",
+    "toCurrencyId": "目标货币ID"
   }
 }

@@ -546,6 +546,7 @@ type RuleTrigger interface {
 // 返回：
 //   - error: 错误信息
 func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, triggerType string) error {
+	// 获取用户所有启用的规则，按优先级排序
 	rules, err := s.ruleRepo.GetEnabledRules(userID)
 	if err != nil {
 		log.Printf("[RuleService] TriggerRules: failed to get enabled rules for user %d: %v", userID, err)
@@ -555,6 +556,7 @@ func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, trigge
 	// Filter rules by trigger type and sort by group order then priority
 	// GetEnabledRules already sorts by priority ASC, id ASC
 	// We further filter by trigger type
+	// 按触发类型过滤规则（on_create/on_update）
 	matchingRules := make([]model.Rule, 0)
 	for _, rule := range rules {
 		if rule.Trigger == model.RuleTrigger(triggerType) {
@@ -566,6 +568,7 @@ func (s *RuleService) TriggerRules(userID uint64, txn *model.Transaction, trigge
 	// Since we don't have group info preloaded in the rule list,
 	// we sort by priority (already sorted from repo) and process in order.
 	// For full group-order sorting, we would need to join with rule_groups table.
+	// 按优先级顺序执行匹配的规则，单条规则失败不阻止后续规则执行
 	for _, rule := range matchingRules {
 		if s.matchTransaction(&rule, txn) {
 			if !s.applyActions(userID, rule.Actions, txn) {
