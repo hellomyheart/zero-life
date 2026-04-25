@@ -39,6 +39,11 @@ const rules: FormRules = {
   initial_balance: [{ required: true, message: t('common.required'), trigger: 'blur' }],
 }
 
+const selectedCurrencyCode = computed(() => {
+  const c = currencyStore.currencies.find((c: { id: number }) => c.id === form.currency_id)
+  return c?.code || 'CNY'
+})
+
 const accountTypeOptions = [
   { value: AccountType.Asset, label: t('account.asset') },
   { value: AccountType.Expense, label: t('account.expense') },
@@ -119,7 +124,7 @@ async function handleSubmit() {
           <CurrencySelect v-model="form.currency_id" :currencies="currencyStore.currencies" mode="id" :disabled="isEdit" />
         </el-form-item>
         <el-form-item :label="t('account.initialBalance')" prop="initial_balance">
-          <AmountInput v-model="form.initial_balance" :currency="currencyStore.defaultCurrency?.code || 'CNY'" :disabled="isEdit" />
+          <AmountInput v-model="form.initial_balance" :currency="selectedCurrencyCode" :disabled="isEdit" />
         </el-form-item>
         <el-form-item :label="t('account.isVirtual')">
           <el-switch v-model="form.is_virtual" />
