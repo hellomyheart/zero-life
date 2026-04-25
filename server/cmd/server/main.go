@@ -1,6 +1,23 @@
-// Package main 是服务器入口，负责初始化并启动HTTP服务
-// 启动流程：加载配置 → 初始化日志 → 连接数据库 → 数据库迁移 → 初始化Redis
-// → 创建JWT服务 → 创建Repository → 创建Service → 创建Controller → 设置路由 → 启动HTTP服务
+// @title           Zero-Life API
+// @version         1.0
+// @description     Zero-Life 财务管理系统后端API，提供账户、交易、分类、标签、预算、账单、货币、规则、报表等功能
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Zero-Life
+// @contact.url    https://github.com/hellomyheart/zero-life
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
+// @externalDocs.description  OpenAPI
+// @externalDocs.url          https://swagger.io/resources/open-api/
 package main
 
 import (
