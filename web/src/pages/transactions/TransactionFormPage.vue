@@ -25,9 +25,20 @@ const loading = ref(false)
 const isEdit = computed(() => !!route.params.id)
 const enableSplits = ref(false)
 
+// 获取当前本地时间，格式为 YYYY-MM-DD HH:mm（带设备时区）
+function getLocalDateTimeStr(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const h = String(now.getHours()).padStart(2, '0')
+  const min = String(now.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d} ${h}:${min}`
+}
+
 const form = reactive<CreateTransactionReq>({
   type: TransactionType.Withdrawal,
-  date: new Date().toISOString().slice(0, 10),
+  date: getLocalDateTimeStr(),
   description: '',
   amount: '0',
   source_account_id: '',
@@ -121,7 +132,7 @@ async function handleSubmit() {
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('transaction.date')" prop="date">
-          <el-date-picker v-model="form.date" type="date" value-format="YYYY-MM-DD" />
+          <el-date-picker v-model="form.date" type="datetime" value-format="YYYY-MM-DD HH:mm" />
         </el-form-item>
         <el-form-item :label="t('transaction.description')">
           <el-input v-model="form.description" :placeholder="t('common.inputPlaceholder')" />

@@ -3,6 +3,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -66,7 +67,7 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 		return nil, errcode.ErrInvalidAmount
 	}
 
-	date, err := time.Parse("2006-01-02", req.Date)
+	date, err := parseDateTime(req.Date)
 	if err != nil {
 		return nil, errcode.ErrBadRequest
 	}
@@ -249,7 +250,7 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 		return nil, errcode.ErrInvalidAmount
 	}
 
-	newDate, err := time.Parse("2006-01-02", req.Date)
+	newDate, err := parseDateTime(req.Date)
 	if err != nil {
 		return nil, errcode.ErrBadRequest
 	}
@@ -743,4 +744,26 @@ func (s *TransactionService) MergeSplits(userID, parentID uint64) error {
 	}
 
 	return s.txnRepo.DeleteBatch(splitIDs, userID)
+}
+
+// parseDateTime 解析日期时间字符串，支持两种格式：
+// - "2006-01-02"（仅日期，时间为 00:00）
+// - "2006-01-02 15:04"（日期+时分）
+// - "2006-01-02T15:04"（ISO 格式）
+// 参数 dateStr: 日期时间字符串
+// 返回: 解析后的 time.Time（使用本地时区）和错误
+func parseDateTime(dateStr string) (time.Time, error) {
+	// 优先尝试带时分的格式
+	for _, layout := range []string{
+		"2006-01-02 15:04",
+		"2006-01-02T15:04",
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+		"2006-01-02",
+	} {
+		if t, err := time.ParseInLocation(layout, dateStr, time.Local); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date format: %s", dateStr)
 }
