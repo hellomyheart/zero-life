@@ -35,7 +35,7 @@ export function formatAmount(amount: string | number, currency?: Currency | stri
 }
 
 // 格式化日期 - 使用dayjs库按指定格式输出
-export function formatDate(date: string | Date, format: string = 'YYYY-MM-DD'): string {
+export function formatDate(date: string | Date, format: string = 'YYYY-MM-DD HH:mm:ss'): string {
   return dayjs(date).format(format)
 }
 

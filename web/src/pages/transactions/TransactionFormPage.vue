@@ -10,6 +10,7 @@ import { useTagStore } from '@/stores/tag'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { CreateTransactionReq, Transaction } from '@/types/transaction'
+import type { Category } from '@/types/category'
 import { TransactionType } from '@/types/transaction'
 import AmountInput from '@/components/common/AmountInput.vue'
 
@@ -102,6 +103,22 @@ const sourceAccountLabel = computed(() => {
 const destinationAccountLabel = computed(() => {
   if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + '（' + t('transaction.expenseAccount') + '）'
   return t('transaction.destinationAccount') + '（' + t('transaction.assetAccount') + '）'
+})
+
+const categoryTreeData = computed(() => {
+  function transform(categories: Category[]): { value: number; label: string; children?: { value: number; label: string }[] }[] {
+    return categories.map(cat => {
+      const node: { value: number; label: string; children?: { value: number; label: string }[] } = {
+        value: cat.id,
+        label: cat.name,
+      }
+      if (cat.children?.length) {
+        node.children = transform(cat.children)
+      }
+      return node
+    })
+  }
+  return transform(categoryStore.categories)
 })
 
 function handleTypeChange() {
@@ -206,9 +223,15 @@ async function handleSubmit() {
           </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.category')">
-          <el-select v-model="form.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
-            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-          </el-select>
+          <el-tree-select
+            v-model="form.category_id"
+            :data="categoryTreeData"
+            :placeholder="t('common.selectPlaceholder')"
+            check-strictly
+            filterable
+            clearable
+            :render-after-expand="false"
+          />
         </el-form-item>
         <el-form-item :label="t('transaction.tags')">
           <el-select v-model="form.tags" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
@@ -234,9 +257,15 @@ async function handleSubmit() {
               </el-col>
               <el-col :span="6">
                 <el-form-item :label="t('transaction.category')">
-                  <el-select v-model="split.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
-                    <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-                  </el-select>
+                  <el-tree-select
+                    v-model="split.category_id"
+                    :data="categoryTreeData"
+                    :placeholder="t('common.selectPlaceholder')"
+                    check-strictly
+                    filterable
+                    clearable
+                    :render-after-expand="false"
+                  />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
