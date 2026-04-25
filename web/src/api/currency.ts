@@ -23,7 +23,7 @@ export function list() {
  * @returns 更新后的货币信息
  * @endpoint PUT /currencies/:id/status
  */
-export function updateStatus(id: string, data: SetCurrencyStatusReq) {
+export function updateStatus(id: number, data: SetCurrencyStatusReq) {
   return put<Currency>(`/currencies/${id}/status`, data)
 }
 

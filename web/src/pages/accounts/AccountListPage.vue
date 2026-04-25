@@ -38,7 +38,7 @@ const pagination = reactive({
 const accountTypes = [
   { key: AccountType.Asset, label: t('account.asset') },
   { key: AccountType.Expense, label: t('account.expense') },
-  { key: AccountType.Income, label: t('account.income') },
+  { key: AccountType.Revenue, label: t('account.income') },
   { key: AccountType.Liability, label: t('account.liability') },
 ]
 

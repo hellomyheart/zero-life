@@ -9,13 +9,13 @@
  * 账户类型枚举
  * - Asset: 资产账户，如银行卡、现金、投资账户等（资金存放处）
  * - Expense: 支出账户，如餐饮、交通等（资金流出方向）
- * - Income: 收入账户，如工资、利息等（资金流入方向）
+ * - Revenue: 收入账户，如工资、利息等（资金流入方向，后端字段值为 revenue）
  * - Liability: 负债账户，如信用卡、贷款等（欠款）
  */
 export enum AccountType {
   Asset = 'asset',
   Expense = 'expense',
-  Income = 'income',
+  Revenue = 'revenue',
   Liability = 'liability',
 }
 

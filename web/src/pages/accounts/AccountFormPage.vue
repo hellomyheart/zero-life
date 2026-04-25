@@ -42,7 +42,7 @@ const rules: FormRules = {
 const accountTypeOptions = [
   { value: AccountType.Asset, label: t('account.asset') },
   { value: AccountType.Expense, label: t('account.expense') },
-  { value: AccountType.Income, label: t('account.income') },
+  { value: AccountType.Revenue, label: t('account.income') },
   { value: AccountType.Liability, label: t('account.liability') },
 ]
 
