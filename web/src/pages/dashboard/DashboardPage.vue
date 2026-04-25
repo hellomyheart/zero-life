@@ -30,13 +30,13 @@ onMounted(async () => {
         <el-col :span="8">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.income') }}</template>
-            <div class="amount income">{{ formatAmount(dashboard.total_income) }}</div>
+            <div class="amount income">{{ formatAmount(dashboard.month_income) }}</div>
           </el-card>
         </el-col>
         <el-col :span="8">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.expense') }}</template>
-            <div class="amount expense">{{ formatAmount(dashboard.total_expense) }}</div>
+            <div class="amount expense">{{ formatAmount(dashboard.month_expense) }}</div>
           </el-card>
         </el-col>
         <el-col :span="8">
@@ -57,7 +57,7 @@ onMounted(async () => {
         <el-col :span="12">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.budgetAlerts') }}</template>
-            <el-table :data="dashboard.budget_alerts" size="small" v-if="dashboard.budget_alerts.length">
+            <el-table :data="dashboard.budget_alerts" size="small" v-if="dashboard.budget_alerts?.length">
               <el-table-column prop="budget_name" :label="t('budget.name')" />
               <el-table-column prop="usage_rate" :label="t('budget.usageRate')">
                 <template #default="{ row }">
@@ -74,18 +74,13 @@ onMounted(async () => {
         <el-col :span="12">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.billReminders') }}</template>
-            <el-table :data="dashboard.bill_reminders" size="small" v-if="dashboard.bill_reminders.length">
+            <el-table :data="dashboard.bill_reminders" size="small" v-if="dashboard.bill_reminders?.length">
               <el-table-column prop="bill_name" :label="t('bill.name')" />
               <el-table-column prop="amount" :label="t('bill.amount')">
                 <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
               </el-table-column>
-              <el-table-column prop="next_due_date" :label="t('bill.nextDueDate')">
-                <template #default="{ row }">{{ formatDate(row.next_due_date) }}</template>
-              </el-table-column>
-              <el-table-column :label="t('bill.overdue')">
-                <template #default="{ row }">
-                  <el-tag v-if="row.is_overdue" type="danger" size="small">{{ t('bill.overdue') }}</el-tag>
-                </template>
+              <el-table-column prop="next_due" :label="t('bill.nextDueDate')">
+                <template #default="{ row }">{{ formatDate(row.next_due) }}</template>
               </el-table-column>
             </el-table>
             <el-empty v-else :description="t('common.noData')" :image-size="60" />
@@ -94,7 +89,7 @@ onMounted(async () => {
         <el-col :span="12">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.recentTransactions') }}</template>
-            <el-table :data="dashboard.recent_transactions" size="small" v-if="dashboard.recent_transactions.length">
+            <el-table :data="dashboard.recent_txns" size="small" v-if="dashboard.recent_txns?.length">
               <el-table-column prop="date" :label="t('transaction.date')">
                 <template #default="{ row }">{{ formatDate(row.date) }}</template>
               </el-table-column>

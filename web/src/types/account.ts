@@ -37,11 +37,12 @@ export interface Account {
 /**
  * 创建账户请求接口
  * 创建新账户时需要提供的参数
+ * 注意：字段名必须与后端 CreateAccountReq JSON tag 完全对应
  */
 export interface CreateAccountReq {
   name: string                 // 账户名称（必填）
-  type: AccountType            // 账户类型（必填）
-  currency: string             // 货币代码（必填）
+  type: AccountType            // 账户类型（必填，asset/expense/revenue/liability）
+  currency_id: number          // 货币ID（必填，后端要求 uint64 的货币ID，不是货币代码）
   initial_balance: string      // 初始余额（必填）
   is_virtual?: boolean         // 是否为虚拟账户（可选，默认为false）
 }
