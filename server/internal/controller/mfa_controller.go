@@ -25,6 +25,16 @@ func NewMFAController(mfaService *service.MFAService) *MFAController {
 // Setup 初始化MFA设置
 // POST /api/v1/mfa/setup
 // 生成MFA密钥和二维码URL
+// @Summary      Setup MFA
+// @Description  Generate MFA secret key and QR code URL
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/setup [post]
+// @Security     BearerAuth
 func (c *MFAController) Setup(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -40,6 +50,18 @@ func (c *MFAController) Setup(ctx *gin.Context) {
 // Enable 启用MFA
 // POST /api/v1/mfa/enable
 // 验证MFA代码并启用多因素认证
+// @Summary      Enable MFA
+// @Description  Verify MFA code and enable multi-factor authentication
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Param        body body request.MFAVerifyReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/enable [post]
+// @Security     BearerAuth
 func (c *MFAController) Enable(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -60,6 +82,18 @@ func (c *MFAController) Enable(ctx *gin.Context) {
 // Disable 禁用MFA
 // POST /api/v1/mfa/disable
 // 验证MFA代码并禁用多因素认证
+// @Summary      Disable MFA
+// @Description  Verify MFA code and disable multi-factor authentication
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Param        body body request.MFAVerifyReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/disable [post]
+// @Security     BearerAuth
 func (c *MFAController) Disable(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -80,6 +114,18 @@ func (c *MFAController) Disable(ctx *gin.Context) {
 // Verify 验证MFA代码
 // POST /api/v1/mfa/verify
 // 用于登录后的MFA验证
+// @Summary      Verify MFA code
+// @Description  Verify MFA code for post-login authentication
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Param        body body request.MFAVerifyReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/verify [post]
+// @Security     BearerAuth
 func (c *MFAController) Verify(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -100,6 +146,16 @@ func (c *MFAController) Verify(ctx *gin.Context) {
 
 // Status 获取MFA状态
 // GET /api/v1/mfa/status
+// @Summary      Get MFA status
+// @Description  Get current user's MFA enabled status
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/status [get]
+// @Security     BearerAuth
 func (c *MFAController) Status(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 

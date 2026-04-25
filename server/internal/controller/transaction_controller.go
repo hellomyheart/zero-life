@@ -30,6 +30,18 @@ func NewTransactionController(txnService *service.TransactionService) *Transacti
 // 接收创建交易请求，调用业务层创建交易记录
 // 参数：
 //   - c: Gin上下文，包含请求信息
+// @Summary      Create transaction
+// @Description  Create a new transaction for the current user
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateTransactionReq true "create transaction request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions [post]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -48,6 +60,19 @@ func (ctrl *TransactionController) Create(c *gin.Context) {
 	Success(c, result)
 }
 
+// @Summary      Get transaction
+// @Description  Get transaction details by ID
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id} [get]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -61,6 +86,24 @@ func (ctrl *TransactionController) Get(c *gin.Context) {
 	Success(c, result)
 }
 
+// @Summary      List transactions
+// @Description  Get paginated list of transactions for the current user
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Param        type query string false "Transaction type"
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Param        account_id query uint64 false "Account ID"
+// @Param        category_id query uint64 false "Category ID"
+// @Param        tag_id query uint64 false "Tag ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions [get]
+// @Security     BearerAuth
 func (ctrl *TransactionController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -79,6 +122,20 @@ func (ctrl *TransactionController) List(c *gin.Context) {
 	SuccessPage(c, result)
 }
 
+// @Summary      Update transaction
+// @Description  Update transaction by ID
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Param        body body request.UpdateTransactionReq true "update transaction request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id} [put]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -98,6 +155,19 @@ func (ctrl *TransactionController) Update(c *gin.Context) {
 	Success(c, result)
 }
 
+// @Summary      Delete transaction
+// @Description  Delete transaction by ID
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -110,6 +180,19 @@ func (ctrl *TransactionController) Delete(c *gin.Context) {
 	Success(c, nil)
 }
 
+// @Summary      Search transactions
+// @Description  Search transactions by keyword with pagination
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        keyword query string false "Search keyword"
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/search [get]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Search(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -131,6 +214,20 @@ func (ctrl *TransactionController) Search(c *gin.Context) {
 // Split 拆分交易
 // POST /api/v1/transactions/:id/split
 // 将一笔交易拆分为多笔子交易
+// @Summary      Split transaction
+// @Description  Split a transaction into multiple sub-transactions
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Param        body body request.SplitTransactionReq true "split transaction request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id}/split [post]
+// @Security     BearerAuth
 func (ctrl *TransactionController) Split(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	parentID := parseIDParam(c, "id")
@@ -152,6 +249,19 @@ func (ctrl *TransactionController) Split(c *gin.Context) {
 
 // GetSplits 获取拆分交易列表
 // GET /api/v1/transactions/:id/splits
+// @Summary      Get transaction splits
+// @Description  Get all sub-transactions of a split transaction
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id}/splits [get]
+// @Security     BearerAuth
 func (ctrl *TransactionController) GetSplits(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	parentID := parseIDParam(c, "id")
@@ -168,6 +278,19 @@ func (ctrl *TransactionController) GetSplits(c *gin.Context) {
 // MergeSplits 合并拆分交易
 // POST /api/v1/transactions/:id/merge
 // 将拆分的子交易合并回父交易
+// @Summary      Merge transaction splits
+// @Description  Merge all sub-transactions back into the parent transaction
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/{id}/merge [post]
+// @Security     BearerAuth
 func (ctrl *TransactionController) MergeSplits(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	parentID := parseIDParam(c, "id")

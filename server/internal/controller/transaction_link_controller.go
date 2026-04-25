@@ -31,6 +31,18 @@ func NewTransactionLinkController(service *service.TransactionLinkService) *Tran
 // 请求方法：POST
 // 请求路径：/transaction-links
 // 请求体：CreateTransactionLinkReq（JSON格式）
+// @Summary      Create transaction link
+// @Description  Create a link between two transactions
+// @Tags         transaction-links
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateTransactionLinkReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transaction-links [post]
+// @Security     BearerAuth
 func (ctrl *TransactionLinkController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -54,6 +66,19 @@ func (ctrl *TransactionLinkController) Create(c *gin.Context) {
 // 请求方法：GET
 // 请求路径：/transaction-links
 // 查询参数：TransactionLinkListReq
+// @Summary      List transaction links
+// @Description  Get paginated list of transaction links
+// @Tags         transaction-links
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transaction-links [get]
+// @Security     BearerAuth
 func (ctrl *TransactionLinkController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -76,6 +101,17 @@ func (ctrl *TransactionLinkController) List(c *gin.Context) {
 // 从上下文中提取用户ID，确保只能删除属于当前用户交易的关联记录
 // 请求方法：DELETE
 // 请求路径：/transaction-links/:id
+// @Summary      Delete transaction link
+// @Description  Delete a transaction link by ID
+// @Tags         transaction-links
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction link ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transaction-links/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *TransactionLinkController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

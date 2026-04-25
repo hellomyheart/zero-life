@@ -22,6 +22,18 @@ func NewAccountController(accountService *service.AccountService) *AccountContro
 }
 
 // Create 创建账户
+// @Summary      Create account
+// @Description  Create a new account for the current user
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateAccountReq true "create account request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/accounts [post]
+// @Security     BearerAuth
 func (ctrl *AccountController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -41,6 +53,19 @@ func (ctrl *AccountController) Create(c *gin.Context) {
 }
 
 // Get 获取账户详情
+// @Summary      Get account
+// @Description  Get account details by ID
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Account ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/accounts/{id} [get]
+// @Security     BearerAuth
 func (ctrl *AccountController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -55,6 +80,18 @@ func (ctrl *AccountController) Get(c *gin.Context) {
 }
 
 // List 获取账户列表（分页）
+// @Summary      List accounts
+// @Description  Get paginated list of accounts for the current user
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/accounts [get]
+// @Security     BearerAuth
 func (ctrl *AccountController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -74,6 +111,20 @@ func (ctrl *AccountController) List(c *gin.Context) {
 }
 
 // Update 更新账户
+// @Summary      Update account
+// @Description  Update account by ID
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Account ID"
+// @Param        body body request.UpdateAccountReq true "update account request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/accounts/{id} [put]
+// @Security     BearerAuth
 func (ctrl *AccountController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -94,6 +145,19 @@ func (ctrl *AccountController) Update(c *gin.Context) {
 }
 
 // Delete 删除账户
+// @Summary      Delete account
+// @Description  Delete account by ID
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Account ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/accounts/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *AccountController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

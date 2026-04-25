@@ -34,6 +34,20 @@ func NewReportController(reportService *service.ReportService) *ReportController
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date、granularity）
 // 响应：IncomeExpenseResp（含总收入、总支出、净收入、分时段明细）
+// @Summary      Income/expense report
+// @Description  Get income and expense summary with time granularity
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Param        granularity query string false "Time granularity (day/week/month/quarter/year)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/income-expense [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) IncomeExpense(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -58,6 +72,19 @@ func (ctrl *ReportController) IncomeExpense(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date）
 // 响应：CategoryReportResp（含支出分类分布和收入分类分布）
+// @Summary      Category report
+// @Description  Get expense and income distribution by category
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/category [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) Category(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -82,6 +109,19 @@ func (ctrl *ReportController) Category(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date）
 // 响应：BudgetReportResp（含各预算的金额、已支出、剩余、使用率）
+// @Summary      Budget report
+// @Description  Get budget execution status report
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/budget [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) Budget(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -106,6 +146,19 @@ func (ctrl *ReportController) Budget(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date）
 // 响应：NetWorthResp（含总净资产和趋势数据）
+// @Summary      Net worth report
+// @Description  Get net worth trend over time
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/net-worth [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) NetWorth(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -130,6 +183,20 @@ func (ctrl *ReportController) NetWorth(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date、granularity）
 // 响应：TrendResp（含各时段的收入和支出数据）
+// @Summary      Trend report
+// @Description  Get income and expense trend data
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Param        granularity query string false "Time granularity (day/week/month/quarter/year)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/trend [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) Trend(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -154,6 +221,19 @@ func (ctrl *ReportController) Trend(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：ReportReq（包含start_date、end_date）
 // 响应：TagReportResp（含各标签的收入和支出数据）
+// @Summary      Tag report
+// @Description  Get income and expense distribution by tag
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/tag [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) Tag(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -178,6 +258,21 @@ func (ctrl *ReportController) Tag(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：account_id（必填）、start_date、end_date、reconciled（是否已对账过滤）
 // 响应：AuditReportResp（含账户信息、期初余额、期末余额、交易明细列表）
+// @Summary      Audit report
+// @Description  Get transaction audit data for an account with running balance
+// @Tags         reports
+// @Accept       json
+// @Produce      json
+// @Param        account_id query uint64 true "Account ID"
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Param        reconciled query bool false "Filter by reconciled status"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reports/audit [get]
+// @Security     BearerAuth
 func (ctrl *ReportController) Audit(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 

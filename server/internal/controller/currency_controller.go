@@ -32,6 +32,16 @@ func NewCurrencyController(currencyService *service.CurrencyService) *CurrencyCo
 // 参数：
 //   - c: Gin上下文
 // 响应：货币列表
+// @Summary      List currencies
+// @Description  Get all available currencies
+// @Tags         currencies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/currencies [get]
+// @Security     BearerAuth
 func (ctrl *CurrencyController) List(c *gin.Context) {
 	result, err := ctrl.currencyService.List()
 	if err != nil {
@@ -49,6 +59,19 @@ func (ctrl *CurrencyController) List(c *gin.Context) {
 // 请求体：SetCurrencyStatusReq（包含is_enabled字段）
 // 响应：更新成功返回nil
 // 业务规则：正在被账户使用的货币不能禁用，默认货币不能禁用
+// @Summary      Update currency status
+// @Description  Enable or disable a currency
+// @Tags         currencies
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Currency ID"
+// @Param        body body request.SetCurrencyStatusReq true "set currency status request"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/currencies/{id}/status [put]
+// @Security     BearerAuth
 func (ctrl *CurrencyController) UpdateStatus(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -72,6 +95,18 @@ func (ctrl *CurrencyController) UpdateStatus(c *gin.Context) {
 //   - c: Gin上下文，包含URL路径参数id
 // 路径参数：id（货币ID）
 // 响应：设置成功返回nil
+// @Summary      Set default currency
+// @Description  Set a currency as the default currency
+// @Tags         currencies
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Currency ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/currencies/{id}/default [put]
+// @Security     BearerAuth
 func (ctrl *CurrencyController) SetDefault(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -88,6 +123,16 @@ func (ctrl *CurrencyController) SetDefault(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文
 // 响应：汇率列表
+// @Summary      Get exchange rates
+// @Description  Get all exchange rates
+// @Tags         currencies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/currencies/exchange-rates [get]
+// @Security     BearerAuth
 func (ctrl *CurrencyController) GetExchangeRates(c *gin.Context) {
 	result, err := ctrl.currencyService.GetExchangeRates()
 	if err != nil {
@@ -104,6 +149,18 @@ func (ctrl *CurrencyController) GetExchangeRates(c *gin.Context) {
 //   - c: Gin上下文
 // 请求体：SetExchangeRateReq（包含源货币ID、目标货币ID、汇率值）
 // 响应：设置成功返回nil
+// @Summary      Set exchange rate
+// @Description  Set exchange rate between two currencies
+// @Tags         currencies
+// @Accept       json
+// @Produce      json
+// @Param        body body request.SetExchangeRateReq true "set exchange rate request"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/currencies/exchange-rates [post]
+// @Security     BearerAuth
 func (ctrl *CurrencyController) SetExchangeRate(c *gin.Context) {
 	var req request.SetExchangeRateReq
 	if err := c.ShouldBindJSON(&req); err != nil {

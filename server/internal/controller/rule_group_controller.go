@@ -32,6 +32,18 @@ func NewRuleGroupController(ruleGroupService *service.RuleGroupService) *RuleGro
 //   - c: Gin上下文，包含用户身份和请求体
 // 请求体：CreateRuleGroupReq（包含名称、排序、是否启用）
 // 响应：创建成功的规则组信息
+// @Summary      Create rule group
+// @Description  Create a new rule group
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateRuleGroupReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups [post]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -55,6 +67,17 @@ func (ctrl *RuleGroupController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（规则组ID）
 // 响应：规则组详细信息
+// @Summary      Get rule group
+// @Description  Get rule group details by ID
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Rule group ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups/{id} [get]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -73,6 +96,16 @@ func (ctrl *RuleGroupController) Get(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：规则组列表
+// @Summary      List rule groups
+// @Description  Get all rule groups for current user
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups [get]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -91,6 +124,19 @@ func (ctrl *RuleGroupController) List(c *gin.Context) {
 // 路径参数：id（规则组ID）
 // 请求体：UpdateRuleGroupReq（包含名称、排序、是否启用）
 // 响应：更新后的规则组信息
+// @Summary      Update rule group
+// @Description  Update rule group by ID
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Rule group ID"
+// @Param        body body request.UpdateRuleGroupReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups/{id} [put]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -116,6 +162,17 @@ func (ctrl *RuleGroupController) Update(c *gin.Context) {
 // 路径参数：id（规则组ID）
 // 响应：删除成功返回nil
 // 业务规则：规则组下有关联规则时无法删除
+// @Summary      Delete rule group
+// @Description  Delete rule group by ID (cannot delete if rules are attached)
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Rule group ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -135,6 +192,19 @@ func (ctrl *RuleGroupController) Delete(c *gin.Context) {
 // 路径参数：id（规则组ID）
 // 请求体：ExecuteRuleGroupReq（包含start_date、end_date）
 // 响应：RuleGroupExecuteResultResp（包含匹配数、成功数、失败数）
+// @Summary      Execute rule group
+// @Description  Execute all rules in a group for transactions in a date range
+// @Tags         rule-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Rule group ID"
+// @Param        body body request.ExecuteRuleGroupReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/rule-groups/{id}/execute [post]
+// @Security     BearerAuth
 func (ctrl *RuleGroupController) ExecuteGroup(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

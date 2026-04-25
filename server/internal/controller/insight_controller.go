@@ -24,6 +24,18 @@ func NewInsightController(insightService *service.InsightService) *InsightContro
 // Expense 支出洞察
 // GET /api/v1/insight/expense
 // 分析支出数据，包括趋势、分类、账户等维度
+// @Summary      Expense insight
+// @Description  Analyze expense data including trends, categories, and accounts
+// @Tags         insight
+// @Accept       json
+// @Produce      json
+// @Param        start query string false "Start date (YYYY-MM-DD)"
+// @Param        end query string false "End date (YYYY-MM-DD)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/insight/expense [get]
+// @Security     BearerAuth
 func (c *InsightController) Expense(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -52,6 +64,18 @@ func (c *InsightController) Expense(ctx *gin.Context) {
 // Income 收入洞察
 // GET /api/v1/insight/income
 // 分析收入数据，包括趋势、来源、账户等维度
+// @Summary      Income insight
+// @Description  Analyze income data including trends, sources, and accounts
+// @Tags         insight
+// @Accept       json
+// @Produce      json
+// @Param        start query string false "Start date (YYYY-MM-DD)"
+// @Param        end query string false "End date (YYYY-MM-DD)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/insight/income [get]
+// @Security     BearerAuth
 func (c *InsightController) Income(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -80,6 +104,18 @@ func (c *InsightController) Income(ctx *gin.Context) {
 // Transfer 转账洞察
 // GET /api/v1/insight/transfer
 // 分析转账数据，包括账户间流动、频率等
+// @Summary      Transfer insight
+// @Description  Analyze transfer data including inter-account flows and frequency
+// @Tags         insight
+// @Accept       json
+// @Produce      json
+// @Param        start query string false "Start date (YYYY-MM-DD)"
+// @Param        end query string false "End date (YYYY-MM-DD)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/insight/transfer [get]
+// @Security     BearerAuth
 func (c *InsightController) Transfer(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 

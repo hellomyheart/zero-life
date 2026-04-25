@@ -27,6 +27,16 @@ func NewDashboardController(dashboardService *service.DashboardService) *Dashboa
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：DashboardResp（含月度收支、总余额、预算预警、账单提醒、最近交易）
+// @Summary      Get dashboard data
+// @Description  Get dashboard summary including monthly income/expense, total balance, budget alerts, bill reminders and recent transactions
+// @Tags         dashboard
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/dashboard [get]
+// @Security     BearerAuth
 func (ctrl *DashboardController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 

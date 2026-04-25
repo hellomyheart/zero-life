@@ -33,6 +33,18 @@ func NewImportController(importService *service.ImportService) *ImportController
 //   - c: Gin上下文
 // 表单字段：file（导入文件）
 // 响应：ImportUploadResp（包含file_id）
+// @Summary      Upload import file
+// @Description  Upload a CSV file for data import, returns file ID for subsequent parsing
+// @Tags         imports
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "File to import"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/imports/upload [post]
+// @Security     BearerAuth
 func (ctrl *ImportController) Upload(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
@@ -56,6 +68,18 @@ func (ctrl *ImportController) Upload(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 请求体：ImportParseReq（包含file_id和mapping字段映射）
 // 响应：ImportPreviewResp（包含总行数、有效行数、无效行数和每行预览数据）
+// @Summary      Parse import file
+// @Description  Parse uploaded file with field mapping and return preview data
+// @Tags         imports
+// @Accept       json
+// @Produce      json
+// @Param        body body request.ImportParseReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/imports/parse [post]
+// @Security     BearerAuth
 func (ctrl *ImportController) Parse(c *gin.Context) {
 	// 获取用户ID，用于后续权限校验（确保用户只能解析自己上传的文件）
 	userID := c.GetUint64("user_id")
@@ -84,6 +108,18 @@ func (ctrl *ImportController) Parse(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 请求体：ImportExecuteReq（包含file_id和mapping字段映射）
 // 响应：ImportResultResp（包含总数、成功数、失败数、跳过数）
+// @Summary      Execute import
+// @Description  Execute data import with field mapping, creating transaction records from file
+// @Tags         imports
+// @Accept       json
+// @Produce      json
+// @Param        body body request.ImportExecuteReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/imports/execute [post]
+// @Security     BearerAuth
 func (ctrl *ImportController) Execute(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 

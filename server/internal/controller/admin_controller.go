@@ -34,6 +34,18 @@ func NewAdminController(adminService *service.AdminService) *AdminController {
 // 路径参数：name（配置名称）
 // 响应：配置详细信息
 // 业务规则：name不能为空
+// @Summary      Get configuration by name
+// @Description  Get a single system configuration value by name
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Configuration name"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/configurations/{name} [get]
+// @Security     BearerAuth
 func (ctrl *AdminController) GetConfiguration(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
@@ -55,6 +67,16 @@ func (ctrl *AdminController) GetConfiguration(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文
 // 响应：配置项列表
+// @Summary      List all configurations
+// @Description  Get all system configuration items
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/configurations [get]
+// @Security     BearerAuth
 func (ctrl *AdminController) ListConfigurations(c *gin.Context) {
 	result, err := ctrl.adminService.ListConfigurations()
 	if err != nil {
@@ -72,6 +94,19 @@ func (ctrl *AdminController) ListConfigurations(c *gin.Context) {
 // 路径参数：name（配置名称）
 // 请求体：AdminUpdateConfigurationReq（包含value字段）
 // 响应：更新后的配置信息
+// @Summary      Update configuration
+// @Description  Update a system configuration value by name
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Configuration name"
+// @Param        body body request.AdminUpdateConfigurationReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/configurations/{name} [put]
+// @Security     BearerAuth
 func (ctrl *AdminController) UpdateConfiguration(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
@@ -100,6 +135,18 @@ func (ctrl *AdminController) UpdateConfiguration(c *gin.Context) {
 //   - c: Gin上下文
 // 请求体：AdminTestEmailReq（包含email字段）
 // 响应：AdminTestEmailResp（包含success和message）
+// @Summary      Test email sending
+// @Description  Send a test email to verify SMTP configuration
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body body request.AdminTestEmailReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/test-email [post]
+// @Security     BearerAuth
 func (ctrl *AdminController) TestEmail(c *gin.Context) {
 	var req request.AdminTestEmailReq
 	if err := c.ShouldBindJSON(&req); err != nil {

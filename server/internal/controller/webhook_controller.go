@@ -34,6 +34,18 @@ func NewWebhookController(service *service.WebhookService) *WebhookController {
 // 请求体：CreateWebhookReq（包含名称、URL、触发事件类型）
 // 响应：创建成功的Webhook信息
 // 业务规则：URL必须以https://开头，触发事件类型仅支持预定义值
+// @Summary      Create webhook
+// @Description  Create a new webhook for event notifications
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateWebhookReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks [post]
+// @Security     BearerAuth
 func (ctrl *WebhookController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -57,6 +69,17 @@ func (ctrl *WebhookController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（Webhook ID）
 // 响应：Webhook详细信息
+// @Summary      Get webhook
+// @Description  Get webhook details by ID
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Webhook ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks/{id} [get]
+// @Security     BearerAuth
 func (ctrl *WebhookController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -75,6 +98,16 @@ func (ctrl *WebhookController) Get(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：Webhook列表
+// @Summary      List webhooks
+// @Description  Get all webhooks for current user
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks [get]
+// @Security     BearerAuth
 func (ctrl *WebhookController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -93,6 +126,19 @@ func (ctrl *WebhookController) List(c *gin.Context) {
 // 路径参数：id（Webhook ID）
 // 请求体：UpdateWebhookReq（包含名称、URL、触发事件类型、是否启用）
 // 响应：更新后的Webhook信息
+// @Summary      Update webhook
+// @Description  Update webhook by ID
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Webhook ID"
+// @Param        body body request.UpdateWebhookReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks/{id} [put]
+// @Security     BearerAuth
 func (ctrl *WebhookController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -117,6 +163,17 @@ func (ctrl *WebhookController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（Webhook ID）
 // 响应：删除成功返回nil
+// @Summary      Delete webhook
+// @Description  Delete webhook by ID
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Webhook ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *WebhookController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -136,6 +193,19 @@ func (ctrl *WebhookController) Delete(c *gin.Context) {
 // 路径参数：id（Webhook ID）
 // 查询参数：page（页码）、page_size（每页数量）
 // 响应：投递记录列表
+// @Summary      List webhook deliveries
+// @Description  Get delivery history for a webhook including HTTP status, errors and timestamps
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Webhook ID"
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/webhooks/{id}/deliveries [get]
+// @Security     BearerAuth
 func (ctrl *WebhookController) ListDeliveries(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	webhookID := parseIDParam(c, "id")

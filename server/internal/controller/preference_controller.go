@@ -34,6 +34,18 @@ func NewPreferenceController(service *service.PreferenceService) *PreferenceCont
 // 查询参数：key（偏好设置键名）
 // 响应：偏好设置值
 // 业务规则：key不能为空
+// @Summary      Get preference
+// @Description  Get preference value by key
+// @Tags         preferences
+// @Accept       json
+// @Produce      json
+// @Param        key path string true "Preference key"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/preferences/{key} [get]
+// @Security     BearerAuth
 func (ctrl *PreferenceController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	key := c.Query("key")
@@ -58,6 +70,18 @@ func (ctrl *PreferenceController) Get(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 请求体：SetPreferenceReq（包含key和value）
 // 响应：设置后的偏好信息
+// @Summary      Set preference
+// @Description  Set or update a preference key-value pair
+// @Tags         preferences
+// @Accept       json
+// @Produce      json
+// @Param        body body request.SetPreferenceReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/preferences [put]
+// @Security     BearerAuth
 func (ctrl *PreferenceController) Set(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -81,6 +105,16 @@ func (ctrl *PreferenceController) Set(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：偏好设置列表
+// @Summary      List preferences
+// @Description  Get all preferences for current user
+// @Tags         preferences
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/preferences [get]
+// @Security     BearerAuth
 func (ctrl *PreferenceController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -99,6 +133,17 @@ func (ctrl *PreferenceController) List(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 路径参数：key（偏好设置键名）
 // 响应：删除成功返回nil
+// @Summary      Delete preference
+// @Description  Delete preference by key
+// @Tags         preferences
+// @Accept       json
+// @Produce      json
+// @Param        key path string true "Preference key"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/preferences/{key} [delete]
+// @Security     BearerAuth
 func (ctrl *PreferenceController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	key := c.Param("key")

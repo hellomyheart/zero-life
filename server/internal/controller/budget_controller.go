@@ -34,6 +34,18 @@ func NewBudgetController(budgetService *service.BudgetService) *BudgetController
 // 请求体：CreateBudgetReq（包含名称、金额、周期、分类ID列表）
 // 响应：创建成功的预算信息
 // 业务规则：预算金额必须大于0，至少关联一个分类
+// @Summary      Create budget
+// @Description  Create a new budget for the current user
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateBudgetReq true "create budget request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets [post]
+// @Security     BearerAuth
 func (ctrl *BudgetController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -58,6 +70,19 @@ func (ctrl *BudgetController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（预算ID）
 // 响应：预算详细信息
+// @Summary      Get budget
+// @Description  Get budget details by ID
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Budget ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets/{id} [get]
+// @Security     BearerAuth
 func (ctrl *BudgetController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -76,6 +101,16 @@ func (ctrl *BudgetController) Get(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：预算列表
+// @Summary      List budgets
+// @Description  Get all budgets for the current user
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets [get]
+// @Security     BearerAuth
 func (ctrl *BudgetController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -95,6 +130,20 @@ func (ctrl *BudgetController) List(c *gin.Context) {
 // 路径参数：id（预算ID）
 // 请求体：UpdateBudgetReq（包含需要更新的字段）
 // 响应：更新后的预算信息
+// @Summary      Update budget
+// @Description  Update budget by ID
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Budget ID"
+// @Param        body body request.UpdateBudgetReq true "update budget request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets/{id} [put]
+// @Security     BearerAuth
 func (ctrl *BudgetController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -120,6 +169,19 @@ func (ctrl *BudgetController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（预算ID）
 // 响应：删除成功返回nil
+// @Summary      Delete budget
+// @Description  Delete budget by ID
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Budget ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *BudgetController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -138,6 +200,19 @@ func (ctrl *BudgetController) Delete(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（预算ID）
 // 响应：预算历史记录列表
+// @Summary      Get budget history
+// @Description  Get budget history by ID
+// @Tags         budgets
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Budget ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/budgets/{id}/history [get]
+// @Security     BearerAuth
 func (ctrl *BudgetController) GetHistory(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

@@ -34,6 +34,18 @@ func NewTagController(tagService *service.TagService) *TagController {
 // 请求体：CreateTagReq（包含名称、颜色）
 // 响应：创建成功的标签信息
 // 业务规则：标签名称在同一用户下不能重复
+// @Summary      Create tag
+// @Description  Create a new tag for the current user
+// @Tags         tags
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateTagReq true "create tag request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/tags [post]
+// @Security     BearerAuth
 func (ctrl *TagController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -57,6 +69,16 @@ func (ctrl *TagController) Create(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：标签列表
+// @Summary      List tags
+// @Description  Get all tags for the current user
+// @Tags         tags
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/tags [get]
+// @Security     BearerAuth
 func (ctrl *TagController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -75,6 +97,20 @@ func (ctrl *TagController) List(c *gin.Context) {
 // 路径参数：id（标签ID）
 // 请求体：UpdateTagReq（包含名称、颜色）
 // 响应：更新后的标签信息
+// @Summary      Update tag
+// @Description  Update tag by ID
+// @Tags         tags
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Tag ID"
+// @Param        body body request.UpdateTagReq true "update tag request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/tags/{id} [put]
+// @Security     BearerAuth
 func (ctrl *TagController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -99,6 +135,19 @@ func (ctrl *TagController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（标签ID）
 // 响应：删除成功返回nil
+// @Summary      Delete tag
+// @Description  Delete tag by ID
+// @Tags         tags
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Tag ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/tags/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *TagController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

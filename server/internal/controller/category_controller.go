@@ -34,6 +34,18 @@ func NewCategoryController(categoryService *service.CategoryService) *CategoryCo
 // 请求体：CreateCategoryReq（包含名称、父分类ID、图标、备注）
 // 响应：创建成功的分类信息
 // 业务规则：分类名称在同一用户下不能重复，层级不能超过2级
+// @Summary      Create category
+// @Description  Create a new category for the current user
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateCategoryReq true "create category request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/categories [post]
+// @Security     BearerAuth
 func (ctrl *CategoryController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -57,6 +69,16 @@ func (ctrl *CategoryController) Create(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：分类列表（含子分类）
+// @Summary      List categories
+// @Description  Get all categories for the current user
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/categories [get]
+// @Security     BearerAuth
 func (ctrl *CategoryController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -76,6 +98,20 @@ func (ctrl *CategoryController) List(c *gin.Context) {
 // 路径参数：id（分类ID）
 // 请求体：UpdateCategoryReq（包含需要更新的字段）
 // 响应：更新后的分类信息
+// @Summary      Update category
+// @Description  Update category by ID
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Category ID"
+// @Param        body body request.UpdateCategoryReq true "update category request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/categories/{id} [put]
+// @Security     BearerAuth
 func (ctrl *CategoryController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -102,6 +138,19 @@ func (ctrl *CategoryController) Update(c *gin.Context) {
 // 路径参数：id（分类ID）
 // 响应：删除成功返回nil
 // 业务规则：有子分类或关联交易时可能无法删除
+// @Summary      Delete category
+// @Description  Delete category by ID
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Category ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/categories/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *CategoryController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

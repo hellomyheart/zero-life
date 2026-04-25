@@ -35,6 +35,18 @@ func NewPiggyBankController(service *service.PiggyBankService) *PiggyBankControl
 //   - ctx: Gin上下文，包含请求信息和用户身份（通过中间件注入的user_id）
 // 请求体：CreatePiggyBankReq（包含名称、目标金额等字段）
 // 响应：创建成功的存钱罐信息
+// @Summary      Create piggy bank
+// @Description  Create a new piggy bank with name and target amount
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreatePiggyBankReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks [post]
+// @Security     BearerAuth
 func (c *PiggyBankController) Create(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -59,6 +71,17 @@ func (c *PiggyBankController) Create(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（存钱罐ID）
 // 响应：存钱罐详细信息
+// @Summary      Get piggy bank
+// @Description  Get piggy bank details by ID
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id} [get]
+// @Security     BearerAuth
 func (c *PiggyBankController) Get(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -77,6 +100,16 @@ func (c *PiggyBankController) Get(ctx *gin.Context) {
 // 参数：
 //   - ctx: Gin上下文，包含用户身份
 // 响应：存钱罐列表
+// @Summary      List piggy banks
+// @Description  Get all piggy banks for current user
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks [get]
+// @Security     BearerAuth
 func (c *PiggyBankController) List(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -96,6 +129,19 @@ func (c *PiggyBankController) List(ctx *gin.Context) {
 // 路径参数：id（存钱罐ID）
 // 请求体：UpdatePiggyBankReq（包含需要更新的字段）
 // 响应：更新后的存钱罐信息
+// @Summary      Update piggy bank
+// @Description  Update piggy bank info by ID
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Param        body body request.UpdatePiggyBankReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id} [put]
+// @Security     BearerAuth
 func (c *PiggyBankController) Update(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -121,6 +167,17 @@ func (c *PiggyBankController) Update(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（存钱罐ID）
 // 响应：删除成功返回nil
+// @Summary      Delete piggy bank
+// @Description  Delete piggy bank and associated data by ID
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id} [delete]
+// @Security     BearerAuth
 func (c *PiggyBankController) Delete(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -140,6 +197,19 @@ func (c *PiggyBankController) Delete(ctx *gin.Context) {
 // 路径参数：id（存钱罐ID）
 // 请求体：AddAmountReq（包含存入金额等字段）
 // 响应：更新后的存钱罐信息
+// @Summary      Add amount to piggy bank
+// @Description  Add amount to piggy bank and record deposit event
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Param        body body request.AddAmountReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id}/add [post]
+// @Security     BearerAuth
 func (c *PiggyBankController) AddAmount(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -166,6 +236,19 @@ func (c *PiggyBankController) AddAmount(ctx *gin.Context) {
 // 路径参数：id（存钱罐ID）
 // 请求体：RemoveAmountReq（包含取出金额等字段）
 // 响应：更新后的存钱罐信息
+// @Summary      Remove amount from piggy bank
+// @Description  Remove amount from piggy bank and record withdrawal event
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Param        body body request.RemoveAmountReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id}/remove [post]
+// @Security     BearerAuth
 func (c *PiggyBankController) RemoveAmount(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -191,6 +274,17 @@ func (c *PiggyBankController) RemoveAmount(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（存钱罐ID）
 // 响应：事件记录列表
+// @Summary      Get piggy bank events
+// @Description  Get deposit/withdrawal event history for piggy bank
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id}/events [get]
+// @Security     BearerAuth
 func (c *PiggyBankController) GetEvents(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -210,6 +304,18 @@ func (c *PiggyBankController) GetEvents(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 请求体：包含orders字段，类型为map[uint64]int，key是存钱罐ID，value是排序序号
 // 响应：排序成功返回nil
+// @Summary      Reorder piggy banks
+// @Description  Batch update piggy bank display order
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        body body map[string]interface{} true "Orders map (piggy_bank_id -> position)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/reorder [put]
+// @Security     BearerAuth
 func (c *PiggyBankController) Reorder(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -235,6 +341,17 @@ func (c *PiggyBankController) Reorder(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（存钱罐ID）
 // 响应：重置后的存钱罐信息
+// @Summary      Reset piggy bank history
+// @Description  Clear all deposit/withdrawal events and reset current amount to zero
+// @Tags         piggy-banks
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Piggy bank ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/piggy-banks/{id}/reset [post]
+// @Security     BearerAuth
 func (c *PiggyBankController) ResetHistory(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")

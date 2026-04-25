@@ -34,6 +34,20 @@ func NewAdminUserController(adminService *service.AdminService) *AdminUserContro
 //   - c: Gin上下文
 // 查询参数：AdminListUsersReq（包含page、page_size、search）
 // 响应：用户分页列表
+// @Summary      List users
+// @Description  Get paginated user list with optional search
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Param        search query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/users [get]
+// @Security     BearerAuth
 func (ctrl *AdminUserController) ListUsers(c *gin.Context) {
 	var req request.AdminListUsersReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -59,6 +73,19 @@ func (ctrl *AdminUserController) ListUsers(c *gin.Context) {
 // 路径参数：id（用户ID）
 // 请求体：AdminUpdateUserReq（包含昵称、角色、语言、时区）
 // 响应：更新后的用户信息
+// @Summary      Update user
+// @Description  Admin update user info (nickname, role, language, timezone)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "User ID"
+// @Param        body body request.AdminUpdateUserReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/users/{id} [put]
+// @Security     BearerAuth
 func (ctrl *AdminUserController) UpdateUser(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -83,6 +110,18 @@ func (ctrl *AdminUserController) UpdateUser(c *gin.Context) {
 //   - c: Gin上下文
 // 路径参数：id（用户ID）
 // 响应：删除成功返回nil
+// @Summary      Delete user
+// @Description  Admin delete a user
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "User ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/users/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *AdminUserController) DeleteUser(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -100,6 +139,18 @@ func (ctrl *AdminUserController) DeleteUser(c *gin.Context) {
 //   - c: Gin上下文
 // 请求体：AdminInviteUserReq（包含邮箱、昵称、角色）
 // 响应：邀请结果
+// @Summary      Invite user
+// @Description  Admin invite a new user by email
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body body request.AdminInviteUserReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/admin/users/invite [post]
+// @Security     BearerAuth
 func (ctrl *AdminUserController) InviteUser(c *gin.Context) {
 	var req request.AdminInviteUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -34,6 +34,18 @@ func NewBillController(billService *service.BillService) *BillController {
 // 请求体：CreateBillReq（包含名称、金额、重复规则、下次到期日等）
 // 响应：创建成功的账单信息
 // 业务规则：账单金额必须大于0，重复规则仅支持daily/weekly/monthly/yearly
+// @Summary      Create bill
+// @Description  Create a new bill for the current user
+// @Tags         bills
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateBillReq true "create bill request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/bills [post]
+// @Security     BearerAuth
 func (ctrl *BillController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -57,6 +69,19 @@ func (ctrl *BillController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（账单ID）
 // 响应：账单详细信息
+// @Summary      Get bill
+// @Description  Get bill details by ID
+// @Tags         bills
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Bill ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/bills/{id} [get]
+// @Security     BearerAuth
 func (ctrl *BillController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -75,6 +100,16 @@ func (ctrl *BillController) Get(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：账单列表
+// @Summary      List bills
+// @Description  Get all bills for the current user
+// @Tags         bills
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/bills [get]
+// @Security     BearerAuth
 func (ctrl *BillController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -93,6 +128,20 @@ func (ctrl *BillController) List(c *gin.Context) {
 // 路径参数：id（账单ID）
 // 请求体：UpdateBillReq（包含需要更新的字段）
 // 响应：更新后的账单信息
+// @Summary      Update bill
+// @Description  Update bill by ID
+// @Tags         bills
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Bill ID"
+// @Param        body body request.UpdateBillReq true "update bill request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/bills/{id} [put]
+// @Security     BearerAuth
 func (ctrl *BillController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -117,6 +166,19 @@ func (ctrl *BillController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（账单ID）
 // 响应：删除成功返回nil
+// @Summary      Delete bill
+// @Description  Delete bill by ID
+// @Tags         bills
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Bill ID"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/bills/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *BillController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

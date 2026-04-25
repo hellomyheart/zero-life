@@ -33,6 +33,20 @@ func NewAttachmentController(service *service.AttachmentService) *AttachmentCont
 //   - ctx: Gin上下文，包含用户身份
 // 表单字段：attachable_type（关联对象类型）、attachable_id（关联对象ID）、file（文件）
 // 响应：上传成功的附件信息
+// @Summary      Upload attachment
+// @Description  Upload a file and attach it to an object
+// @Tags         attachments
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        attachable_type formData string true "Attachable object type"
+// @Param        attachable_id formData uint64 true "Attachable object ID"
+// @Param        file formData file true "File to upload"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/attachments/upload [post]
+// @Security     BearerAuth
 func (c *AttachmentController) Upload(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -64,6 +78,17 @@ func (c *AttachmentController) Upload(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（附件ID）
 // 响应：文件流（Content-Disposition: attachment）
+// @Summary      Download attachment
+// @Description  Download an attachment file by ID
+// @Tags         attachments
+// @Accept       json
+// @Produce      octet-stream
+// @Param        id path uint64 true "Attachment ID"
+// @Success      200  {file} file
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/attachments/{id}/download [get]
+// @Security     BearerAuth
 func (c *AttachmentController) Download(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -82,6 +107,17 @@ func (c *AttachmentController) Download(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（附件ID）
 // 响应：文件流（Content-Disposition: inline）
+// @Summary      View attachment
+// @Description  View an attachment file inline in browser
+// @Tags         attachments
+// @Accept       json
+// @Produce      octet-stream
+// @Param        id path uint64 true "Attachment ID"
+// @Success      200  {file} file
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/attachments/{id}/view [get]
+// @Security     BearerAuth
 func (c *AttachmentController) View(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")
@@ -103,6 +139,18 @@ func (c *AttachmentController) View(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：attachable_type（关联对象类型）、attachable_id（关联对象ID）
 // 响应：附件列表
+// @Summary      List attachments
+// @Description  Get attachment list by attachable type and ID
+// @Tags         attachments
+// @Accept       json
+// @Produce      json
+// @Param        attachable_type query string true "Attachable object type"
+// @Param        attachable_id query uint64 true "Attachable object ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/attachments [get]
+// @Security     BearerAuth
 func (c *AttachmentController) List(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	attachableType := ctx.Query("attachable_type")
@@ -121,6 +169,17 @@ func (c *AttachmentController) List(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（附件ID）
 // 响应：删除成功返回nil
+// @Summary      Delete attachment
+// @Description  Delete an attachment by ID
+// @Tags         attachments
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Attachment ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/attachments/{id} [delete]
+// @Security     BearerAuth
 func (c *AttachmentController) Delete(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	id := parseIDParam(ctx, "id")

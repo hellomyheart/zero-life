@@ -32,6 +32,18 @@ func NewTransactionBulkController(bulkService *service.TransactionBulkService) *
 //   - c: Gin上下文，包含用户身份
 // 请求体：BulkEditReq（包含交易ID列表、分类ID、备注、标签ID列表）
 // 响应：编辑成功返回nil
+// @Summary      Bulk edit transactions
+// @Description  Batch modify category, notes, and tags for selected transactions
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        body body request.BulkEditReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/bulk/edit [post]
+// @Security     BearerAuth
 func (ctrl *TransactionBulkController) BulkEdit(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -55,6 +67,18 @@ func (ctrl *TransactionBulkController) BulkEdit(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 请求体：BulkDeleteReq（包含交易ID列表）
 // 响应：删除成功返回nil
+// @Summary      Bulk delete transactions
+// @Description  Batch delete transactions by ID list
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        body body request.BulkDeleteReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/bulk/delete [post]
+// @Security     BearerAuth
 func (ctrl *TransactionBulkController) BulkDelete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -79,6 +103,19 @@ func (ctrl *TransactionBulkController) BulkDelete(c *gin.Context) {
 // 路径参数：id（交易ID）
 // 请求体：ConvertReq（包含目标类型、源账户ID、目标账户ID）
 // 响应：转换后的交易信息
+// @Summary      Convert transaction type
+// @Description  Convert a transaction from one type to another
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Param        body body request.ConvertReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/bulk/{id}/convert [post]
+// @Security     BearerAuth
 func (ctrl *TransactionBulkController) ConvertType(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -104,6 +141,17 @@ func (ctrl *TransactionBulkController) ConvertType(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（原交易ID）
 // 响应：克隆后的新交易信息
+// @Summary      Clone transaction
+// @Description  Clone a transaction creating a new copy with all the same info
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Transaction ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/transactions/bulk/{id}/clone [post]
+// @Security     BearerAuth
 func (ctrl *TransactionBulkController) Clone(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

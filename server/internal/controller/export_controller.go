@@ -34,6 +34,20 @@ func NewExportController(service *service.ExportService) *ExportController {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：ExportReq（包含start_date、end_date、format）
 // 响应：文件流下载（CSV或JSON格式）
+// @Summary      Export transactions
+// @Description  Export transaction data by date range and format (CSV or JSON)
+// @Tags         exports
+// @Accept       json
+// @Produce      octet-stream
+// @Param        start_date query string false "Start date"
+// @Param        end_date query string false "End date"
+// @Param        format query string false "Export format (csv or json)"
+// @Success      200  {file} file
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/exports/transactions [get]
+// @Security     BearerAuth
 func (c *ExportController) ExportTransactions(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -64,6 +78,18 @@ func (c *ExportController) ExportTransactions(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：ExportReq（包含format）
 // 响应：文件流下载（CSV或JSON格式）
+// @Summary      Export accounts
+// @Description  Export account data in CSV or JSON format
+// @Tags         exports
+// @Accept       json
+// @Produce      octet-stream
+// @Param        format query string false "Export format (csv or json)"
+// @Success      200  {file} file
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/exports/accounts [get]
+// @Security     BearerAuth
 func (c *ExportController) ExportAccounts(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -94,6 +120,18 @@ func (c *ExportController) ExportAccounts(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：ExportReq（包含format）
 // 响应：文件流下载（CSV或JSON格式）
+// @Summary      Export budgets
+// @Description  Export budget data in CSV or JSON format
+// @Tags         exports
+// @Accept       json
+// @Produce      octet-stream
+// @Param        format query string false "Export format (csv or json)"
+// @Success      200  {file} file
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/exports/budgets [get]
+// @Security     BearerAuth
 func (c *ExportController) ExportBudgets(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -124,6 +162,18 @@ func (c *ExportController) ExportBudgets(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：ExportReq（包含format）
 // 响应：文件流下载（CSV或JSON格式）
+// @Summary      Export categories
+// @Description  Export category data in CSV or JSON format
+// @Tags         exports
+// @Accept       json
+// @Produce      octet-stream
+// @Param        format query string false "Export format (csv or json)"
+// @Success      200  {file} file
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/exports/categories [get]
+// @Security     BearerAuth
 func (c *ExportController) ExportCategories(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 
@@ -154,6 +204,18 @@ func (c *ExportController) ExportCategories(ctx *gin.Context) {
 //   - ctx: Gin上下文，包含用户身份
 // 查询参数：ExportReq（包含format）
 // 响应：文件流下载（CSV或JSON格式）
+// @Summary      Export tags
+// @Description  Export tag data in CSV or JSON format
+// @Tags         exports
+// @Accept       json
+// @Produce      octet-stream
+// @Param        format query string false "Export format (csv or json)"
+// @Success      200  {file} file
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/exports/tags [get]
+// @Security     BearerAuth
 func (c *ExportController) ExportTags(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 

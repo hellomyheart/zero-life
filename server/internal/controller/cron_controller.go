@@ -25,6 +25,16 @@ func NewCronController(cronService *service.CronService) *CronController {
 // Run 执行定时任务
 // 通过URL路径中的token参数验证请求合法性，防止未授权触发
 // token从配置文件app.cron_token读取，不再硬编码
+// @Summary      Run cron job
+// @Description  Execute scheduled tasks via token authentication
+// @Tags         cron
+// @Accept       json
+// @Produce      json
+// @Param        token path string true "Cron token"
+// @Success      200  {object} map[string]interface{}
+// @Failure      403  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/cron/{token} [get]
 func (ctrl *CronController) Run(c *gin.Context) {
 	token := c.Param("token")
 	// 从配置读取cron令牌，如果未配置则使用默认值（建议在配置文件中设置）

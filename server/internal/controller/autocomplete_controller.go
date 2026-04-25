@@ -56,6 +56,17 @@ func NewAutocompleteController(
 // 根据查询关键词返回匹配的账户列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete accounts
+// @Description  Search accounts by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/accounts [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -81,6 +92,17 @@ func (c *AutocompleteController) Accounts(ctx *gin.Context) {
 // 根据查询关键词返回匹配的分类列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete categories
+// @Description  Search categories by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/categories [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Categories(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -111,6 +133,17 @@ func (c *AutocompleteController) Categories(ctx *gin.Context) {
 // 根据查询关键词返回匹配的标签列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete tags
+// @Description  Search tags by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/tags [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Tags(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -142,6 +175,17 @@ func (c *AutocompleteController) Tags(ctx *gin.Context) {
 // 根据查询关键词返回匹配的货币列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete currencies
+// @Description  Search currencies by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/currencies [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 	query := strings.ToLower(ctx.Query("q"))
 
@@ -175,6 +219,17 @@ func (c *AutocompleteController) Currencies(ctx *gin.Context) {
 // 根据查询关键词返回匹配的预算列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete budgets
+// @Description  Search budgets by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/budgets [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
@@ -205,6 +260,17 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 // 根据查询关键词返回匹配的账单列表
 // 参数：
 //   - ctx: Gin上下文
+// @Summary      Autocomplete bills
+// @Description  Search bills by keyword for autocomplete
+// @Tags         autocomplete
+// @Accept       json
+// @Produce      json
+// @Param        q query string false "Search keyword"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/autocomplete/bills [get]
+// @Security     BearerAuth
 func (c *AutocompleteController) Bills(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))

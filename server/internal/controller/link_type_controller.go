@@ -33,6 +33,18 @@ func NewLinkTypeController(linkTypeService *service.LinkTypeService) *LinkTypeCo
 //   - c: Gin上下文
 // 请求体：CreateLinkTypeReq（包含名称、正向描述、反向描述、是否有方向性）
 // 响应：创建成功的关联类型信息
+// @Summary      Create link type
+// @Description  Create a new link type defining transaction relationship semantics
+// @Tags         link-types
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateLinkTypeReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/link-types [post]
+// @Security     BearerAuth
 func (ctrl *LinkTypeController) Create(c *gin.Context) {
 	var req request.CreateLinkTypeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -54,6 +66,17 @@ func (ctrl *LinkTypeController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含URL路径参数id
 // 路径参数：id（关联类型ID）
 // 响应：关联类型详细信息
+// @Summary      Get link type
+// @Description  Get link type details by ID
+// @Tags         link-types
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Link type ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/link-types/{id} [get]
+// @Security     BearerAuth
 func (ctrl *LinkTypeController) Get(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -71,6 +94,19 @@ func (ctrl *LinkTypeController) Get(c *gin.Context) {
 //   - c: Gin上下文
 // 查询参数：LinkTypeListReq（包含page、page_size）
 // 响应：关联类型分页列表
+// @Summary      List link types
+// @Description  Get paginated list of link types
+// @Tags         link-types
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/link-types [get]
+// @Security     BearerAuth
 func (ctrl *LinkTypeController) List(c *gin.Context) {
 	var req request.LinkTypeListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -93,6 +129,19 @@ func (ctrl *LinkTypeController) List(c *gin.Context) {
 // 路径参数：id（关联类型ID）
 // 请求体：UpdateLinkTypeReq（包含需要更新的字段）
 // 响应：更新后的关联类型信息
+// @Summary      Update link type
+// @Description  Update link type by ID
+// @Tags         link-types
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Link type ID"
+// @Param        body body request.UpdateLinkTypeReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/link-types/{id} [put]
+// @Security     BearerAuth
 func (ctrl *LinkTypeController) Update(c *gin.Context) {
 	id := parseIDParam(c, "id")
 
@@ -116,6 +165,17 @@ func (ctrl *LinkTypeController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含URL路径参数id
 // 路径参数：id（关联类型ID）
 // 响应：删除成功返回nil
+// @Summary      Delete link type
+// @Description  Delete link type by ID
+// @Tags         link-types
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Link type ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/link-types/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *LinkTypeController) Delete(c *gin.Context) {
 	id := parseIDParam(c, "id")
 

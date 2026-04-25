@@ -31,6 +31,18 @@ func NewReconciliationController(service *service.ReconciliationService) *Reconc
 // 请求方法：POST
 // 请求路径：/reconciliations
 // 请求体：CreateReconciliationReq（JSON格式）
+// @Summary      Create reconciliation
+// @Description  Create a new reconciliation record
+// @Tags         reconciliations
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateReconciliationReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reconciliations [post]
+// @Security     BearerAuth
 func (ctrl *ReconciliationController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -53,6 +65,17 @@ func (ctrl *ReconciliationController) Create(c *gin.Context) {
 // 从上下文中提取用户ID，确保只能查询属于当前用户的对账记录
 // 请求方法：GET
 // 请求路径：/reconciliations/:id
+// @Summary      Get reconciliation
+// @Description  Get reconciliation details by ID
+// @Tags         reconciliations
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Reconciliation ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reconciliations/{id} [get]
+// @Security     BearerAuth
 func (ctrl *ReconciliationController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -71,6 +94,19 @@ func (ctrl *ReconciliationController) Get(c *gin.Context) {
 // 请求方法：GET
 // 请求路径：/reconciliations
 // 查询参数：ReconciliationListReq
+// @Summary      List reconciliations
+// @Description  Get paginated list of reconciliation records
+// @Tags         reconciliations
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reconciliations [get]
+// @Security     BearerAuth
 func (ctrl *ReconciliationController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -94,6 +130,19 @@ func (ctrl *ReconciliationController) List(c *gin.Context) {
 // 请求方法：PUT
 // 请求路径：/reconciliations/:id
 // 请求体：UpdateReconciliationReq（JSON格式）
+// @Summary      Update reconciliation
+// @Description  Update reconciliation record by ID
+// @Tags         reconciliations
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Reconciliation ID"
+// @Param        body body request.UpdateReconciliationReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reconciliations/{id} [put]
+// @Security     BearerAuth
 func (ctrl *ReconciliationController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -117,6 +166,17 @@ func (ctrl *ReconciliationController) Update(c *gin.Context) {
 // 从上下文中提取用户ID，确保只能删除属于当前用户的对账记录
 // 请求方法：DELETE
 // 请求路径：/reconciliations/:id
+// @Summary      Delete reconciliation
+// @Description  Delete reconciliation record by ID
+// @Tags         reconciliations
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Reconciliation ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/reconciliations/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *ReconciliationController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

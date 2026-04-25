@@ -32,6 +32,18 @@ func NewObjectGroupController(service *service.ObjectGroupService) *ObjectGroupC
 //   - c: Gin上下文，包含用户身份和请求体
 // 请求体：CreateObjectGroupReq（包含名称、对象类型、对象ID）
 // 响应：创建成功的分组信息
+// @Summary      Create object group
+// @Description  Create a new object group for organizing transactions, bills, budgets, etc.
+// @Tags         object-groups
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateObjectGroupReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/object-groups [post]
+// @Security     BearerAuth
 func (ctrl *ObjectGroupController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -55,6 +67,17 @@ func (ctrl *ObjectGroupController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（分组ID）
 // 响应：分组详细信息
+// @Summary      Get object group
+// @Description  Get object group details by ID
+// @Tags         object-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Object group ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/object-groups/{id} [get]
+// @Security     BearerAuth
 func (ctrl *ObjectGroupController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -74,6 +97,17 @@ func (ctrl *ObjectGroupController) Get(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：groupable_type（对象类型，如transaction/bill/budget/piggy_bank）
 // 响应：分组列表
+// @Summary      List object groups
+// @Description  Get object group list filtered by groupable type
+// @Tags         object-groups
+// @Accept       json
+// @Produce      json
+// @Param        groupable_type query string false "Object type (transaction/bill/budget/piggy_bank)"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/object-groups [get]
+// @Security     BearerAuth
 func (ctrl *ObjectGroupController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	groupableType := c.Query("groupable_type")
@@ -93,6 +127,19 @@ func (ctrl *ObjectGroupController) List(c *gin.Context) {
 // 路径参数：id（分组ID）
 // 请求体：UpdateObjectGroupReq（包含名称）
 // 响应：更新后的分组信息
+// @Summary      Update object group
+// @Description  Update object group by ID
+// @Tags         object-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Object group ID"
+// @Param        body body request.UpdateObjectGroupReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/object-groups/{id} [put]
+// @Security     BearerAuth
 func (ctrl *ObjectGroupController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -117,6 +164,17 @@ func (ctrl *ObjectGroupController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（分组ID）
 // 响应：删除成功返回nil
+// @Summary      Delete object group
+// @Description  Delete object group by ID
+// @Tags         object-groups
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Object group ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/object-groups/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *ObjectGroupController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

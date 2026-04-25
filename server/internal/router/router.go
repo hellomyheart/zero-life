@@ -3,9 +3,13 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/hellomyheart/zero-life/server/internal/controller"
 	"github.com/hellomyheart/zero-life/server/internal/middleware"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
+
+	_ "github.com/hellomyheart/zero-life/server/docs"
 )
 
 // Router 路由器，持有Gin引擎和所有控制器的引用，用于注册API路由
@@ -127,6 +131,9 @@ func NewRouter(
 func (r *Router) Setup(jwtService *jwt.Service) {
 	// 全局CORS中间件，允许跨域请求
 	r.engine.Use(middleware.CORS())
+
+	// Swagger API文档UI，访问 /swagger/index.html
+	r.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1版本路由组
 	v1 := r.engine.Group("/api/v1")

@@ -32,6 +32,18 @@ func NewRecurrenceController(recurrenceService *service.RecurrenceService) *Recu
 //   - c: Gin上下文，包含用户身份和请求体
 // 请求体：CreateRecurrenceReq（包含标题、类型、金额、重复频率、下次执行日期等）
 // 响应：创建成功的周期性交易信息
+// @Summary      Create recurrence
+// @Description  Create a new recurring transaction schedule
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateRecurrenceReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences [post]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -55,6 +67,17 @@ func (ctrl *RecurrenceController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（周期性交易ID）
 // 响应：周期性交易详细信息
+// @Summary      Get recurrence
+// @Description  Get recurrence details by ID
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurrence ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences/{id} [get]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -73,6 +96,19 @@ func (ctrl *RecurrenceController) Get(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：RecurrenceListReq（包含page、page_size）
 // 响应：周期性交易分页列表
+// @Summary      List recurrences
+// @Description  Get paginated list of recurrences
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences [get]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -97,6 +133,19 @@ func (ctrl *RecurrenceController) List(c *gin.Context) {
 // 路径参数：id（周期性交易ID）
 // 请求体：UpdateRecurrenceReq（包含需要更新的字段）
 // 响应：更新后的周期性交易信息
+// @Summary      Update recurrence
+// @Description  Update recurrence by ID
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurrence ID"
+// @Param        body body request.UpdateRecurrenceReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences/{id} [put]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -121,6 +170,17 @@ func (ctrl *RecurrenceController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（周期性交易ID）
 // 响应：删除成功返回nil
+// @Summary      Delete recurrence
+// @Description  Delete recurrence by ID
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurrence ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -139,6 +199,17 @@ func (ctrl *RecurrenceController) Delete(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（周期性交易ID）
 // 响应：创建的交易信息
+// @Summary      Trigger recurrence
+// @Description  Manually trigger a recurrence to create a transaction record
+// @Tags         recurrences
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurrence ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurrences/{id}/trigger [post]
+// @Security     BearerAuth
 func (ctrl *RecurrenceController) Trigger(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")

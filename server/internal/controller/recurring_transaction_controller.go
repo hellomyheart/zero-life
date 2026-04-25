@@ -32,6 +32,18 @@ func NewRecurringTransactionController(service *service.RecurringTransactionServ
 //   - c: Gin上下文，包含用户身份和请求体
 // 请求体：CreateRecurringTransactionReq（包含描述、金额、重复类型、开始日期等）
 // 响应：创建成功的循环交易信息
+// @Summary      Create recurring transaction
+// @Description  Create a new recurring transaction
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Param        body body request.CreateRecurringTransactionReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions [post]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) Create(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -55,6 +67,17 @@ func (ctrl *RecurringTransactionController) Create(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（循环交易ID）
 // 响应：循环交易详细信息
+// @Summary      Get recurring transaction
+// @Description  Get recurring transaction details by ID
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurring transaction ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions/{id} [get]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) Get(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -73,6 +96,20 @@ func (ctrl *RecurringTransactionController) Get(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份
 // 查询参数：RecurringTransactionListReq（包含page、page_size、active过滤）
 // 响应：循环交易分页列表
+// @Summary      List recurring transactions
+// @Description  Get paginated list of recurring transactions
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number"
+// @Param        page_size query int false "Page size"
+// @Param        active query bool false "Filter by active status"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions [get]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) List(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
@@ -97,6 +134,19 @@ func (ctrl *RecurringTransactionController) List(c *gin.Context) {
 // 路径参数：id（循环交易ID）
 // 请求体：UpdateRecurringTransactionReq（包含需要更新的字段）
 // 响应：更新后的循环交易信息
+// @Summary      Update recurring transaction
+// @Description  Update recurring transaction by ID
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurring transaction ID"
+// @Param        body body request.UpdateRecurringTransactionReq true "request body"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions/{id} [put]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) Update(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -121,6 +171,17 @@ func (ctrl *RecurringTransactionController) Update(c *gin.Context) {
 //   - c: Gin上下文，包含用户身份和URL路径参数id
 // 路径参数：id（循环交易ID）
 // 响应：删除成功返回nil
+// @Summary      Delete recurring transaction
+// @Description  Delete recurring transaction by ID
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Param        id path uint64 true "Recurring transaction ID"
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) Delete(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 	id := parseIDParam(c, "id")
@@ -138,6 +199,16 @@ func (ctrl *RecurringTransactionController) Delete(c *gin.Context) {
 // 参数：
 //   - c: Gin上下文，包含用户身份
 // 响应：创建的交易数量（{"created": N}）
+// @Summary      Process due recurring transactions
+// @Description  Check and process all due recurring transactions, creating corresponding transaction records
+// @Tags         recurring-transactions
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/recurring-transactions/process-due [post]
+// @Security     BearerAuth
 func (ctrl *RecurringTransactionController) ProcessDue(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
