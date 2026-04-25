@@ -5,3 +5,7 @@
 
 
 .preferences
+*.db
+*.db-shm
+*.db-wal
+*.exe
