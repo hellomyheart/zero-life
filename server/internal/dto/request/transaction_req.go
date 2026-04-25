@@ -8,8 +8,8 @@ type CreateTransactionReq struct {
 	Date          string            `json:"date" binding:"required"`                                   // 交易日期
 	Description   string            `json:"description" binding:"required"`                            // 交易描述
 	Amount        string            `json:"amount" binding:"required"`                                 // 交易金额，必须大于0
-	SourceID      uint64            `json:"source_id" binding:"required"`                              // 源账户ID（支出账户）
-	DestinationID *uint64           `json:"destination_id"`                                            // 目标账户ID（转账时必填）
+	SourceID      uint64            `json:"source_id" binding:"required"`                              // 源账户ID（取款=资产账户，存款=收入账户，转账=源资产账户）
+	DestinationID *uint64           `json:"destination_id"`                                            // 目标账户ID（取款=支出账户，存款=资产账户，转账=目标资产账户）
 	CategoryID    *uint64           `json:"category_id"`                                               // 分类ID
 	Notes         string            `json:"notes"`                                                     // 备注
 	Tags          []uint64          `json:"tags"`                                                      // 标签ID列表

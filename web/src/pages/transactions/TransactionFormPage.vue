@@ -13,6 +13,8 @@ import type { CreateTransactionReq, Transaction } from '@/types/transaction'
 import { TransactionType } from '@/types/transaction'
 import AmountInput from '@/components/common/AmountInput.vue'
 
+import { AccountType } from '@/types/account'
+
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -55,6 +57,7 @@ const rules: FormRules = {
   description: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   amount: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   source_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
+  destination_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
 }
 
 const transactionTypeOptions = [
@@ -62,6 +65,38 @@ const transactionTypeOptions = [
   { value: TransactionType.Withdrawal, label: t('transaction.withdrawal') },
   { value: TransactionType.Transfer, label: t('transaction.transfer') },
 ]
+
+// 根据交易类型筛选账户选项
+const assetAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Asset))
+const expenseAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Expense))
+const revenueAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Revenue))
+
+// 取款：source=资产账户，destination=支出账户
+// 存款：source=收入账户，destination=资产账户
+// 转账：source=资产账户，destination=资产账户
+const sourceAccountOptions = computed(() => {
+  if (form.type === TransactionType.Deposit) return revenueAccounts.value
+  return assetAccounts.value
+})
+const destinationAccountOptions = computed(() => {
+  if (form.type === TransactionType.Withdrawal) return expenseAccounts.value
+  return assetAccounts.value
+})
+const showDestination = computed(() => true)
+const sourceAccountLabel = computed(() => {
+  if (form.type === TransactionType.Deposit) return t('transaction.sourceAccount') + ' (' + t('transaction.revenueAccount') + ')'
+  return t('transaction.sourceAccount') + ' (' + t('transaction.assetAccount') + ')'
+})
+const destinationAccountLabel = computed(() => {
+  if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + ' (' + t('transaction.expenseAccount') + ')'
+  if (form.type === TransactionType.Transfer) return t('transaction.destinationAccount') + ' (' + t('transaction.assetAccount') + ')'
+  return t('transaction.destinationAccount') + ' (' + t('transaction.assetAccount') + ')'
+})
+
+function handleTypeChange() {
+  form.source_id = 0
+  form.destination_id = undefined
+}
 
 function addSplit() {
   if (!form.splits) form.splits = []
@@ -136,7 +171,7 @@ async function handleSubmit() {
     <el-card>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
         <el-form-item :label="t('transaction.type')" prop="type">
-          <el-radio-group v-model="form.type">
+          <el-radio-group v-model="form.type" @change="handleTypeChange">
             <el-radio v-for="opt in transactionTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -149,14 +184,14 @@ async function handleSubmit() {
         <el-form-item :label="t('transaction.amount')" prop="amount">
           <AmountInput v-model="form.amount" />
         </el-form-item>
-        <el-form-item :label="t('transaction.sourceAccount')" prop="source_id">
+        <el-form-item :label="sourceAccountLabel" prop="source_id">
           <el-select v-model="form.source_id" :placeholder="t('common.selectPlaceholder')" filterable>
-            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+            <el-option v-for="acc in sourceAccountOptions" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="form.type === TransactionType.Transfer" :label="t('transaction.destinationAccount')">
+        <el-form-item v-if="showDestination" :label="destinationAccountLabel" prop="destination_id">
           <el-select v-model="form.destination_id" :placeholder="t('common.selectPlaceholder')" filterable>
-            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+            <el-option v-for="acc in destinationAccountOptions" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.category')">

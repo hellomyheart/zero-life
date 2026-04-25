@@ -403,8 +403,8 @@ func (s *TransactionService) validateTransaction(userID uint64, txnType model.Tr
 		return errcode.ErrNotFound
 	}
 
-	// For transfer, destination must exist
-	if txnType == model.TransactionTypeTransfer {
+	// For transfer and deposit, destination must exist
+	if txnType == model.TransactionTypeTransfer || txnType == model.TransactionTypeDeposit {
 		if destID == nil {
 			return errcode.ErrInvalidTxnType
 		}
@@ -418,9 +418,9 @@ func (s *TransactionService) validateTransaction(userID uint64, txnType model.Tr
 }
 
 // calculateBalanceChanges 根据交易类型计算各账户的余额变更
-// deposit（存款）：源账户余额增加
-// withdrawal（取款）：源账户余额减少
-// transfer（转账）：源账户余额减少，目标账户余额增加
+// withdrawal（取款）：source_id（资产账户）余额减少
+// deposit（存款）：destination_id（资产账户）余额增加
+// transfer（转账）：source_id 余额减少，destination_id 余额增加
 // 参数：
 //   - txnType: 交易类型
 //   - amount: 交易金额
@@ -433,8 +433,10 @@ func (s *TransactionService) calculateBalanceChanges(txnType model.TransactionTy
 
 	switch txnType {
 	case model.TransactionTypeDeposit:
-		// Money goes into source account (increase)
-		changes[sourceID] = amount
+		// Money goes into destination account (increase)
+		if destID != nil {
+			changes[*destID] = amount
+		}
 	case model.TransactionTypeWithdrawal:
 		// Money leaves source account (decrease)
 		changes[sourceID] = amount.Neg()

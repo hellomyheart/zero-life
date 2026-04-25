@@ -11921,7 +11921,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "destination_id": {
-                    "description": "目标账户ID（转账时必填）",
+                    "description": "目标账户ID（取款=支出账户，存款=资产账户，转账=目标资产账户）",
                     "type": "integer"
                 },
                 "notes": {
@@ -11929,7 +11929,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "source_id": {
-                    "description": "源账户ID（支出账户）",
+                    "description": "源账户ID（取款=资产账户，存款=收入账户，转账=源资产账户）",
                     "type": "integer"
                 },
                 "splits": {
