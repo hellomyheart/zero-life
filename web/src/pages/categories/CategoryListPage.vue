@@ -1,10 +1,12 @@
 <script setup lang="ts">
-// 分类列表页面 - 树形结构展示分类支持拖拽排序
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/category'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElIcon } from 'element-plus'
+import * as Icons from '@element-plus/icons-vue'
 import type { Category, CreateCategoryReq } from '@/types/category'
+import IconSelect from '@/components/common/IconSelect.vue'
 
 const { t } = useI18n()
 
@@ -17,6 +19,8 @@ const editingId = ref<number | null>(null)
 const form = ref<CreateCategoryReq>({
   name: '',
   parent_id: null,
+  icon: '',
+  notes: '',
 })
 
 const treeProps = {
@@ -38,14 +42,14 @@ async function fetchCategories() {
 function handleCreate(parentId: number | null = null) {
   dialogTitle.value = t('category.create')
   editingId.value = null
-  form.value = { name: '', parent_id: parentId }
+  form.value = { name: '', parent_id: parentId, icon: '', notes: '' }
   dialogVisible.value = true
 }
 
 function handleEdit(data: Category) {
   dialogTitle.value = t('category.edit')
   editingId.value = data.id
-  form.value = { name: data.name, parent_id: data.parent_id }
+  form.value = { name: data.name, parent_id: data.parent_id, icon: data.icon, notes: data.notes }
   dialogVisible.value = true
 }
 
@@ -98,7 +102,13 @@ onMounted(fetchCategories)
     >
       <template #default="{ data }">
         <div class="tree-node">
-          <span>{{ data.name }}</span>
+          <span class="node-label">
+            <el-icon v-if="data.icon && (Icons as any)[data.icon]" :size="16">
+              <component :is="(Icons as any)[data.icon]" />
+            </el-icon>
+            <span>{{ data.name }}</span>
+            <span v-if="data.notes" class="node-notes">{{ data.notes }}</span>
+          </span>
           <span class="tree-actions">
             <el-button link type="primary" size="small" @click="handleCreate(data.id)">{{ t('category.create') }}</el-button>
             <el-button link type="primary" size="small" @click="handleEdit(data)">{{ t('common.edit') }}</el-button>
@@ -112,6 +122,12 @@ onMounted(fetchCategories)
       <el-form :model="form" label-width="80px">
         <el-form-item :label="t('category.name')">
           <el-input v-model="form.name" :placeholder="t('common.inputPlaceholder')" />
+        </el-form-item>
+        <el-form-item label="图标">
+          <IconSelect :model-value="form.icon ?? ''" @update:model-value="form.icon = $event" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="form.notes" type="textarea" :rows="2" placeholder="输入备注" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -149,5 +165,17 @@ onMounted(fetchCategories)
 .tree-node:hover .tree-actions {
   display: inline-flex;
   gap: 4px;
+}
+
+.node-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-notes {
+  color: #999;
+  font-size: 12px;
+  margin-left: 4px;
 }
 </style>

@@ -1,0 +1,38 @@
+app:
+  env: development
+  port: "8080"
+
+db:
+  path: "./data/zero-life.db"
+  max_idle_conns: 1
+  max_open_conns: 1
+  max_lifetime: 0s
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 8
+
+jwt:
+  secret: "change-me-in-production"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+
+smtp:
+  host: ""
+  port: 587
+  user: ""
+  password: ""
+  from: ""
+
+cors:
+  allow_origins:
+    - "http://localhost:5173"
+
+log:
+  level: debug
+  format: json
+
+attach:
+  path: "./data/attachments"

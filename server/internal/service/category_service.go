@@ -145,28 +145,22 @@ func (s *CategoryService) Delete(userID, id uint64) error {
 	}
 
 	// 在数据库事务中执行删除操作，确保数据一致性
-	return s.db.Transaction(func(dbTx *gorm.DB) error {
-		// 步骤1：获取所有子分类
-		subCategories, err := s.categoryRepo.GetSubCategories(id, userID)
-		if err != nil {
-			return err
-		}
+	subCategories, err := s.categoryRepo.GetSubCategories(id, userID)
+	if err != nil {
+		return errcode.ErrInternal
+	}
 
-		// 步骤2：删除所有子分类
-		for _, sub := range subCategories {
-			if err := s.categoryRepo.Delete(sub.ID, userID); err != nil {
-				return err
-			}
+	for _, sub := range subCategories {
+		if err := s.categoryRepo.Delete(sub.ID, userID); err != nil {
+			return errcode.ErrInternal
 		}
+	}
 
-		// 步骤3：将关联交易的分类ID设为NULL（避免外键约束错误）
-		if err := dbTx.Model(&model.Transaction{}).Where("category_id = ?", id).Update("category_id", nil).Error; err != nil {
-			return err
-		}
+	if err := s.db.Model(&model.Transaction{}).Where("category_id = ?", id).Update("category_id", nil).Error; err != nil {
+		return errcode.ErrInternal
+	}
 
-		// 步骤4：删除分类本身
-		return s.categoryRepo.Delete(id, userID)
-	})
+	return s.categoryRepo.Delete(id, userID)
 }
 
 // toResp 将分类模型转换为响应对象
@@ -186,21 +180,23 @@ func (s *CategoryService) toResp(c *model.Category) *response.CategoryResp {
 // buildTree 将扁平的分类列表构建为树形结构
 // 使用map快速查找，将子分类挂载到父分类的Children字段
 func (s *CategoryService) buildTree(categories []model.Category) []response.CategoryResp {
-	// Build a map for quick lookup
 	nodeMap := make(map[uint64]*response.CategoryResp)
 	for _, c := range categories {
 		nodeMap[c.ID] = s.toResp(&c)
 	}
 
+	for _, c := range categories {
+		if c.ParentID != nil {
+			if parent, ok := nodeMap[*c.ParentID]; ok {
+				parent.Children = append(parent.Children, *nodeMap[c.ID])
+			}
+		}
+	}
+
 	var roots []response.CategoryResp
 	for _, c := range categories {
-		node := nodeMap[c.ID]
 		if c.ParentID == nil {
-			roots = append(roots, *node)
-		} else {
-			if parent, ok := nodeMap[*c.ParentID]; ok {
-				parent.Children = append(parent.Children, *node)
-			}
+			roots = append(roots, *nodeMap[c.ID])
 		}
 	}
 
