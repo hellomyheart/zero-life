@@ -13,7 +13,8 @@ type CreateAccountReq struct {
 }
 
 // UpdateAccountReq 更新账户请求
-// 仅允许修改名称、备注和虚拟属性，账户类型和货币不可更改
+// 仅允许修改名称、备注和虚拟属性
+// 账户类型、货币、初始余额创建后不可修改（修改会影响已有交易的余额计算）
 type UpdateAccountReq struct {
 	Name      string `json:"name"`                  // 账户名称
 	Notes     string `json:"notes"`                 // 备注

@@ -6,6 +6,7 @@ import Decimal from 'decimal.js'
 const props = defineProps<{
   modelValue: string // 金额值（字符串类型，避免精度丢失）
   currency?: string // 货币代码，显示在输入框前缀
+  disabled?: boolean // 是否禁用
 }>()
 
 const emit = defineEmits<{
@@ -48,6 +49,7 @@ function handleBlur() {
     @input="handleInput"
     @blur="handleBlur"
     type="text"
+    :disabled="disabled"
     clearable
   >
     <!-- 有货币代码时，在输入框前显示货币前缀 -->

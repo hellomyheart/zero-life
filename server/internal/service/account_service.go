@@ -133,7 +133,8 @@ func (s *AccountService) List(userID uint64, req *request.AccountListReq) (*pagi
 }
 
 // Update 更新账户信息
-// 仅更新请求中提供的字段（部分更新）
+// 仅允许修改名称、备注和虚拟属性
+// 账户类型、货币、初始余额创建后不可修改（修改会影响已有交易的余额计算）
 // 参数：
 //   - userID: 用户ID
 //   - id: 账户ID
@@ -164,7 +165,13 @@ func (s *AccountService) Update(userID, id uint64, req *request.UpdateAccountReq
 		return nil, errcode.ErrInternal
 	}
 
-	return s.toResp(account), nil
+	// 重新加载以获取关联的货币信息
+	updated, err := s.accountRepo.GetByID(id, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return s.toResp(updated), nil
 }
 
 // Delete 删除账户

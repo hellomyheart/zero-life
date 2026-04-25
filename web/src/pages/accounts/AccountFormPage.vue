@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // 账户表单页面 - 用于创建和编辑账户
+// 编辑模式下：账户类型、货币、初始余额不可修改（只读），仅名称、备注、虚拟属性可编辑
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -7,7 +8,7 @@ import { create, update, getAccount } from '@/api/account'
 import { useCurrencyStore } from '@/stores/currency'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { CreateAccountReq } from '@/types/account'
+import type { CreateAccountReq, UpdateAccountReq, Account } from '@/types/account'
 import { AccountType } from '@/types/account'
 import AmountInput from '@/components/common/AmountInput.vue'
 import CurrencySelect from '@/components/common/CurrencySelect.vue'
@@ -21,18 +22,20 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const isEdit = computed(() => !!route.params.id)
 
-const form = reactive<CreateAccountReq & { is_virtual?: boolean }>({
+// 表单数据，创建和编辑共用
+const form = reactive({
   name: '',
-  type: AccountType.Asset,
-  currency: 'CNY',
+  type: AccountType.Asset as string,
+  currency_id: 0 as number,
   initial_balance: '0',
+  notes: '',
   is_virtual: false,
 })
 
 const rules: FormRules = {
   name: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   type: [{ required: true, message: t('common.required'), trigger: 'change' }],
-  currency: [{ required: true, message: t('common.required'), trigger: 'change' }],
+  currency_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
   initial_balance: [{ required: true, message: t('common.required'), trigger: 'blur' }],
 }
 
@@ -45,13 +48,18 @@ const accountTypeOptions = [
 
 onMounted(async () => {
   await currencyStore.fetchCurrencies()
+  // 新建模式：设置默认货币ID作为初始值，避免下拉框显示0
+  if (!isEdit.value && currencyStore.defaultCurrency) {
+    form.currency_id = currencyStore.defaultCurrency.id
+  }
   if (isEdit.value) {
     try {
-      const account = await getAccount(route.params.id as string) as unknown as CreateAccountReq & { is_virtual?: boolean; id: string }
+      const account = (await getAccount(route.params.id as string)) as unknown as Account
       form.name = account.name
       form.type = account.type
-      form.currency = account.currency
+      form.currency_id = account.currency_id
       form.initial_balance = account.initial_balance
+      form.notes = account.notes || ''
       form.is_virtual = account.is_virtual
     } catch {
       ElMessage.error(t('common.failed'))
@@ -66,9 +74,23 @@ async function handleSubmit() {
   loading.value = true
   try {
     if (isEdit.value) {
-      await update(route.params.id as string, form)
+      // 编辑模式：只提交可修改的字段（名称、备注、虚拟属性）
+      const req: UpdateAccountReq = {
+        name: form.name,
+        notes: form.notes,
+        is_virtual: form.is_virtual,
+      }
+      await update(route.params.id as string, req)
     } else {
-      await create(form)
+      // 创建模式：提交所有字段
+      const req: CreateAccountReq = {
+        name: form.name,
+        type: form.type as AccountType,
+        currency_id: form.currency_id,
+        initial_balance: form.initial_balance,
+        is_virtual: form.is_virtual,
+      }
+      await create(req)
     }
     ElMessage.success(t('common.success'))
     router.push('/accounts')
@@ -89,15 +111,15 @@ async function handleSubmit() {
           <el-input v-model="form.name" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('account.type')" prop="type">
-          <el-select v-model="form.type" :placeholder="t('common.selectPlaceholder')">
+          <el-select v-model="form.type" :placeholder="t('common.selectPlaceholder')" :disabled="isEdit">
             <el-option v-for="opt in accountTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
-        <el-form-item :label="t('account.currency')" prop="currency">
-          <CurrencySelect v-model="form.currency" :currencies="currencyStore.currencies" />
+        <el-form-item :label="t('account.currency')" prop="currency_id">
+          <CurrencySelect v-model="form.currency_id" :currencies="currencyStore.currencies" mode="id" :disabled="isEdit" />
         </el-form-item>
         <el-form-item :label="t('account.initialBalance')" prop="initial_balance">
-          <AmountInput v-model="form.initial_balance" :currency="form.currency" />
+          <AmountInput v-model="form.initial_balance" :currency="currencyStore.defaultCurrency?.code || 'CNY'" :disabled="isEdit" />
         </el-form-item>
         <el-form-item :label="t('account.isVirtual')">
           <el-switch v-model="form.is_virtual" />

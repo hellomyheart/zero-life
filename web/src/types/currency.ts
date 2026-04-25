@@ -8,7 +8,7 @@
  * 表示系统中的一种货币
  */
 export interface Currency {
-  id: string                   // 货币唯一标识
+  id: number                    // 货币唯一标识（后端返回 uint64）
   code: string                 // 货币代码，如"CNY"、"USD"、"EUR"
   name: string                 // 货币名称，如"人民币"、"美元"
   symbol: string               // 货币符号，如"¥"、"$"、"€"
@@ -40,7 +40,7 @@ export interface SetCurrencyStatusReq {
  * 设置默认货币请求接口
  */
 export interface SetDefaultCurrencyReq {
-  currency_id: string          // 要设为默认的货币ID
+  currency_id: number          // 要设为默认的货币ID（后端 uint64）
 }
 
 /**
