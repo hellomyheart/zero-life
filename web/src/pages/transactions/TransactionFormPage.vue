@@ -38,6 +38,18 @@ function getLocalDateTimeStr(): string {
   return `${y}-${m}-${d} ${h}:${min}`
 }
 
+function formatDateForPicker(dateStr: string): string {
+  if (!dateStr) return getLocalDateTimeStr()
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day} ${h}:${min}`
+}
+
 const form = reactive<CreateTransactionReq>({
   type: TransactionType.Withdrawal,
   date: getLocalDateTimeStr(),
@@ -117,7 +129,7 @@ onMounted(async () => {
     try {
       const tx = (await getTransaction(Number(route.params.id))) as unknown as Transaction
       form.type = tx.type
-      form.date = tx.date
+      form.date = formatDateForPicker(tx.date)
       form.description = tx.description
       form.amount = tx.amount
       form.source_id = tx.source_id

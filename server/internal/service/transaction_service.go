@@ -739,6 +739,8 @@ func parseDateTime(dateStr string) (time.Time, error) {
 		"2006-01-02T15:04",
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05",
+		time.RFC3339,
+		time.RFC3339Nano,
 		"2006-01-02",
 	} {
 		if t, err := time.ParseInLocation(layout, dateStr, time.Local); err == nil {
