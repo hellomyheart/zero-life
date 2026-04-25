@@ -21,7 +21,7 @@ export function list() {
  * @returns 标签详细信息
  * @endpoint GET /tags/:id
  */
-export function getTag(id: string) {
+export function getTag(id: number) {
   return get<Tag>(`/tags/${id}`)
 }
 
@@ -42,7 +42,7 @@ export function create(data: CreateTagReq) {
  * @returns 更新后的标签信息
  * @endpoint PUT /tags/:id
  */
-export function update(id: string, data: UpdateTagReq) {
+export function update(id: number, data: UpdateTagReq) {
   return put<Tag>(`/tags/${id}`, data)
 }
 
@@ -51,6 +51,6 @@ export function update(id: string, data: UpdateTagReq) {
  * @param id - 要删除的标签ID
  * @endpoint DELETE /tags/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/tags/${id}`)
 }

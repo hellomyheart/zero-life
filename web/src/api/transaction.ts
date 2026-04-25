@@ -20,7 +20,7 @@ export function list(params: TransactionListReq) {
  * @param id 交易ID
  * @returns 交易详情
  */
-export function getTransaction(id: string) {
+export function getTransaction(id: number) {
   return get<Transaction>(`/transactions/${id}`)
 }
 
@@ -39,7 +39,7 @@ export function create(data: CreateTransactionReq) {
  * @param data 更新数据
  * @returns 更新后的交易信息
  */
-export function update(id: string, data: UpdateTransactionReq) {
+export function update(id: number, data: UpdateTransactionReq) {
   return put<Transaction>(`/transactions/${id}`, data)
 }
 
@@ -47,7 +47,7 @@ export function update(id: string, data: UpdateTransactionReq) {
  * 删除交易
  * @param id 交易ID
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/transactions/${id}`)
 }
 

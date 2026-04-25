@@ -25,7 +25,7 @@ const dialogVisible = ref(false)
 /** 对话框标题 */
 const dialogTitle = ref('')
 /** 当前编辑的标签ID，null表示新建模式 */
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 
 /** 分页参数 */
 const pagination = reactive({
@@ -82,7 +82,7 @@ function handleEdit(tag: Tag) {
  * 弹出确认框，确认后调用API删除
  * @param id 标签ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('tag.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)

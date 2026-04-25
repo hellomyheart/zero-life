@@ -12,7 +12,7 @@ const categories = ref<Category[]>([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
-const editingId = ref<string | null>(null)
+const editingId = ref<number | null>(null)
 
 const form = ref<CreateCategoryReq>({
   name: '',
@@ -35,7 +35,7 @@ async function fetchCategories() {
   }
 }
 
-function handleCreate(parentId: string | null = null) {
+function handleCreate(parentId: number | null = null) {
   dialogTitle.value = t('category.create')
   editingId.value = null
   form.value = { name: '', parent_id: parentId }

@@ -22,7 +22,7 @@ export function list() {
  * @returns 分类详细信息
  * @endpoint GET /categories/:id
  */
-export function getCategory(id: string) {
+export function getCategory(id: number) {
   return get<Category>(`/categories/${id}`)
 }
 
@@ -43,7 +43,7 @@ export function create(data: CreateCategoryReq) {
  * @returns 更新后的分类信息
  * @endpoint PUT /categories/:id
  */
-export function update(id: string, data: UpdateCategoryReq) {
+export function update(id: number, data: UpdateCategoryReq) {
   return put<Category>(`/categories/${id}`, data)
 }
 
@@ -52,6 +52,6 @@ export function update(id: string, data: UpdateCategoryReq) {
  * @param id - 要删除的分类ID
  * @endpoint DELETE /categories/:id
  */
-export function remove(id: string) {
+export function remove(id: number) {
   return del<void>(`/categories/${id}`)
 }

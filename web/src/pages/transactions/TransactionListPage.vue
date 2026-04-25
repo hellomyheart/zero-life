@@ -35,8 +35,8 @@ const filter = reactive({
   type: undefined as TransactionType | undefined, // 交易类型
   start_date: '', // 开始日期
   end_date: '', // 结束日期
-  source_account_id: '', // 源账户ID
-  category_id: '', // 分类ID
+  account_id: undefined as number | undefined, // 账户ID
+  category_id: undefined as number | undefined, // 分类ID
   keyword: '', // 搜索关键词
   page: 1, // 当前页码
   page_size: 20, // 每页记录数
@@ -53,7 +53,7 @@ async function fetchTransactions() {
     if (filter.type) params.type = filter.type
     if (filter.start_date) params.start_date = filter.start_date
     if (filter.end_date) params.end_date = filter.end_date
-    if (filter.source_account_id) params.source_account_id = filter.source_account_id
+    if (filter.account_id) params.account_id = filter.account_id
     if (filter.category_id) params.category_id = filter.category_id
     if (filter.keyword) params.keyword = filter.keyword
 
@@ -79,7 +79,7 @@ function handleCreate() {
  * 跳转到编辑交易页面
  * @param id 交易ID
  */
-function handleEdit(id: string) {
+function handleEdit(id: number) {
   router.push(`/transactions/${id}/edit`)
 }
 
@@ -88,7 +88,7 @@ function handleEdit(id: string) {
  * 弹出确认框，确认后删除交易记录
  * @param id 交易ID
  */
-async function handleDelete(id: string) {
+async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('transaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })
     await remove(id)
@@ -119,8 +119,8 @@ function resetFilter() {
   filter.type = undefined
   filter.start_date = ''
   filter.end_date = ''
-  filter.source_account_id = ''
-  filter.category_id = ''
+  filter.account_id = undefined
+  filter.category_id = undefined
   filter.keyword = ''
   filter.page = 1
   fetchTransactions()
@@ -155,7 +155,7 @@ onMounted(async () => {
           />
         </el-form-item>
         <el-form-item :label="t('transaction.sourceAccount')">
-          <el-select v-model="filter.source_account_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
+          <el-select v-model="filter.account_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
             <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
@@ -182,8 +182,12 @@ onMounted(async () => {
       <el-table-column prop="amount" :label="t('transaction.amount')" width="150">
         <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
       </el-table-column>
-      <el-table-column prop="source_account_name" :label="t('transaction.sourceAccount')" width="150" />
-      <el-table-column prop="category_name" :label="t('transaction.category')" width="150" />
+      <el-table-column :label="t('transaction.sourceAccount')" width="150">
+        <template #default="{ row }">{{ row.source?.name || '' }}</template>
+      </el-table-column>
+      <el-table-column :label="t('transaction.category')" width="150">
+        <template #default="{ row }">{{ row.category?.name || '' }}</template>
+      </el-table-column>
       <el-table-column :label="t('common.edit')" width="160" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleEdit(row.id)">{{ t('common.edit') }}</el-button>

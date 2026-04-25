@@ -9,7 +9,7 @@
  * 表示系统中的一个标签
  */
 export interface Tag {
-  id: string                   // 标签唯一标识
+  id: number                    // 标签唯一标识（后端 uint64）
   name: string                 // 标签名称，如"出差"、"日常"
   color: string                // 标签颜色（十六进制色值），如"#FF5733"
   transaction_count: number    // 关联的交易数量
