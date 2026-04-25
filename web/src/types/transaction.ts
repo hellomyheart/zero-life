@@ -133,7 +133,7 @@ export interface UpdateTransactionReq {
 }
 
 /**
- * 交易列表查询请求
+ * 交易列表查询请求（对应后端 TransactionListReq）
  */
 export interface TransactionListReq {
   type?: TransactionType        // 交易类型筛选
@@ -142,7 +142,25 @@ export interface TransactionListReq {
   account_id?: number           // 账户ID筛选
   category_id?: number          // 分类ID筛选
   tag_id?: number               // 标签ID筛选
-  keyword?: string              // 关键词搜索
+  sort?: string                 // 排序字段，默认 -date
+  page?: number                 // 页码
+  page_size?: number            // 每页数量
+}
+
+/**
+ * 交易搜索请求（对应后端 TransactionSearchReq）
+ */
+export interface TransactionSearchReq {
+  keyword?: string              // 关键词搜索（描述、备注）
+  type?: TransactionType        // 交易类型筛选
+  start_date?: string           // 开始日期
+  end_date?: string             // 结束日期
+  min_amount?: string           // 最小金额
+  max_amount?: string           // 最大金额
+  account_id?: number           // 账户ID筛选
+  category_id?: number          // 分类ID筛选
+  tag_id?: number               // 标签ID筛选
+  sort?: string                 // 排序字段
   page?: number                 // 页码
   page_size?: number            // 每页数量
 }

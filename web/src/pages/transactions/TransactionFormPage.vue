@@ -44,6 +44,7 @@ const form = reactive<CreateTransactionReq>({
   source_id: 0,
   destination_id: undefined,
   category_id: undefined,
+  notes: '',
   tags: [],
   splits: [],
 })
@@ -64,7 +65,7 @@ const transactionTypeOptions = [
 
 function addSplit() {
   if (!form.splits) form.splits = []
-  form.splits.push({ amount: '0', category_id: undefined, tags: [], description: '' })
+  form.splits.push({ amount: '0', category_id: undefined, tags: [], description: '', notes: '' })
 }
 
 function removeSplit(index: number) {
@@ -88,12 +89,14 @@ onMounted(async () => {
       form.source_id = tx.source_id
       form.destination_id = tx.destination_id ?? undefined
       form.category_id = tx.category_id ?? undefined
+      form.notes = tx.notes || ''
       form.tags = tx.tags?.map(tag => tag.id) ?? []
       form.splits = tx.splits?.map(s => ({
         amount: s.amount,
         category_id: s.category_id ?? undefined,
         tags: s.tags?.map(t => t.id) ?? [],
         description: '',
+        notes: s.notes || '',
       })) ?? []
       enableSplits.value = (tx.splits?.length ?? 0) > 0
     } catch {
@@ -166,6 +169,9 @@ async function handleSubmit() {
             <el-option v-for="tag in tagStore.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
           </el-select>
         </el-form-item>
+        <el-form-item :label="t('transaction.notes')">
+          <el-input v-model="form.notes" type="textarea" :rows="2" :placeholder="t('common.inputPlaceholder')" />
+        </el-form-item>
 
         <el-form-item :label="t('transaction.enableSplits')">
           <el-switch v-model="enableSplits" />
@@ -182,18 +188,34 @@ async function handleSubmit() {
               </el-col>
               <el-col :span="6">
                 <el-form-item :label="t('transaction.category')">
-                  <el-select v-model="split.category_id" :placeholder="t('common.selectPlaceholder')" filterable>
+                  <el-select v-model="split.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
                     <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :span="8">
+              <el-col :span="6">
+                <el-form-item :label="t('transaction.tags')">
+                  <el-select v-model="split.tags" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
+                    <el-option v-for="tag in tagStore.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item :label="t('common.delete')">
+                  <el-button type="danger" link @click="removeSplit(index)">{{ t('common.delete') }}</el-button>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="10">
+              <el-col :span="12">
                 <el-form-item :label="t('transaction.description')">
                   <el-input v-model="split.description" />
                 </el-form-item>
               </el-col>
-              <el-col :span="4">
-                <el-button type="danger" link @click="removeSplit(index)">{{ t('common.delete') }}</el-button>
+              <el-col :span="12">
+                <el-form-item :label="t('transaction.notes')">
+                  <el-input v-model="split.notes" />
+                </el-form-item>
               </el-col>
             </el-row>
           </div>

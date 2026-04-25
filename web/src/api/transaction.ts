@@ -3,7 +3,7 @@
  * 提供交易的增删改查、搜索等接口
  */
 import { get, post, put, del } from '@/utils/request'
-import type { Transaction, CreateTransactionReq, UpdateTransactionReq, TransactionListReq } from '@/types/transaction'
+import type { Transaction, CreateTransactionReq, UpdateTransactionReq, TransactionListReq, TransactionSearchReq } from '@/types/transaction'
 import type { PageResult } from '@/types/common'
 
 /**
@@ -53,9 +53,9 @@ export function remove(id: number) {
 
 /**
  * 搜索交易
- * @param params 搜索参数
+ * @param params 搜索参数（关键词、类型、金额范围等）
  * @returns 匹配的交易分页列表
  */
-export function search(params: TransactionListReq) {
+export function search(params: TransactionSearchReq) {
   return get<PageResult<Transaction>>('/transactions/search', params as Record<string, unknown>)
 }
