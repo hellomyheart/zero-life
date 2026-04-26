@@ -61,6 +61,7 @@ var (
 	ErrInvalidAmount     = &Error{Code: 30001, Message: "amount must be greater than zero"}
 	ErrSplitAmountMismatch = &Error{Code: 30002, Message: "split amounts must equal total amount"}
 	ErrInvalidTxnType    = &Error{Code: 30003, Message: "invalid transaction type"}
+	ErrSameAccount       = &Error{Code: 30004, Message: "source and destination accounts cannot be the same"}
 
 	// 分类错误 4xxxx
 	ErrCategoryNameExists = &Error{Code: 40001, Message: "category name already exists"}

@@ -122,7 +122,8 @@
     "removeSplit": "Remove Split",
     "assetAccount": "Asset Account",
     "expenseAccount": "Expense Account",
-    "revenueAccount": "Revenue Account"
+    "revenueAccount": "Revenue Account",
+    "sameAccountError": "Source and destination accounts cannot be the same"
   },
   "category": {
     "title": "Category Management",

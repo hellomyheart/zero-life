@@ -70,8 +70,32 @@ const rules: FormRules = {
   date: [{ required: true, message: t('common.required'), trigger: 'change' }],
   description: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   amount: [{ required: true, message: t('common.required'), trigger: 'blur' }],
-  source_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
-  destination_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
+  source_id: [
+    { required: true, message: t('common.required'), trigger: 'change' },
+    {
+      validator: (_rule: unknown, value: number | undefined, callback: (err?: Error) => void) => {
+        if (value && form.destination_id && value === form.destination_id) {
+          callback(new Error(t('transaction.sameAccountError')))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change',
+    },
+  ],
+  destination_id: [
+    { required: true, message: t('common.required'), trigger: 'change' },
+    {
+      validator: (_rule: unknown, value: number | undefined, callback: (err?: Error) => void) => {
+        if (value && form.source_id && value === form.source_id) {
+          callback(new Error(t('transaction.sameAccountError')))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change',
+    },
+  ],
 }
 
 const transactionTypeOptions = [

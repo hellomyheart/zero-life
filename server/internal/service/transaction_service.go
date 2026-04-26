@@ -412,6 +412,10 @@ func (s *TransactionService) validateTransaction(userID uint64, txnType model.Tr
 		if err != nil {
 			return errcode.ErrNotFound
 		}
+		// 来源账户和目标账户不能是同一个账户
+		if sourceID == *destID {
+			return errcode.ErrSameAccount
+		}
 	}
 
 	return nil

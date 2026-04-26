@@ -122,7 +122,8 @@
     "removeSplit": "移除拆分",
     "assetAccount": "资产账户",
     "expenseAccount": "支出账户",
-    "revenueAccount": "收入账户"
+    "revenueAccount": "收入账户",
+    "sameAccountError": "来源账户和目标账户不能是同一个账户"
   },
   "category": {
     "title": "分类管理",
