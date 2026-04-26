@@ -5,9 +5,7 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {
-    "kit.ArkData": "1.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {},
   "dynamicDependencies": {}
 }
