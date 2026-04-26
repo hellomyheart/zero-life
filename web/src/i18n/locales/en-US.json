@@ -147,7 +147,12 @@
     "name": "Tag Name",
     "color": "Color",
     "transactionCount": "Transaction Count",
-    "deleteConfirm": "Are you sure you want to delete this tag?"
+    "deleteConfirm": "Are you sure you want to delete this tag? Child tags will also be deleted.",
+    "parentTag": "Parent Tag",
+    "topLevel": "Top Level",
+    "selectParent": "Select Parent Tag",
+    "childTags": "Child Tags",
+    "deleteWithChildren": "This tag has child tags. They will be deleted together. Continue?"
   },
   "budget": {
     "title": "Budget Management",

@@ -1,5 +1,5 @@
 // Package service 业务逻辑层，实现核心业务逻辑
-// TagService 标签业务逻辑，处理标签的增删改查
+// TagService 标签业务逻辑，处理标签的增删改查（支持树形结构）
 package service
 
 import (
@@ -13,26 +13,28 @@ import (
 
 // TagService 标签服务
 // 负责处理标签的增删改查，标签用于对交易进行分类标记
-// 依赖tagRepo进行标签数据访问
+// 支持两级树形结构（父标签 → 子标签），与分类类似
+// 依赖tagRepo进行标签数据访问，依赖db执行删除事务
 type TagService struct {
 	tagRepo *repository.TagRepository // 标签数据访问对象
+	db      *gorm.DB                  // 数据库连接，用于删除标签时清理子标签
 }
 
 // NewTagService 创建标签服务实例
-func NewTagService(tagRepo *repository.TagRepository) *TagService {
-	return &TagService{tagRepo: tagRepo}
+func NewTagService(tagRepo *repository.TagRepository, db *gorm.DB) *TagService {
+	return &TagService{tagRepo: tagRepo, db: db}
 }
 
 // Create 创建标签
-// 检查名称唯一性，如果未指定颜色则默认使用 #409EFF
+// 检查名称唯一性和两级深度限制，如果未指定颜色则默认使用 #409EFF
 // 参数：
 //   - userID: 用户ID
-//   - req: 创建请求参数（名称、颜色）
+//   - req: 创建请求参数（名称、颜色、父标签ID）
 // 返回：
 //   - *response.TagResp: 创建成功的标签信息（含关联交易数）
-//   - error: 错误信息（如名称重复）
+//   - error: 错误信息（如名称重复、层级过深）
 func (s *TagService) Create(userID uint64, req *request.CreateTagReq) (*response.TagResp, error) {
-	// Check name uniqueness
+	// 检查名称唯一性
 	tags, err := s.tagRepo.List(userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -43,10 +45,22 @@ func (s *TagService) Create(userID uint64, req *request.CreateTagReq) (*response
 		}
 	}
 
+	// 检查两级深度限制：如果指定了父标签，父标签不能本身也是子标签
+	if req.ParentID != nil {
+		parent, err := s.tagRepo.GetByID(*req.ParentID, userID)
+		if err != nil {
+			return nil, errcode.ErrNotFound
+		}
+		if parent.ParentID != nil {
+			return nil, errcode.ErrTagTooDeep
+		}
+	}
+
 	tag := &model.Tag{
-		UserID: userID,
-		Name:   req.Name,
-		Color:  req.Color,
+		UserID:   userID,
+		Name:     req.Name,
+		Color:    req.Color,
+		ParentID: req.ParentID,
 	}
 	if tag.Color == "" {
 		tag.Color = "#409EFF"
@@ -58,21 +72,15 @@ func (s *TagService) Create(userID uint64, req *request.CreateTagReq) (*response
 
 	count, _ := s.tagRepo.CountTransactions(tag.ID)
 
-	return &response.TagResp{
-		ID:               tag.ID,
-		Name:             tag.Name,
-		Color:            tag.Color,
-		TransactionCount: count,
-		CreatedAt:        tag.CreatedAt,
-		UpdatedAt:        tag.UpdatedAt,
-	}, nil
+	return s.toResp(tag, count), nil
 }
 
-// List 获取用户所有标签列表（含每个标签的关联交易数）
+// List 获取用户所有标签的树形列表
+// 返回两级树形结构的标签数据，含每个标签的关联交易数
 // 参数：
 //   - userID: 用户ID
 // 返回：
-//   - []response.TagResp: 标签列表
+//   - []response.TagResp: 标签树形列表
 //   - error: 错误信息
 func (s *TagService) List(userID uint64) ([]response.TagResp, error) {
 	tags, err := s.tagRepo.List(userID)
@@ -80,23 +88,30 @@ func (s *TagService) List(userID uint64) ([]response.TagResp, error) {
 		return nil, errcode.ErrInternal
 	}
 
-	items := make([]response.TagResp, 0, len(tags))
-	for _, t := range tags {
-		count, _ := s.tagRepo.CountTransactions(t.ID)
-		items = append(items, response.TagResp{
-			ID:               t.ID,
-			Name:             t.Name,
-			Color:            t.Color,
-			TransactionCount: count,
-			CreatedAt:        t.CreatedAt,
-			UpdatedAt:        t.UpdatedAt,
-		})
-	}
-
-	return items, nil
+	return s.buildTree(tags), nil
 }
 
-// Update 更新标签信息（名称和颜色）
+// Get 获取单个标签详情
+// 参数：
+//   - userID: 用户ID
+//   - id: 标签ID
+// 返回：
+//   - *response.TagResp: 标签信息（含关联交易数）
+//   - error: 错误信息
+func (s *TagService) Get(userID, id uint64) (*response.TagResp, error) {
+	tag, err := s.tagRepo.GetByID(id, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
+	count, _ := s.tagRepo.CountTransactions(tag.ID)
+	return s.toResp(tag, count), nil
+}
+
+// Update 更新标签信息（名称、颜色、父标签ID）
 // 参数：
 //   - userID: 用户ID
 //   - id: 标签ID
@@ -119,24 +134,38 @@ func (s *TagService) Update(userID, id uint64, req *request.UpdateTagReq) (*resp
 	if req.Color != "" {
 		tag.Color = req.Color
 	}
+	// 更新父标签ID时需要检查深度限制
+	if req.ParentID != nil {
+		// 不能将自己设为自己的子标签
+		if *req.ParentID == id {
+			return nil, errcode.ErrTagTooDeep
+		}
+		// 父标签不能本身也是子标签（两级限制）
+		parent, err := s.tagRepo.GetByID(*req.ParentID, userID)
+		if err != nil {
+			return nil, errcode.ErrNotFound
+		}
+		if parent.ParentID != nil {
+			return nil, errcode.ErrTagTooDeep
+		}
+		// 如果当前标签已有子标签，则不能将其变为子标签（否则会形成三级）
+		subTags, _ := s.tagRepo.GetSubTags(id, userID)
+		if len(subTags) > 0 {
+			return nil, errcode.ErrTagTooDeep
+		}
+		tag.ParentID = req.ParentID
+	}
 
 	if err := s.tagRepo.Update(tag); err != nil {
 		return nil, errcode.ErrInternal
 	}
 
 	count, _ := s.tagRepo.CountTransactions(tag.ID)
-
-	return &response.TagResp{
-		ID:               tag.ID,
-		Name:             tag.Name,
-		Color:            tag.Color,
-		TransactionCount: count,
-		CreatedAt:        tag.CreatedAt,
-		UpdatedAt:        tag.UpdatedAt,
-	}, nil
+	return s.toResp(tag, count), nil
 }
 
 // Delete 删除标签
+// 同时删除所有子标签，以及关联的 transaction_tags 记录
 // 参数：
 //   - userID: 用户ID
 //   - id: 标签ID
@@ -151,5 +180,74 @@ func (s *TagService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
+	// 先删除所有子标签
+	subTags, err := s.tagRepo.GetSubTags(id, userID)
+	if err != nil {
+		return errcode.ErrInternal
+	}
+	for _, sub := range subTags {
+		if err := s.tagRepo.Delete(sub.ID, userID); err != nil {
+			return errcode.ErrInternal
+		}
+	}
+
 	return s.tagRepo.Delete(id, userID)
+}
+
+// toResp 将标签模型转换为响应对象
+func (s *TagService) toResp(t *model.Tag, transactionCount int64) *response.TagResp {
+	return &response.TagResp{
+		ID:               t.ID,
+		Name:             t.Name,
+		Color:            t.Color,
+		ParentID:         t.ParentID,
+		TransactionCount: transactionCount,
+		CreatedAt:        t.CreatedAt,
+		UpdatedAt:        t.UpdatedAt,
+	}
+}
+
+// buildTree 将扁平的标签列表构建为树形结构
+// 使用map快速查找，将子标签挂载到父标签的Children字段
+// 注意：必须先挂载子节点到父节点，再收集根节点（Go值语义）
+func (s *TagService) buildTree(tags []model.Tag) []response.TagResp {
+	// 预计算每个标签的关联交易数
+	countMap := make(map[uint64]int64, len(tags))
+	for _, t := range tags {
+		count, _ := s.tagRepo.CountTransactions(t.ID)
+		countMap[t.ID] = count
+	}
+
+	// 创建节点映射
+	nodeMap := make(map[uint64]*response.TagResp, len(tags))
+	for _, t := range tags {
+		nodeMap[t.ID] = &response.TagResp{
+			ID:               t.ID,
+			Name:             t.Name,
+			Color:            t.Color,
+			ParentID:         t.ParentID,
+			TransactionCount: countMap[t.ID],
+			CreatedAt:        t.CreatedAt,
+			UpdatedAt:        t.UpdatedAt,
+		}
+	}
+
+	// 将子标签挂载到父标签的Children字段
+	for _, t := range tags {
+		if t.ParentID != nil {
+			if parent, ok := nodeMap[*t.ParentID]; ok {
+				parent.Children = append(parent.Children, *nodeMap[t.ID])
+			}
+		}
+	}
+
+	// 收集根节点（parent_id 为 nil 的标签）
+	var roots []response.TagResp
+	for _, t := range tags {
+		if t.ParentID == nil {
+			roots = append(roots, *nodeMap[t.ID])
+		}
+	}
+
+	return roots
 }

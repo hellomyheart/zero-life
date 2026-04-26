@@ -8815,7 +8815,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all tags for the current user",
+                "description": "Get all tags for the current user in tree structure",
                 "consumes": [
                     "application/json"
                 ],
@@ -8860,7 +8860,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new tag for the current user",
+                "description": "Create a new tag for the current user, supports parent_id for tree structure",
                 "consumes": [
                     "application/json"
                 ],
@@ -8921,13 +8921,77 @@ const docTemplate = `{
             }
         },
         "/api/v1/tags/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get tag by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get tag",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Tag ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update tag by ID",
+                "description": "Update tag by ID, supports changing parent_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -9009,7 +9073,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete tag by ID",
+                "description": "Delete tag by ID, also deletes child tags",
                 "consumes": [
                     "application/json"
                 ],
@@ -11864,6 +11928,10 @@ const docTemplate = `{
                 "name": {
                     "description": "标签名称，同一用户下不能重复",
                     "type": "string"
+                },
+                "parent_id": {
+                    "description": "父标签ID，为nil时表示顶级标签",
+                    "type": "integer"
                 }
             }
         },
@@ -12676,6 +12744,10 @@ const docTemplate = `{
                 "name": {
                     "description": "标签名称",
                     "type": "string"
+                },
+                "parent_id": {
+                    "description": "父标签ID",
+                    "type": "integer"
                 }
             }
         },

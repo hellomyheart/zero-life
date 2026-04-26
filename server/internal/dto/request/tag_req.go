@@ -3,12 +3,14 @@ package request
 
 // CreateTagReq 创建标签请求
 type CreateTagReq struct {
-	Name  string `json:"name" binding:"required"` // 标签名称，同一用户下不能重复
-	Color string `json:"color"`                   // 标签颜色（十六进制色值）
+	Name     string  `json:"name" binding:"required"` // 标签名称，同一用户下不能重复
+	Color    string  `json:"color"`                   // 标签颜色（十六进制色值）
+	ParentID *uint64 `json:"parent_id"`               // 父标签ID，为nil时表示顶级标签
 }
 
 // UpdateTagReq 更新标签请求
 type UpdateTagReq struct {
-	Name  string `json:"name"`  // 标签名称
-	Color string `json:"color"` // 标签颜色
+	Name     string  `json:"name"`     // 标签名称
+	Color    string  `json:"color"`    // 标签颜色
+	ParentID *uint64 `json:"parent_id"` // 父标签ID
 }

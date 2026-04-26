@@ -11,6 +11,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { CreateTransactionReq, Transaction } from '@/types/transaction'
 import type { Category } from '@/types/category'
+import type { Tag } from '@/types/tag'
 import { TransactionType } from '@/types/transaction'
 import AmountInput from '@/components/common/AmountInput.vue'
 
@@ -119,6 +120,22 @@ const categoryTreeData = computed(() => {
     })
   }
   return transform(categoryStore.categories)
+})
+
+const tagTreeData = computed(() => {
+  function transform(tags: Tag[]): { value: number; label: string; children?: { value: number; label: string }[] }[] {
+    return tags.map(tag => {
+      const node: { value: number; label: string; children?: { value: number; label: string }[] } = {
+        value: tag.id,
+        label: tag.name,
+      }
+      if (tag.children?.length) {
+        node.children = transform(tag.children)
+      }
+      return node
+    })
+  }
+  return transform(tagStore.tags)
 })
 
 function handleTypeChange() {
@@ -234,9 +251,16 @@ async function handleSubmit() {
           />
         </el-form-item>
         <el-form-item :label="t('transaction.tags')">
-          <el-select v-model="form.tags" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
-            <el-option v-for="tag in tagStore.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
-          </el-select>
+          <el-tree-select
+            v-model="form.tags"
+            :data="tagTreeData"
+            :placeholder="t('common.selectPlaceholder')"
+            check-strictly
+            multiple
+            filterable
+            clearable
+            :render-after-expand="false"
+          />
         </el-form-item>
         <el-form-item :label="t('transaction.notes')">
           <el-input v-model="form.notes" type="textarea" :rows="2" :placeholder="t('common.inputPlaceholder')" />
@@ -270,9 +294,16 @@ async function handleSubmit() {
               </el-col>
               <el-col :span="6">
                 <el-form-item :label="t('transaction.tags')">
-                  <el-select v-model="split.tags" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
-                    <el-option v-for="tag in tagStore.tags" :key="tag.id" :label="tag.name" :value="tag.id" />
-                  </el-select>
+                  <el-tree-select
+                    v-model="split.tags"
+                    :data="tagTreeData"
+                    :placeholder="t('common.selectPlaceholder')"
+                    check-strictly
+                    multiple
+                    filterable
+                    clearable
+                    :render-after-expand="false"
+                  />
                 </el-form-item>
               </el-col>
               <el-col :span="6">

@@ -200,6 +200,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 		{
 			tags.POST("", r.tagCtrl.Create)
 			tags.GET("", r.tagCtrl.List)
+			tags.GET("/:id", r.tagCtrl.Get)
 			tags.PUT("/:id", r.tagCtrl.Update)
 			tags.DELETE("/:id", r.tagCtrl.Delete)
 		}

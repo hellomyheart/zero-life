@@ -147,7 +147,12 @@
     "name": "标签名称",
     "color": "颜色",
     "transactionCount": "关联交易数",
-    "deleteConfirm": "确定要删除该标签吗？"
+    "deleteConfirm": "确定要删除该标签吗？删除父标签将同时删除所有子标签。",
+    "parentTag": "父标签",
+    "topLevel": "顶级标签",
+    "selectParent": "选择父标签",
+    "childTags": "子标签",
+    "deleteWithChildren": "该标签下有子标签，删除后将一并删除，确定继续吗？"
   },
   "budget": {
     "title": "预算管理",

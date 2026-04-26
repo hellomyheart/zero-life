@@ -69,6 +69,7 @@ var (
 	// 标签错误 5xxxx
 	ErrTagNameExists   = &Error{Code: 50001, Message: "tag name already exists"}
 	ErrTagAlreadyAdded = &Error{Code: 50002, Message: "tag already added to transaction"}
+	ErrTagTooDeep      = &Error{Code: 50003, Message: "tag hierarchy exceeds 2 levels"}
 
 	// 预算错误 6xxxx
 	ErrBudgetAmountInvalid = &Error{Code: 60001, Message: "budget amount must be greater than zero"}

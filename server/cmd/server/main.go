@@ -176,7 +176,7 @@ func main() {
 	webhookService := service.NewWebhookService(webhookRepo)
 	txnService := service.NewTransactionService(txnRepo, accountRepo, db, ruleService, webhookService)
 	categoryService := service.NewCategoryService(categoryRepo, db)
-	tagService := service.NewTagService(tagRepo)
+	tagService := service.NewTagService(tagRepo, db)
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo)
 	billService := service.NewBillService(billRepo, txnService)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)

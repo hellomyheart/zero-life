@@ -50,6 +50,10 @@ type Tag struct {
 	// 默认值：#409EFF（Element Plus 主色）
 	// gorm:"size:7" 限制长度为 7 个字符（#RRGGBB）
 	Color string `gorm:"size:7;default:#409EFF" json:"color"`
+
+	// ParentID 父标签ID，支持树形结构
+	// 为nil时表示顶级标签
+	ParentID *uint64 `gorm:"index" json:"parent_id"`
 	
 	// CreatedAt 标签创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`

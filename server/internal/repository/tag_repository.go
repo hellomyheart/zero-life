@@ -90,3 +90,16 @@ func (r *TagRepository) CountTransactions(tagID uint64) (int64, error) {
 	}
 	return count, nil
 }
+
+// GetSubTags 获取指定父标签下的所有子标签。
+// 执行 SQL: SELECT * FROM tags WHERE parent_id = ? AND user_id = ?
+// 参数 parentID: 父标签 ID。
+// 参数 userID: 当前登录用户 ID。
+// 返回: 子标签列表。
+func (r *TagRepository) GetSubTags(parentID, userID uint64) ([]model.Tag, error) {
+	var tags []model.Tag
+	if err := r.db.Where("parent_id = ? AND user_id = ?", parentID, userID).Find(&tags).Error; err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
