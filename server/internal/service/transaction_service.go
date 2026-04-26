@@ -184,12 +184,15 @@ func (s *TransactionService) List(userID uint64, req *request.TransactionListReq
 	params.Normalize()
 
 	filter := repository.TransactionFilter{
-		Type:       req.Type,
-		StartDate:  req.StartDate,
-		EndDate:    req.EndDate,
-		AccountID:  req.AccountID,
-		CategoryID: req.CategoryID,
-		TagID:      req.TagID,
+		Type:        req.Type,
+		StartDate:   req.StartDate,
+		EndDate:     req.EndDate,
+		AccountID:   req.AccountID,
+		CategoryID:  req.CategoryID,
+		CategoryIDs: req.CategoryIDs,
+		TagID:       req.TagID,
+		TagIDs:      req.TagIDs,
+		Keyword:     req.Keyword,
 	}
 
 	txns, err := s.txnRepo.List(userID, filter, params.Offset(), params.PageSize)

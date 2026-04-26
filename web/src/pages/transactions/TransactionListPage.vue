@@ -17,7 +17,9 @@ import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
 import { useCategoryStore } from '@/stores/category'
+import { useTagStore } from '@/stores/tag'
 import type { Category } from '@/types/category'
+import type { Tag } from '@/types/tag'
 import type { Transaction } from '@/types/transaction'
 import { TransactionType } from '@/types/transaction'
 import Pagination from '@/components/common/Pagination.vue'
@@ -27,6 +29,7 @@ const { t } = useI18n()
 const router = useRouter()
 const accountStore = useAccountStore()
 const categoryStore = useCategoryStore()
+const tagStore = useTagStore()
 
 const transactions = ref<Transaction[]>([])
 const total = ref(0)
@@ -37,7 +40,8 @@ const filter = reactive({
   start_date: '',
   end_date: '',
   account_id: undefined as number | undefined,
-  category_id: undefined as number | number[] | undefined,
+  category_ids: [] as number[],
+  tag_ids: [] as number[],
   keyword: '',
   page: 1,
   page_size: 20,
@@ -57,6 +61,22 @@ const categoryTreeData = computed(() => {
     })
   }
   return transform(categoryStore.categories)
+})
+
+const tagTreeData = computed(() => {
+  function transform(tags: Tag[]): { value: number; label: string; children?: { value: number; label: string }[] }[] {
+    return tags.map(tag => {
+      const node: { value: number; label: string; children?: { value: number; label: string }[] } = {
+        value: tag.id,
+        label: tag.name,
+      }
+      if (tag.children?.length) {
+        node.children = transform(tag.children)
+      }
+      return node
+    })
+  }
+  return transform(tagStore.tags)
 })
 
 function formatTransactionAmount(row: Transaction): string {
@@ -97,13 +117,8 @@ async function fetchTransactions() {
     if (filter.start_date) params.start_date = filter.start_date
     if (filter.end_date) params.end_date = filter.end_date
     if (filter.account_id) params.account_id = filter.account_id
-    if (filter.category_id) {
-      if (Array.isArray(filter.category_id)) {
-        params.category_ids = filter.category_id
-      } else {
-        params.category_id = filter.category_id
-      }
-    }
+    if (filter.category_ids.length > 0) params.category_ids = filter.category_ids.join(',')
+    if (filter.tag_ids.length > 0) params.tag_ids = filter.tag_ids.join(',')
     if (filter.keyword) params.keyword = filter.keyword
 
     const res = await list(params as unknown as typeof filter)
@@ -157,14 +172,15 @@ function resetFilter() {
   filter.start_date = ''
   filter.end_date = ''
   filter.account_id = undefined
-  filter.category_id = undefined as number | number[] | undefined
+  filter.category_ids = []
+  filter.tag_ids = []
   filter.keyword = ''
   filter.page = 1
   fetchTransactions()
 }
 
 onMounted(async () => {
-  await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories()])
+  await Promise.all([accountStore.fetchAccounts(), categoryStore.fetchCategories(), tagStore.fetchTags()])
   fetchTransactions()
 })
 </script>
@@ -198,8 +214,23 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item :label="t('transaction.category')">
           <el-tree-select
-            v-model="filter.category_id"
+            v-model="filter.category_ids"
             :data="categoryTreeData"
+            :placeholder="t('common.selectPlaceholder')"
+            check-strictly
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            style="width: 100%"
+            :render-after-expand="false"
+          />
+        </el-form-item>
+        <el-form-item :label="t('transaction.tags')">
+          <el-tree-select
+            v-model="filter.tag_ids"
+            :data="tagTreeData"
             :placeholder="t('common.selectPlaceholder')"
             check-strictly
             multiple

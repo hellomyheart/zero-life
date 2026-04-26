@@ -10,12 +10,15 @@ import (
 // TransactionFilter 交易列表的基础过滤器，用于 List 和 Count 方法。
 // 各字段为空或 nil 时表示不过滤该条件。
 type TransactionFilter struct {
-	Type       string  // 交易类型过滤，如 "withdrawal"（支出）、"deposit"（收入）、"transfer"（转账）
-	StartDate  string  // 开始日期过滤，格式 "2006-01-02"
-	EndDate    string  // 结束日期过滤，格式 "2006-01-02"
-	AccountID  *uint64 // 账户 ID 过滤，匹配源账户或目标账户
-	CategoryID *uint64 // 分类 ID 过滤
-	TagID      *uint64 // 标签 ID 过滤，通过 JOIN transaction_tags 表实现
+	Type        string   // 交易类型过滤，如 "withdrawal"（支出）、"deposit"（收入）、"transfer"（转账）
+	StartDate   string   // 开始日期过滤，格式 "2006-01-02"
+	EndDate     string   // 结束日期过滤，格式 "2006-01-02"
+	AccountID   *uint64  // 账户 ID 过滤，匹配源账户或目标账户
+	CategoryID  *uint64  // 分类 ID 过滤（单个）
+	CategoryIDs []uint64 // 分类 ID 过滤（多个，OR 关系）
+	TagID       *uint64  // 标签 ID 过滤（单个），通过 JOIN transaction_tags 表实现
+	TagIDs      []uint64 // 标签 ID 过滤（多个，OR 关系），通过 JOIN transaction_tags 表实现
+	Keyword     string   // 关键词搜索，匹配描述或备注
 }
 
 // TransactionRepository 交易仓库，负责交易记录的数据访问。
@@ -262,6 +265,10 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		query = query.Where("description LIKE ? OR notes LIKE ?", keyword, keyword)
+	}
 	if filter.StartDate != "" {
 		if t, err := time.Parse("2006-01-02", filter.StartDate); err == nil {
 			query = query.Where("date >= ?", t)
@@ -278,8 +285,14 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 	if filter.CategoryID != nil {
 		query = query.Where("category_id = ?", *filter.CategoryID)
 	}
+	if len(filter.CategoryIDs) > 0 {
+		query = query.Where("category_id IN ?", filter.CategoryIDs)
+	}
 	if filter.TagID != nil {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id AND transaction_tags.tag_id = ?", *filter.TagID)
+	}
+	if len(filter.TagIDs) > 0 {
+		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id AND transaction_tags.tag_id IN ?", filter.TagIDs)
 	}
 	return query
 }

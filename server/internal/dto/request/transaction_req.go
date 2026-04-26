@@ -43,15 +43,18 @@ type UpdateTransactionReq struct {
 // TransactionListReq 交易列表查询请求
 // 用于分页查询和过滤交易列表
 type TransactionListReq struct {
-	Page       int     `form:"page,default=1"`        // 页码
-	PageSize   int     `form:"page_size,default=20"`  // 每页数量
-	Type       string  `form:"type"`                  // 按交易类型过滤
-	StartDate  string  `form:"start_date"`            // 开始日期过滤
-	EndDate    string  `form:"end_date"`              // 结束日期过滤
-	AccountID  *uint64 `form:"account_id"`            // 按账户ID过滤
-	CategoryID *uint64 `form:"category_id"`           // 按分类ID过滤
-	TagID      *uint64 `form:"tag_id"`                // 按标签ID过滤
-	Sort       string  `form:"sort,default=-date"`    // 排序字段，默认按日期倒序
+	Page        int     `form:"page,default=1"`        // 页码
+	PageSize    int     `form:"page_size,default=20"`  // 每页数量
+	Type        string  `form:"type"`                  // 按交易类型过滤
+	StartDate   string  `form:"start_date"`            // 开始日期过滤
+	EndDate     string  `form:"end_date"`              // 结束日期过滤
+	AccountID   *uint64 `form:"account_id"`            // 按账户ID过滤
+	CategoryID  *uint64 `form:"category_id"`           // 按分类ID过滤（单个）
+	CategoryIDs []uint64 `form:"category_ids"`          // 按分类ID过滤（多个，逗号分隔）
+	TagID       *uint64 `form:"tag_id"`                // 按标签ID过滤（单个）
+	TagIDs      []uint64 `form:"tag_ids"`               // 按标签ID过滤（多个，逗号分隔）
+	Keyword     string  `form:"keyword"`               // 关键词搜索（描述、备注）
+	Sort        string  `form:"sort,default=-date"`    // 排序字段，默认按日期倒序
 }
 
 type TransactionSearchReq struct {
