@@ -5,7 +5,8 @@
  * - 展示交易列表，支持分页
  * - 支持按类型、日期范围、账户、分类、关键词筛选
  * - 支持创建、编辑、删除交易
- * - 支持查看交易详情
+ * - 金额按类型显示正负号和颜色：存款(+)绿色，取款(-)红色，转账灰色
+ * - 类型标签用不同颜色区分：存款(绿)，取款(红)，转账(蓝)
  */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -25,27 +26,77 @@ const router = useRouter()
 const accountStore = useAccountStore()
 const categoryStore = useCategoryStore()
 
-// 响应式数据
-const transactions = ref<Transaction[]>([]) // 交易列表数据
-const total = ref(0) // 总记录数
-const loading = ref(false) // 加载状态
+const transactions = ref<Transaction[]>([])
+const total = ref(0)
+const loading = ref(false)
 
-// 筛选条件
 const filter = reactive({
-  type: undefined as TransactionType | undefined, // 交易类型
-  start_date: '', // 开始日期
-  end_date: '', // 结束日期
-  account_id: undefined as number | undefined, // 账户ID
-  category_id: undefined as number | undefined, // 分类ID
-  keyword: '', // 搜索关键词
-  page: 1, // 当前页码
-  page_size: 20, // 每页记录数
+  type: undefined as TransactionType | undefined,
+  start_date: '',
+  end_date: '',
+  account_id: undefined as number | undefined,
+  category_id: undefined as number | undefined,
+  keyword: '',
+  page: 1,
+  page_size: 20,
 })
 
 /**
- * 获取交易列表
- * 根据筛选条件从后端获取交易数据
+ * 根据交易类型格式化金额显示
+ * - 存款(deposit)：显示 +金额，绿色
+ * - 取款(withdrawal)：显示 -金额，红色
+ * - 转账(transfer)：显示金额，灰色（内部转移，不增减总资产）
  */
+function formatTransactionAmount(row: Transaction): string {
+  const num = Number(row.amount)
+  if (isNaN(num)) return row.amount
+
+  const absFormatted = Math.abs(num).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
+  if (row.type === TransactionType.Deposit) {
+    return `+${absFormatted}`
+  } else if (row.type === TransactionType.Withdrawal) {
+    return `-${absFormatted}`
+  }
+  return absFormatted
+}
+
+/**
+ * 根据交易类型返回金额的CSS类名
+ * - 存款：绿色（收入）
+ * - 取款：红色（支出）
+ * - 转账：灰色（内部转移）
+ */
+function amountClass(row: Transaction): string {
+  if (row.type === TransactionType.Deposit) return 'amount-deposit'
+  if (row.type === TransactionType.Withdrawal) return 'amount-withdrawal'
+  return 'amount-transfer'
+}
+
+/**
+ * 根据交易类型返回标签的type
+ * - 存款：success(绿色)
+ * - 取款：danger(红色)
+ * - 转账：info(蓝色)
+ */
+function typeTagType(row: Transaction): '' | 'success' | 'danger' | 'info' {
+  if (row.type === TransactionType.Deposit) return 'success'
+  if (row.type === TransactionType.Withdrawal) return 'danger'
+  return 'info'
+}
+
+/**
+ * 获取交易类型的显示文本
+ */
+function typeLabel(row: Transaction): string {
+  if (row.type === TransactionType.Deposit) return t('transaction.deposit')
+  if (row.type === TransactionType.Withdrawal) return t('transaction.withdrawal')
+  return t('transaction.transfer')
+}
+
 async function fetchTransactions() {
   loading.value = true
   try {
@@ -68,26 +119,14 @@ async function fetchTransactions() {
   }
 }
 
-/**
- * 跳转到创建交易页面
- */
 function handleCreate() {
   router.push('/transactions/create')
 }
 
-/**
- * 跳转到编辑交易页面
- * @param id 交易ID
- */
 function handleEdit(id: number) {
   router.push(`/transactions/${id}/edit`)
 }
 
-/**
- * 删除交易
- * 弹出确认框，确认后删除交易记录
- * @param id 交易ID
- */
 async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('transaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -175,20 +214,42 @@ onMounted(async () => {
     </el-card>
 
     <el-table :data="transactions" v-loading="loading" stripe style="margin-top: 16px">
-      <el-table-column prop="date" :label="t('transaction.date')" width="120">
+      <el-table-column prop="date" :label="t('transaction.date')" width="170">
         <template #default="{ row }">{{ formatDate(row.date) }}</template>
       </el-table-column>
-      <el-table-column prop="description" :label="t('transaction.description')" />
-      <el-table-column prop="amount" :label="t('transaction.amount')" width="150">
-        <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
+      <el-table-column :label="t('transaction.type')" width="90">
+        <template #default="{ row }">
+          <el-tag :type="typeTagType(row)" size="small" effect="dark">{{ typeLabel(row) }}</el-tag>
+        </template>
       </el-table-column>
-      <el-table-column :label="t('transaction.sourceAccount')" width="150">
+      <el-table-column prop="description" :label="t('transaction.description')" min-width="160" show-overflow-tooltip />
+      <el-table-column :label="t('transaction.amount')" width="140" align="right">
+        <template #default="{ row }">
+          <span :class="amountClass(row)" class="amount-text">{{ formatTransactionAmount(row) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column :label="t('transaction.sourceAccount')" width="130" show-overflow-tooltip>
         <template #default="{ row }">{{ row.source?.name || '' }}</template>
       </el-table-column>
-      <el-table-column :label="t('transaction.category')" width="150">
+      <el-table-column :label="t('transaction.destinationAccount')" width="130" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.destination?.name || '' }}</template>
+      </el-table-column>
+      <el-table-column :label="t('transaction.category')" width="120" show-overflow-tooltip>
         <template #default="{ row }">{{ row.category?.name || '' }}</template>
       </el-table-column>
-      <el-table-column :label="t('common.edit')" width="160" fixed="right">
+      <el-table-column :label="t('transaction.tags')" width="150">
+        <template #default="{ row }">
+          <el-tag
+            v-for="tag in (row.tags || []).slice(0, 3)"
+            :key="tag.id"
+            size="small"
+            :color="tag.color"
+            style="color: #fff; margin: 2px"
+          >{{ tag.name }}</el-tag>
+          <span v-if="(row.tags || []).length > 3" class="more-tags">+{{ row.tags.length - 3 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column :label="t('common.edit')" width="140" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleEdit(row.id)">{{ t('common.edit') }}</el-button>
           <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
@@ -220,5 +281,28 @@ onMounted(async () => {
 
 .filter-card {
   margin-bottom: 0;
+}
+
+.amount-text {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-deposit {
+  color: #67C23A;
+}
+
+.amount-withdrawal {
+  color: #F56C6C;
+}
+
+.amount-transfer {
+  color: #909399;
+}
+
+.more-tags {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 4px;
 }
 </style>
