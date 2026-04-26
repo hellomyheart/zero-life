@@ -1,18 +1,25 @@
 <script setup lang="ts">
-// 预算列表页面 - 展示预算已用和剩余使用率等
-import { ref, onMounted } from 'vue'
+/**
+ * 预算列表页面
+ * 功能：
+ * - 展示预算列表，含已用/剩余/使用率/状态
+ * - 支持创建、编辑、删除预算
+ * - 分类选择支持树形结构
+ * - 响应式布局
+ */
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { list, remove } from '@/api/budget'
+import { list, create, update, remove } from '@/api/budget'
 import { formatAmount } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCategoryStore } from '@/stores/category'
 import type { Budget } from '@/types/budget'
 import { BudgetPeriod } from '@/types/budget'
+import type { Category } from '@/types/category'
 
 const { t } = useI18n()
 const router = useRouter()
-// 分类状态管理 - 用于获取分类下拉选项
 const categoryStore = useCategoryStore()
 
 const budgets = ref<Budget[]>([])
@@ -24,9 +31,24 @@ const editingId = ref<number | null>(null)
 const form = ref({
   name: '',
   amount: '0',
-  period: 'monthly' as BudgetPeriod,
+  period: BudgetPeriod.Monthly,
   category_ids: [] as number[],
-  start_date: '',
+})
+
+const categoryTreeData = computed(() => {
+  function transform(categories: Category[]): { value: number; label: string; children?: { value: number; label: string }[] }[] {
+    return categories.map(cat => {
+      const node: { value: number; label: string; children?: { value: number; label: string }[] } = {
+        value: cat.id,
+        label: cat.name,
+      }
+      if (cat.children?.length) {
+        node.children = transform(cat.children)
+      }
+      return node
+    })
+  }
+  return transform(categoryStore.categories)
 })
 
 async function fetchBudgets() {
@@ -43,7 +65,7 @@ async function fetchBudgets() {
 function handleCreate() {
   dialogTitle.value = t('budget.create')
   editingId.value = null
-  form.value = { name: '', amount: '0', period: BudgetPeriod.Monthly, category_ids: [], start_date: '' }
+  form.value = { name: '', amount: '0', period: BudgetPeriod.Monthly, category_ids: [] }
   dialogVisible.value = true
 }
 
@@ -53,9 +75,8 @@ function handleEdit(budget: Budget) {
   form.value = {
     name: budget.name,
     amount: budget.amount,
-    period: budget.period,
-    category_ids: budget.category_ids,
-    start_date: budget.start_date,
+    period: budget.period as BudgetPeriod,
+    category_ids: budget.categories?.map(c => c.id) || [],
   }
   dialogVisible.value = true
 }
@@ -76,16 +97,20 @@ async function handleDelete(id: number) {
 }
 
 async function handleSubmit() {
-  if (!form.value.name) {
+  if (!form.value.name || !form.value.amount || form.value.category_ids.length === 0) {
     ElMessage.warning(t('common.required'))
     return
   }
   try {
-    const { create: createBudget, update: updateBudget } = await import('@/api/budget')
     if (editingId.value) {
-      await updateBudget(editingId.value, form.value)
+      await update(editingId.value, {
+        name: form.value.name,
+        amount: form.value.amount,
+        period: form.value.period,
+        category_ids: form.value.category_ids,
+      })
     } else {
-      await createBudget(form.value)
+      await create(form.value)
     }
     ElMessage.success(t('common.success'))
     dialogVisible.value = false
@@ -95,14 +120,23 @@ async function handleSubmit() {
   }
 }
 
-function getStatusType(status: string) {
-  if (status === 'exceeded') return 'danger'
+/**
+ * 根据预算状态返回 el-tag 的 type
+ * 后端返回：normal / warning / overspent
+ */
+function getStatusType(status: string): '' | 'success' | 'warning' | 'danger' {
+  if (status === 'overspent') return 'danger'
   if (status === 'warning') return 'warning'
   return 'success'
 }
 
+function getStatusLabel(status: string): string {
+  if (status === 'overspent') return t('budget.overspent')
+  if (status === 'warning') return t('budget.warning')
+  return t('budget.normal')
+}
+
 onMounted(async () => {
-  // 打开页面时加载分类列表，供下拉选择使用
   await categoryStore.fetchCategories()
   await fetchBudgets()
 })
@@ -116,21 +150,33 @@ onMounted(async () => {
     </div>
 
     <el-table :data="budgets" v-loading="loading" stripe>
-      <el-table-column prop="name" :label="t('budget.name')" />
-      <el-table-column prop="amount" :label="t('budget.amount')" width="150">
+      <el-table-column prop="name" :label="t('budget.name')" min-width="140" show-overflow-tooltip />
+      <el-table-column :label="t('budget.amount')" width="130">
         <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
       </el-table-column>
-      <el-table-column prop="spent" :label="t('budget.spent')" width="150">
+      <el-table-column :label="t('budget.spent')" width="130">
         <template #default="{ row }">{{ formatAmount(row.spent) }}</template>
       </el-table-column>
-      <el-table-column :label="t('budget.usageRate')" width="200">
+      <el-table-column :label="t('budget.remaining')" width="130">
+        <template #default="{ row }">{{ formatAmount(row.remaining) }}</template>
+      </el-table-column>
+      <el-table-column :label="t('budget.usageRate')" width="180">
         <template #default="{ row }">
-          <el-progress :percentage="row.amount ? Math.round(row.spent / row.amount * 100) : 0" :status="getStatusType(row.status) === 'danger' ? 'exception' : getStatusType(row.status) === 'warning' ? 'warning' : undefined" />
+          <el-progress
+            :percentage="Math.min(Math.round(row.usage_rate * 100), 100)"
+            :status="row.status === 'overspent' ? 'exception' : row.status === 'warning' ? 'warning' : undefined"
+          />
+          <span v-if="row.usage_rate > 1" class="overspent-label">{{ Math.round(row.usage_rate * 100) }}%</span>
         </template>
       </el-table-column>
-      <el-table-column :label="t('budget.status')" width="100">
+      <el-table-column :label="t('budget.period')" width="80">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+          {{ row.period === 'monthly' ? t('budget.monthly') : t('budget.yearly') }}
+        </template>
+      </el-table-column>
+      <el-table-column :label="t('budget.status')" width="90">
+        <template #default="{ row }">
+          <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column :label="t('common.edit')" width="200" fixed="right">
@@ -145,26 +191,31 @@ onMounted(async () => {
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item :label="t('budget.name')">
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('budget.amount')">
-          <el-input v-model="form.amount" />
+          <el-input v-model="form.amount" style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('budget.period')">
-          <el-select v-model="form.period">
-            <el-option :label="t('budget.monthly')" value="monthly" />
-            <el-option :label="t('budget.quarterly')" value="quarterly" />
-            <el-option :label="t('budget.yearly')" value="yearly" />
+          <el-select v-model="form.period" style="width: 100%">
+            <el-option :label="t('budget.monthly')" :value="BudgetPeriod.Monthly" />
+            <el-option :label="t('budget.yearly')" :value="BudgetPeriod.Yearly" />
           </el-select>
         </el-form-item>
-        <!-- 分类多选下拉框 - 选择预算关联的多个分类 -->
-        <el-form-item :label="t('transaction.category')">
-          <el-select v-model="form.category_ids" multiple :placeholder="t('common.selectPlaceholder')" filterable clearable>
-            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="t('budget.startDate')">
-          <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" />
+        <el-form-item :label="t('budget.categories')">
+          <el-tree-select
+            v-model="form.category_ids"
+            :data="categoryTreeData"
+            :placeholder="t('common.selectPlaceholder')"
+            check-strictly
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            style="width: 100%"
+            :render-after-expand="false"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -176,14 +227,9 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
+.overspent-label {
+  font-size: 12px;
+  color: var(--app-amount-withdrawal);
+  font-weight: 600;
 }
 </style>
