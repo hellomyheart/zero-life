@@ -83,3 +83,35 @@ func (r *CategoryRepository) GetSubCategories(parentID, userID uint64) ([]model.
 	}
 	return categories, nil
 }
+
+// GetDescendantIDs 获取指定分类的所有子孙分类ID（包含自身）
+// 递归查询：先查直接子分类，再对每个子分类递归查询，最终返回所有层级的后代ID
+// 参数 ids: 起始分类ID列表
+// 参数 userID: 用户ID
+// 返回: 包含自身及所有子孙分类的ID列表
+func (r *CategoryRepository) GetDescendantIDs(ids []uint64, userID uint64) ([]uint64, error) {
+	if len(ids) == 0 {
+		return ids, nil
+	}
+	result := make([]uint64, 0, len(ids)*2)
+	result = append(result, ids...)
+
+	// 逐层向下查找子分类
+	currentLevel := ids
+	for len(currentLevel) > 0 {
+		var children []model.Category
+		if err := r.db.Where("parent_id IN ? AND user_id = ?", currentLevel, userID).Find(&children).Error; err != nil {
+			return nil, err
+		}
+		if len(children) == 0 {
+			break
+		}
+		currentLevel = make([]uint64, 0, len(children))
+		for _, c := range children {
+			currentLevel = append(currentLevel, c.ID)
+			result = append(result, c.ID)
+		}
+	}
+
+	return result, nil
+}

@@ -19,32 +19,29 @@ import (
 // TransactionService 交易服务
 // 核心业务服务，处理交易的创建、查询、更新、删除、搜索、拆分和合并
 // 依赖txnRepo进行交易数据访问，依赖accountRepo验证账户归属
+// 依赖categoryRepo/tagRepo展开分类/标签的子孙节点ID（搜索时选中父节点自动包含子节点）
 // 依赖db执行数据库事务（确保交易创建和余额更新的一致性）
 // 依赖ruleTrigger在交易创建/更新后触发规则引擎（异步执行，不阻塞响应）
 // 依赖webhookNotifier在交易创建/更新/删除后触发Webhook通知
 type TransactionService struct {
-	txnRepo        *repository.TransactionRepository // 交易数据访问对象
-	accountRepo    *repository.AccountRepository     // 账户数据访问对象，用于验证账户归属
-	db             *gorm.DB                          // 数据库连接，用于执行事务操作
-	ruleTrigger    RuleTrigger                       // 规则触发器接口，交易变更后触发规则引擎
-	webhookNotifier WebhookNotifier                  // Webhook通知接口，交易变更后发送通知
+	txnRepo         *repository.TransactionRepository // 交易数据访问对象
+	accountRepo     *repository.AccountRepository     // 账户数据访问对象，用于验证账户归属
+	categoryRepo    *repository.CategoryRepository     // 分类数据访问对象，用于展开子孙分类ID
+	tagRepo         *repository.TagRepository         // 标签数据访问对象，用于展开子孙标签ID
+	db              *gorm.DB                          // 数据库连接，用于执行事务操作
+	ruleTrigger     RuleTrigger                       // 规则触发器接口，交易变更后触发规则引擎
+	webhookNotifier WebhookNotifier                   // Webhook通知接口，交易变更后发送通知
 }
 
 // NewTransactionService 创建交易服务实例
-// 参数：
-//   - txnRepo: 交易数据访问对象
-//   - accountRepo: 账户数据访问对象
-//   - db: 数据库连接
-//   - ruleTrigger: 规则触发器（可为nil，表示不触发规则）
-//   - webhookNotifier: Webhook通知器（可为nil，表示不发送通知）
-// 返回：
-//   - *TransactionService: 交易服务实例
-func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, db *gorm.DB, ruleTrigger RuleTrigger, webhookNotifier WebhookNotifier) *TransactionService {
+func NewTransactionService(txnRepo *repository.TransactionRepository, accountRepo *repository.AccountRepository, categoryRepo *repository.CategoryRepository, tagRepo *repository.TagRepository, db *gorm.DB, ruleTrigger RuleTrigger, webhookNotifier WebhookNotifier) *TransactionService {
 	return &TransactionService{
-		txnRepo:        txnRepo,
-		accountRepo:    accountRepo,
-		db:             db,
-		ruleTrigger:    ruleTrigger,
+		txnRepo:         txnRepo,
+		accountRepo:     accountRepo,
+		categoryRepo:    categoryRepo,
+		tagRepo:         tagRepo,
+		db:              db,
+		ruleTrigger:     ruleTrigger,
 		webhookNotifier: webhookNotifier,
 	}
 }
@@ -184,15 +181,41 @@ func (s *TransactionService) List(userID uint64, req *request.TransactionListReq
 	params.Normalize()
 
 	filter := repository.TransactionFilter{
-		Type:        req.Type,
-		StartDate:   req.StartDate,
-		EndDate:     req.EndDate,
-		AccountID:   req.AccountID,
-		CategoryID:  req.CategoryID,
-		CategoryIDs: req.CategoryIDs,
-		TagID:       req.TagID,
-		TagIDs:      req.TagIDs,
-		Keyword:     req.Keyword,
+		Type:      req.Type,
+		StartDate: req.StartDate,
+		EndDate:   req.EndDate,
+		AccountID: req.AccountID,
+		Keyword:   req.Keyword,
+	}
+
+	// 展开分类ID：选中父分类时自动包含所有子孙分类
+	if len(req.CategoryIDs) > 0 {
+		expanded, err := s.categoryRepo.GetDescendantIDs(req.CategoryIDs, userID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		filter.CategoryIDs = expanded
+	} else if req.CategoryID != nil {
+		expanded, err := s.categoryRepo.GetDescendantIDs([]uint64{*req.CategoryID}, userID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		filter.CategoryIDs = expanded
+	}
+
+	// 展开标签ID：选中父标签时自动包含所有子孙标签
+	if len(req.TagIDs) > 0 {
+		expanded, err := s.tagRepo.GetDescendantIDs(req.TagIDs, userID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		filter.TagIDs = expanded
+	} else if req.TagID != nil {
+		expanded, err := s.tagRepo.GetDescendantIDs([]uint64{*req.TagID}, userID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		filter.TagIDs = expanded
 	}
 
 	txns, err := s.txnRepo.List(userID, filter, params.Offset(), params.PageSize)

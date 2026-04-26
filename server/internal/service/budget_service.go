@@ -17,21 +17,19 @@ import (
 // BudgetService 预算服务
 // 负责处理预算相关的业务逻辑，包括预算的创建、查询、更新、删除及使用率计算
 // 依赖budgetRepo进行预算数据访问，依赖txnRepo查询交易以计算预算已花费金额
+// 依赖categoryRepo展开分类的子孙节点ID（预算关联父分类时自动包含子分类的支出）
 type BudgetService struct {
-	budgetRepo *repository.BudgetRepository // 预算数据访问对象
-	txnRepo    *repository.TransactionRepository // 交易数据访问对象，用于计算预算周期内的支出
+	budgetRepo   *repository.BudgetRepository       // 预算数据访问对象
+	txnRepo      *repository.TransactionRepository   // 交易数据访问对象，用于计算预算周期内的支出
+	categoryRepo *repository.CategoryRepository      // 分类数据访问对象，用于展开子孙分类ID
 }
 
 // NewBudgetService 创建预算服务实例
-// 参数：
-//   - budgetRepo: 预算数据访问对象
-//   - txnRepo: 交易数据访问对象
-// 返回：
-//   - *BudgetService: 预算服务实例
-func NewBudgetService(budgetRepo *repository.BudgetRepository, txnRepo *repository.TransactionRepository) *BudgetService {
+func NewBudgetService(budgetRepo *repository.BudgetRepository, txnRepo *repository.TransactionRepository, categoryRepo *repository.CategoryRepository) *BudgetService {
 	return &BudgetService{
-		budgetRepo: budgetRepo,
-		txnRepo:    txnRepo,
+		budgetRepo:   budgetRepo,
+		txnRepo:      txnRepo,
+		categoryRepo: categoryRepo,
 	}
 }
 
@@ -252,21 +250,31 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 
 	// 只统计支出类型交易，预算追踪的是支出而非收入
 	withdrawalType := string(model.TransactionTypeWithdrawal)
-	var total decimal.Decimal
+
+	// 收集所有关联分类ID，并展开子孙分类（选中父分类时自动包含子分类的支出）
+	var allCategoryIDs []uint64
 	for _, cat := range budget.Categories {
-		filter := repository.TransactionFilter{
-			Type:       withdrawalType,
-			StartDate:  start.Format("2006-01-02"),
-			EndDate:    end.Format("2006-01-02"),
-			CategoryID: &cat.ID,
-		}
-		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
-		if err != nil {
-			continue
-		}
-		for _, txn := range txns {
-			total = total.Add(txn.Amount)
-		}
+		allCategoryIDs = append(allCategoryIDs, cat.ID)
+	}
+	expandedIDs, err := s.categoryRepo.GetDescendantIDs(allCategoryIDs, userID)
+	if err != nil {
+		return decimal.Zero
+	}
+
+	filter := repository.TransactionFilter{
+		Type:        withdrawalType,
+		StartDate:   start.Format("2006-01-02"),
+		EndDate:     end.Format("2006-01-02"),
+		CategoryIDs: expandedIDs,
+	}
+	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	if err != nil {
+		return decimal.Zero
+	}
+
+	var total decimal.Decimal
+	for _, txn := range txns {
+		total = total.Add(txn.Amount)
 	}
 
 	return total
