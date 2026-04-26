@@ -206,6 +206,16 @@ onMounted(async () => {
     } catch {
       ElMessage.error(t('common.failed'))
     }
+  } else if (route.query.type) {
+    // 复制模式：从 query 参数恢复表单数据
+    form.type = (route.query.type as string) as TransactionType
+    form.description = (route.query.description as string) || ''
+    form.amount = (route.query.amount as string) || '0'
+    form.source_id = route.query.source_id ? Number(route.query.source_id) : undefined
+    form.destination_id = route.query.destination_id ? Number(route.query.destination_id) : undefined
+    form.category_id = route.query.category_id ? Number(route.query.category_id) : undefined
+    form.notes = (route.query.notes as string) || ''
+    form.tags = route.query.tags ? (route.query.tags as string).split(',').map(Number).filter(n => !isNaN(n)) : []
   }
 })
 

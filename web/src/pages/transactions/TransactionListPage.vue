@@ -140,6 +140,23 @@ function handleEdit(id: number) {
   router.push(`/transactions/${id}/edit`)
 }
 
+function handleClone(row: Transaction) {
+  const data = {
+    type: row.type,
+    description: row.description,
+    amount: row.amount,
+    source_id: row.source_id,
+    destination_id: row.destination_id ?? '',
+    category_id: row.category_id ?? '',
+    notes: row.notes || '',
+    tags: row.tags?.map(t => t.id).join(',') ?? '',
+  }
+  const query = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== '' && v !== undefined)
+  )
+  router.push({ path: '/transactions/create', query })
+}
+
 async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('transaction.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -288,9 +305,10 @@ onMounted(async () => {
           <span v-if="(row.tags || []).length > 3" class="more-tags">+{{ row.tags.length - 3 }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.edit')" width="140" fixed="right">
+      <el-table-column :label="t('common.edit')" width="200" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleEdit(row.id)">{{ t('common.edit') }}</el-button>
+          <el-button link type="primary" @click="handleClone(row)">{{ t('common.clone') }}</el-button>
           <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>
