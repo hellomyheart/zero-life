@@ -107,7 +107,7 @@ export interface CreateTransactionReq {
   date: string                  // 交易日期（必填，格式 YYYY-MM-DD HH:mm）
   description: string           // 交易描述（必填）
   amount: string                // 交易金额（必填，必须大于0）
-  source_id: number             // 源账户ID（必填，后端 uint64）
+  source_id: number | undefined    // 源账户ID（必填，后端 uint64）
   destination_id?: number       // 目标账户ID（转账时必填，后端 *uint64）
   category_id?: number          // 分类ID（后端 *uint64）
   notes?: string                // 备注

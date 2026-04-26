@@ -57,7 +57,7 @@ const form = reactive<CreateTransactionReq>({
   date: getLocalDateTimeStr(),
   description: '',
   amount: '0',
-  source_id: 0,
+  source_id: undefined,
   destination_id: undefined,
   category_id: undefined,
   notes: '',
@@ -163,7 +163,7 @@ const tagTreeData = computed(() => {
 })
 
 function handleTypeChange() {
-  form.source_id = 0
+  form.source_id = undefined
   form.destination_id = undefined
 }
 
