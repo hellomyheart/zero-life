@@ -1,47 +1,47 @@
 /**
  * 货币相关类型定义
- * 包含货币信息和汇率接口，用于支持多币种记账
+ * 字段名与后端 JSON tag 完全对应
  */
 
 /**
- * 货币信息接口
- * 表示系统中的一种货币
+ * 货币信息接口（对应后端 CurrencyResp）
  */
 export interface Currency {
-  id: number                    // 货币唯一标识（后端返回 uint64）
-  code: string                 // 货币代码，如"CNY"、"USD"、"EUR"
-  name: string                 // 货币名称，如"人民币"、"美元"
-  symbol: string               // 货币符号，如"¥"、"$"、"€"
-  is_enabled: boolean          // 是否启用（禁用的货币不会出现在选择列表中）
-  is_default: boolean          // 是否为系统默认货币
-  created_at: string           // 创建时间
-  updated_at: string           // 最后更新时间
+  id: number
+  code: string
+  name: string
+  symbol: string
+  decimal_places: number
+  is_enabled: boolean
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }
 
 /**
- * 汇率信息接口
- * 表示两种货币之间的汇率
+ * 汇率信息接口（对应后端 ExchangeRateResp）
+ * 后端返回 from_currency_id/to_currency_id（非 source_currency/target_currency）
  */
 export interface ExchangeRate {
-  source_currency: string      // 源货币代码，如"USD"
-  target_currency: string      // 目标货币代码，如"CNY"
-  rate: string                 // 汇率值，如"7.24"（1 USD = 7.24 CNY）
-  updated_at: string           // 汇率更新时间
+  id: number
+  from_currency_id: number
+  to_currency_id: number
+  rate: string
+  updated_at: string
 }
 
 /**
  * 设置货币启用状态请求接口
  */
 export interface SetCurrencyStatusReq {
-  is_enabled: boolean          // 是否启用该货币
+  is_enabled: boolean
 }
 
 /**
- * 设置汇率请求接口
- * 创建或更新两种货币之间的汇率
+ * 设置汇率请求接口（对应后端 SetExchangeRateReq）
  */
 export interface SetExchangeRateReq {
-  from_currency_id: number     // 源货币ID
-  to_currency_id: number       // 目标货币ID
-  rate: string                 // 汇率值
+  from_currency_id: number
+  to_currency_id: number
+  rate: string
 }

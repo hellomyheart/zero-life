@@ -72,12 +72,12 @@ onMounted(fetchData)
             <template #header>{{ t('report.incomeByCategory') }}</template>
             <!-- 收入分类饼图 -->
             <PieChart
-              :data="data.income_categories.map((c) => ({ name: c.category_name, value: Number(c.amount) }))"
+              :data="data.income_by_category.map((c) => ({ name: c.category_name, value: Number(c.amount) }))"
               name-field="name"
               value-field="value"
             />
             <!-- 收入分类明细表 -->
-            <el-table :data="data.income_categories" size="small" style="margin-top: 16px">
+            <el-table :data="data.income_by_category" size="small" style="margin-top: 16px">
               <el-table-column prop="category_name" :label="t('category.name')" />
               <el-table-column prop="amount" :label="t('transaction.amount')">
                 <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
@@ -93,12 +93,12 @@ onMounted(fetchData)
             <template #header>{{ t('report.expenseByCategory') }}</template>
             <!-- 支出分类饼图 -->
             <PieChart
-              :data="data.expense_categories.map((c) => ({ name: c.category_name, value: Number(c.amount) }))"
+              :data="data.expense_by_category.map((c) => ({ name: c.category_name, value: Number(c.amount) }))"
               name-field="name"
               value-field="value"
             />
             <!-- 支出分类明细表 -->
-            <el-table :data="data.expense_categories" size="small" style="margin-top: 16px">
+            <el-table :data="data.expense_by_category" size="small" style="margin-top: 16px">
               <el-table-column prop="category_name" :label="t('category.name')" />
               <el-table-column prop="amount" :label="t('transaction.amount')">
                 <template #default="{ row }">{{ formatAmount(row.amount) }}</template>

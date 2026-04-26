@@ -67,22 +67,10 @@ onMounted(fetchData)
     <template v-if="data">
       <!-- 净值概览卡片 -->
       <el-row :gutter="20">
-        <el-col :span="8">
-          <el-card shadow="hover">
-            <template #header>{{ t('report.totalAssets') }}</template>
-            <div class="amount income">{{ formatAmount(data.total_assets) }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card shadow="hover">
-            <template #header>{{ t('report.totalLiabilities') }}</template>
-            <div class="amount expense">{{ formatAmount(data.total_liabilities) }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
+        <el-col :span="24">
           <el-card shadow="hover">
             <template #header>{{ t('report.netWorth') }}</template>
-            <div class="amount">{{ formatAmount(data.net_worth) }}</div>
+            <div class="amount">{{ formatAmount(data.total_net_worth) }}</div>
           </el-card>
         </el-col>
       </el-row>

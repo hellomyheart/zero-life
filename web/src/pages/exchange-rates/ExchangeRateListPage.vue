@@ -73,8 +73,12 @@ onMounted(async () => {
       </template>
 
       <el-table :data="exchangeRates" v-loading="loading" stripe>
-        <el-table-column prop="source_currency" :label="t('exchangeRate.fromCurrency')" />
-        <el-table-column prop="target_currency" :label="t('exchangeRate.toCurrency')" />
+        <el-table-column :label="t('exchangeRate.fromCurrency')">
+          <template #default="{ row }">{{ enabledCurrencies.find((c: Currency) => c.id === row.from_currency_id)?.code || row.from_currency_id }}</template>
+        </el-table-column>
+        <el-table-column :label="t('exchangeRate.toCurrency')">
+          <template #default="{ row }">{{ enabledCurrencies.find((c: Currency) => c.id === row.to_currency_id)?.code || row.to_currency_id }}</template>
+        </el-table-column>
         <el-table-column prop="rate" :label="t('exchangeRate.rate')" />
         <el-table-column prop="updated_at" label="Updated At" />
       </el-table>

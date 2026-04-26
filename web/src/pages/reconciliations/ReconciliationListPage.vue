@@ -1,20 +1,10 @@
 <script setup lang="ts">
 /**
  * 对账管理页面
- * 功能：
- * - 创建对账记录，核对账户余额与实际余额
- * - 查看对账历史，包括期初余额、期末余额和差额
- * - 编辑和删除对账记录
- * 
- * 业务流程：
- * 1. 选择要对账的账户
- * 2. 输入对账周期（开始日期和结束日期）
- * 3. 输入期初余额和期末余额
- * 4. 系统自动计算差额（期末余额 - 账面余额）
- * 5. 保存对账记录，状态为 open
- * 
- * 数据来源：后端 /api/v1/reconciliations 接口
- * 使用 Store：accountStore（获取账户列表）
+ * 字段名与后端 JSON tag 完全对应：
+ * - starting_balance（非 start_balance）
+ * - ending_balance（非 end_balance）
+ * - 后端 CreateReconciliationReq 不接受 notes 字段
  */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -26,36 +16,23 @@ import type { Reconciliation, CreateReconciliationReq, UpdateReconciliationReq }
 import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
-// 账户状态管理 - 用于获取账户下拉选项
 const accountStore = useAccountStore()
 
-// 对账记录列表
 const items = ref<Reconciliation[]>([])
-// 加载状态
 const loading = ref(false)
-// 对话框显示状态
 const dialogVisible = ref(false)
-// 对话框标题
 const dialogTitle = ref('')
-// 当前编辑的对账记录 ID
 const editingId = ref<number | null>(null)
-/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
-// 表单数据
 const form = ref<CreateReconciliationReq>({
   account_id: 0,
   start_date: '',
   end_date: '',
-  start_balance: '0',
-  end_balance: '0',
-  notes: '',
+  starting_balance: '0',
+  ending_balance: '0',
 })
 
-/**
- * 获取对账记录列表
- * 传入分页参数，从后端获取当前页的数据和总记录数
- */
 async function fetchList() {
   loading.value = true
   try {
@@ -63,64 +40,43 @@ async function fetchList() {
     items.value = res.items || []
     pagination.total = res.total || 0
   } catch {
-    ElMessage.error(t('common.operationFailed') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 页码变化处理函数
- * @param page 新的页码
- */
 function handlePageChange(page: number) {
   pagination.page = page
   fetchList()
 }
 
-/**
- * 每页数量变化处理函数
- * @param size 新的每页数量
- */
 function handleSizeChange(size: number) {
   pagination.page_size = size
   pagination.page = 1
   fetchList()
 }
 
-/**
- * 打开创建对话框
- * 初始化表单为空值
- */
 function handleCreate() {
   dialogTitle.value = t('reconciliation.create')
   editingId.value = null
-  form.value = { account_id: 0, start_date: '', end_date: '', start_balance: '0', end_balance: '0', notes: '' }
+  form.value = { account_id: 0, start_date: '', end_date: '', starting_balance: '0', ending_balance: '0' }
   dialogVisible.value = true
 }
 
-/**
- * 打开编辑对话框
- * @param row 选中的对账记录
- */
 function handleEdit(row: Reconciliation) {
   dialogTitle.value = t('reconciliation.edit')
   editingId.value = row.id
   form.value = {
     account_id: row.account_id,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    start_balance: row.start_balance,
-    end_balance: row.end_balance,
-    notes: row.notes,
+    start_date: row.start_date ? row.start_date.substring(0, 10) : '',
+    end_date: row.end_date ? row.end_date.substring(0, 10) : '',
+    starting_balance: row.starting_balance,
+    ending_balance: row.ending_balance,
   }
   dialogVisible.value = true
 }
 
-/**
- * 删除对账记录
- * @param id 对账记录 ID
- */
 async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('reconciliation.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -128,21 +84,15 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchList()
   } catch {
-    ElMessage.error(t('common.operationFailed') || 'Failed to delete')
+    ElMessage.error(t('common.failed'))
   }
 }
 
-/**
- * 提交表单数据
- * 根据 editingId 判断是创建还是更新操作
- */
 async function handleSubmit() {
   try {
     if (editingId.value) {
-      // 更新操作：只允许更新期末余额和备注
-      await update(editingId.value, { end_balance: form.value.end_balance, notes: form.value.notes } as UpdateReconciliationReq)
+      await update(editingId.value, { ending_balance: form.value.ending_balance } as UpdateReconciliationReq)
     } else {
-      // 创建操作
       await create(form.value)
     }
     ElMessage.success(t('common.success'))
@@ -153,9 +103,7 @@ async function handleSubmit() {
   }
 }
 
-// 组件挂载时加载账户列表和对账记录
 onMounted(async () => {
-  // 打开页面时加载账户列表，供下拉选择使用
   await accountStore.fetchAccounts()
   await fetchList()
 })
@@ -175,11 +123,13 @@ onMounted(async () => {
       <el-table-column prop="end_date" :label="t('common.endDate')" width="120">
         <template #default="{ row }">{{ formatDate(row.end_date) }}</template>
       </el-table-column>
-      <el-table-column prop="start_balance" :label="t('reconciliation.startBalance')" width="130">
-        <template #default="{ row }">{{ formatAmount(row.start_balance) }}</template>
+      <!-- starting_balance 字段名与后端 ReconciliationResp JSON tag 对应（非 start_balance） -->
+      <el-table-column prop="starting_balance" :label="t('reconciliation.startBalance')" width="130">
+        <template #default="{ row }">{{ formatAmount(row.starting_balance) }}</template>
       </el-table-column>
-      <el-table-column prop="end_balance" :label="t('reconciliation.endBalance')" width="130">
-        <template #default="{ row }">{{ formatAmount(row.end_balance) }}</template>
+      <!-- ending_balance 字段名与后端 JSON tag 对应（非 end_balance） -->
+      <el-table-column prop="ending_balance" :label="t('reconciliation.endBalance')" width="130">
+        <template #default="{ row }">{{ formatAmount(row.ending_balance) }}</template>
       </el-table-column>
       <el-table-column prop="difference" :label="t('reconciliation.difference')" width="130">
         <template #default="{ row }">{{ formatAmount(row.difference) }}</template>
@@ -203,26 +153,22 @@ onMounted(async () => {
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
-        <!-- 账户选择下拉框 - 选择要对账的账户 -->
         <el-form-item :label="t('transaction.sourceAccount')">
-          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable style="width: 100%">
             <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('common.startDate')">
-          <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" />
+          <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('common.endDate')">
-          <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" />
+          <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('reconciliation.startBalance')">
-          <el-input v-model="form.start_balance" />
+          <el-input v-model="form.starting_balance" />
         </el-form-item>
         <el-form-item :label="t('reconciliation.endBalance')">
-          <el-input v-model="form.end_balance" />
-        </el-form-item>
-        <el-form-item :label="t('piggyBank.notes')">
-          <el-input v-model="form.notes" type="textarea" />
+          <el-input v-model="form.ending_balance" />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -1,92 +1,118 @@
 /**
  * 报表相关类型定义
- * 定义各类财务报表的数据结构，包括收支、分类、预算、净值和趋势报表
+ * 字段名与后端 JSON tag 完全对应
  */
 
 /**
  * 报表查询请求接口
- * 所有报表接口共用的查询参数
  */
 export interface ReportReq {
-  start_date: string           // 查询起始日期（必填）
-  end_date: string             // 查询结束日期（必填）
-  currency?: string            // 货币代码（可选，用于多币种报表）
-  account_ids?: number[]        // 账户ID列表（可选，筛选特定账户的数据）
-  category_ids?: number[]       // 分类ID列表（可选，筛选特定分类的数据）
+  start_date: string
+  end_date: string
+  currency?: string
+  account_ids?: number[]
+  category_ids?: number[]
 }
 
 /**
- * 收支报表响应接口
- * 返回指定时间段内的收支汇总数据
+ * 时段明细响应接口（对应后端 PeriodDetailResp）
+ */
+export interface PeriodDetailResp {
+  period: string
+  income: string
+  expense: string
+  net: string
+}
+
+/**
+ * 收支报表响应接口（对应后端 IncomeExpenseResp）
+ * 后端返回 details（非 income_by_account/expense_by_account）
  */
 export interface IncomeExpenseResp {
-  total_income: string         // 总收入
-  total_expense: string        // 总支出
-  net_income: string           // 净收入（收入 - 支出）
-  income_by_account: {         // 按账户分组的收入明细
-    account_id: number          // 账户ID
-    account_name: string        // 账户名称
-    amount: string              // 收入金额
-  }[]
-  expense_by_account: {        // 按账户分组的支出明细
-    account_id: number          // 账户ID
-    account_name: string        // 账户名称
-    amount: string              // 支出金额
-  }[]
+  total_income: string
+  total_expense: string
+  net_income: string
+  prev_income: string
+  prev_expense: string
+  prev_net: string
+  details: PeriodDetailResp[]
 }
 
 /**
- * 分类项响应接口
- * 单个分类的汇总数据
+ * 分类项响应接口（对应后端 CategoryItemResp）
  */
 export interface CategoryItemResp {
-  category_id: number           // 分类ID
-  category_name: string        // 分类名称
-  amount: string               // 该分类的金额
-  percentage: number           // 占比百分比（0-100）
+  category_id: number
+  category_name: string
+  amount: string
+  percentage: number
 }
 
 /**
- * 分类报表响应接口
- * 按分类汇总的收入和支出数据
+ * 分类报表响应接口（对应后端 CategoryReportResp）
+ * 后端字段名为 income_by_category/expense_by_category
  */
 export interface CategoryReportResp {
-  income_categories: CategoryItemResp[]   // 收入分类汇总列表
-  expense_categories: CategoryItemResp[]  // 支出分类汇总列表
+  income_by_category: CategoryItemResp[]
+  expense_by_category: CategoryItemResp[]
 }
 
 /**
- * 预算报表响应接口
- * 各预算的使用情况汇总
+ * 预算报表项响应接口（对应后端 BudgetReportItemResp）
+ */
+export interface BudgetReportItemResp {
+  budget_id: number
+  budget_name: string
+  amount: string
+  spent: string
+  remaining: string
+  usage_rate: number
+}
+
+/**
+ * 预算报表响应接口（对应后端 BudgetReportResp）
+ * 后端字段名为 items（非 budgets）
  */
 export interface BudgetReportResp {
-  budgets: {                   // 预算列表
-    budget_id: number           // 预算ID
-    budget_name: string        // 预算名称
-    amount: string             // 预算金额上限
-    spent: string              // 已花费金额
-    usage_rate: number         // 使用率（0-1之间）
-    status: string             // 预算状态
-  }[]
+  items: BudgetReportItemResp[]
 }
 
 /**
- * 净值报表响应接口
- * 资产、负债和净值的变化趋势
+ * 净资产趋势点响应接口（对应后端 NetWorthPointResp）
+ */
+export interface NetWorthPointResp {
+  date: string
+  net_worth: string
+}
+
+/**
+ * 净值报表响应接口（对应后端 NetWorthResp）
+ * 后端仅有 total_net_worth 和 trend，无 total_assets/total_liabilities
  */
 export interface NetWorthResp {
-  trend: {                     // 按日期的净值变化列表
-    date: string               // 日期（格式：YYYY-MM 或 YYYY-MM-DD）
-    net_worth: string          // 当日净值
-  }[]
-  total_assets: string         // 总资产
-  total_liabilities: string    // 总负债
-  net_worth: string            // 当前净值（总资产 - 总负债）
+  total_net_worth: string
+  trend: NetWorthPointResp[]
 }
 
 /**
- * 趋势报表响应接口
- * 收支随时间的变化趋势，用于绘制趋势图
+ * 趋势报表项响应接口（对应后端 TrendItemResp）
+ * 后端字段名为 period（非 date），无 net 字段
+ */
+export interface TrendItemResp {
+  period: string
+  income: string
+  expense: string
+}
+
+/**
+ * 趋势报表响应接口（对应后端 TrendResp）
+ */
+export interface TrendResp {
+  items: TrendItemResp[]
+}
+
+/**
+ * 标签报表项响应接口（对应后端 TagReportItemResp）
  */
 export interface TagItemResp {
   tag_id: number
@@ -95,15 +121,9 @@ export interface TagItemResp {
   expense: string
 }
 
+/**
+ * 标签报表响应接口（对应后端 TagReportResp）
+ */
 export interface TagReportResp {
   items: TagItemResp[]
-}
-
-export interface TrendResp {
-  items: {
-    date: string
-    income: string
-    expense: string
-    net: string
-  }[]
 }

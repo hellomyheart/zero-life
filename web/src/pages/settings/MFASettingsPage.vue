@@ -26,7 +26,7 @@ async function handleSetup() {
   loading.value = true
   try {
     const res = await setup() as unknown as MFASetupResp
-    qrCodeUrl.value = res.qr_code_url
+    qrCodeUrl.value = res.qr_code
     secret.value = res.secret
   } catch (err) {
     ElMessage.error((err as Error).message || t('common.failed'))

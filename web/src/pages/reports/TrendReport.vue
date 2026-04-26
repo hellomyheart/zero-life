@@ -68,8 +68,8 @@ onMounted(fetchData)
       <!-- 收支趋势折线图 -->
       <el-card>
         <LineChart
-          :data="data.items.map((item) => ({ date: item.date, income: Number(item.income), expense: Number(item.expense), net: Number(item.net) }))"
-          x-field="date"
+          :data="data.items.map((item) => ({ period: item.period, income: Number(item.income), expense: Number(item.expense), net: Number(item.income) - Number(item.expense) }))"
+          x-field="period"
           :y-fields="[{ field: 'income', name: t('report.income') }, { field: 'expense', name: t('report.expense') }, { field: 'net', name: t('report.netIncome') }]"
           :title="t('report.trend')"
         />
@@ -78,15 +78,15 @@ onMounted(fetchData)
       <!-- 收支趋势明细表 -->
       <el-card style="margin-top: 20px">
         <el-table :data="data.items" stripe>
-          <el-table-column prop="date" :label="t('common.date')" />
+          <el-table-column prop="period" :label="t('common.date')" />
           <el-table-column prop="income" :label="t('report.income')">
             <template #default="{ row }">{{ formatAmount(row.income) }}</template>
           </el-table-column>
           <el-table-column prop="expense" :label="t('report.expense')">
             <template #default="{ row }">{{ formatAmount(row.expense) }}</template>
           </el-table-column>
-          <el-table-column prop="net" :label="t('report.netIncome')">
-            <template #default="{ row }">{{ formatAmount(row.net) }}</template>
+          <el-table-column :label="t('report.netIncome')">
+            <template #default="{ row }">{{ formatAmount(Number(row.income) - Number(row.expense)) }}</template>
           </el-table-column>
         </el-table>
       </el-card>

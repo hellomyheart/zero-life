@@ -107,8 +107,12 @@ onMounted(fetchData)
         </div>
       </template>
       <el-table :data="exchangeRates" stripe>
-        <el-table-column prop="source_currency" :label="t('currency.sourceCurrency')" />
-        <el-table-column prop="target_currency" :label="t('currency.targetCurrency')" />
+        <el-table-column :label="t('currency.sourceCurrency')">
+          <template #default="{ row }">{{ currencies.find(c => c.id === row.from_currency_id)?.code || row.from_currency_id }}</template>
+        </el-table-column>
+        <el-table-column :label="t('currency.targetCurrency')">
+          <template #default="{ row }">{{ currencies.find(c => c.id === row.to_currency_id)?.code || row.to_currency_id }}</template>
+        </el-table-column>
         <el-table-column prop="rate" :label="t('currency.rate')" />
         <el-table-column prop="updated_at" label="Updated At" />
       </el-table>

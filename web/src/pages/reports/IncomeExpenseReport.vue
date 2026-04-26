@@ -3,7 +3,7 @@
  * 收支报表页面
  * 功能：
  * - 展示指定时间段内的总收入、总支出和净收入
- * - 按账户分组显示收入明细和支出明细
+ * - 按期间显示收支明细
  * - 支持自定义日期范围查询
  * 
  * 数据来源：后端 /reports/income-expense 接口
@@ -33,7 +33,7 @@ const params = reactive<ReportReq>({
 
 /**
  * 获取收支报表数据
- * 调用后端 API 获取指定日期范围内的收支汇总和按账户分组的明细
+ * 调用后端 API 获取指定日期范围内的收支汇总和按期间的明细
  */
 async function fetchData() {
   loading.value = true
@@ -86,31 +86,21 @@ onMounted(fetchData)
         </el-col>
       </el-row>
 
-      <!-- 按账户分组的收支明细 -->
-      <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="12">
-          <el-card>
-            <template #header>{{ t('report.incomeByAccount') }}</template>
-            <el-table :data="data.income_by_account" size="small">
-              <el-table-column prop="account_name" :label="t('account.name')" />
-              <el-table-column prop="amount" :label="t('transaction.amount')">
-                <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-        <el-col :span="12">
-          <el-card>
-            <template #header>{{ t('report.expenseByAccount') }}</template>
-            <el-table :data="data.expense_by_account" size="small">
-              <el-table-column prop="account_name" :label="t('account.name')" />
-              <el-table-column prop="amount" :label="t('transaction.amount')">
-                <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-      </el-row>
+      <!-- 按期间的收支明细 -->
+      <el-card style="margin-top: 20px">
+        <el-table :data="data.details" stripe>
+          <el-table-column prop="period" :label="t('common.date')" />
+          <el-table-column prop="income" :label="t('report.income')">
+            <template #default="{ row }">{{ formatAmount(row.income) }}</template>
+          </el-table-column>
+          <el-table-column prop="expense" :label="t('report.expense')">
+            <template #default="{ row }">{{ formatAmount(row.expense) }}</template>
+          </el-table-column>
+          <el-table-column prop="net" :label="t('report.netIncome')">
+            <template #default="{ row }">{{ formatAmount(row.net) }}</template>
+          </el-table-column>
+        </el-table>
+      </el-card>
     </template>
   </div>
 </template>

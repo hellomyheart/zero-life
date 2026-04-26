@@ -4,6 +4,7 @@ import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { upload, parse, execute } from '@/api/import'
 import { ElMessage } from 'element-plus'
+import type { ImportPreviewResp } from '@/types/import'
 
 const { t } = useI18n()
 
@@ -18,9 +19,8 @@ const targetFields = ['date', 'description', 'amount', 'source_account', 'catego
 async function handleUpload(options: { file: File }) {
   loading.value = true
   try {
-    const res = await upload(options.file) as { file_id: string; columns: string[] }
+    const res = await upload(options.file) as { file_id: string }
     fileId.value = res.file_id
-    availableColumns.value = res.columns || []
     step.value = 2
     ElMessage.success(t('common.success'))
   } catch (err) {
@@ -33,8 +33,8 @@ async function handleUpload(options: { file: File }) {
 async function handleParse() {
   loading.value = true
   try {
-    const res = await parse({ file_id: fileId.value, column_mapping: columnMapping }) as { data: Record<string, unknown>[] }
-    parsedData.value = res.data || []
+    const res = await parse({ file_id: fileId.value, mapping: columnMapping }) as unknown as ImportPreviewResp
+    parsedData.value = res.rows?.map(r => r.data) || []
     step.value = 3
   } catch (err) {
     ElMessage.error((err as Error).message || t('common.failed'))
@@ -46,7 +46,7 @@ async function handleParse() {
 async function handleExecute() {
   loading.value = true
   try {
-    await execute({ file_id: fileId.value, column_mapping: columnMapping })
+    await execute({ file_id: fileId.value, mapping: columnMapping })
     ElMessage.success(t('common.success'))
     step.value = 4
   } catch (err) {

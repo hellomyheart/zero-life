@@ -68,7 +68,7 @@ onMounted(fetchData)
       <!-- 预算对比柱状图 -->
       <el-card>
         <BarChart
-          :data="data.budgets.map((b) => ({ name: b.budget_name, amount: Number(b.amount), spent: Number(b.spent) }))"
+          :data="data.items.map((b) => ({ name: b.budget_name, amount: Number(b.amount), spent: Number(b.spent) }))"
           x-field="name"
           :y-fields="[{ field: 'amount', name: t('budget.amount') }, { field: 'spent', name: t('budget.spent') }]"
           :title="t('report.budget')"
@@ -77,7 +77,7 @@ onMounted(fetchData)
 
       <!-- 预算使用明细表 -->
       <el-card style="margin-top: 20px">
-        <el-table :data="data.budgets" stripe>
+        <el-table :data="data.items" stripe>
           <el-table-column prop="budget_name" :label="t('budget.name')" />
           <el-table-column prop="amount" :label="t('budget.amount')">
             <template #default="{ row }">{{ formatAmount(row.amount) }}</template>

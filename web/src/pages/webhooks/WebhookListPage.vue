@@ -1,40 +1,46 @@
 <script setup lang="ts">
-// Webhook列表页面 - 配置事件通知发送到URL和触发条件
+/**
+ * Webhook列表页面
+ * 字段名与后端 JSON tag 完全对应：
+ * - is_active（非 active）
+ * - trigger 值使用后端定义的事件名（如 transaction.created）
+ */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/webhook'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Webhook, CreateWebhookReq, UpdateWebhookReq } from '@/types/webhook'
+import { WebhookTrigger } from '@/types/webhook'
 import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 
-/** Webhook列表数据 */
 const webhooks = ref<Webhook[]>([])
-/** 加载状态 */
 const loading = ref(false)
-/** 对话框显示状态 */
 const dialogVisible = ref(false)
-/** 对话框标题 */
 const dialogTitle = ref('')
-/** 当前编辑的Webhook ID，null表示新建 */
 const editingId = ref<number | null>(null)
-/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
+/** 触发事件选项 - 值与后端 oneof 验证完全对应 */
 const triggerOptions = [
-  { value: 'STORE_TRANSACTION', label: 'Store Transaction' },
-  { value: 'UPDATE_TRANSACTION', label: 'Update Transaction' },
-  { value: 'DESTROY_TRANSACTION', label: 'Destroy Transaction' },
+  { value: WebhookTrigger.TransactionCreated, label: t('webhook.transactionCreated') },
+  { value: WebhookTrigger.TransactionUpdated, label: t('webhook.transactionUpdated') },
+  { value: WebhookTrigger.TransactionDeleted, label: t('webhook.transactionDeleted') },
+  { value: WebhookTrigger.BillPaid, label: t('webhook.billPaid') },
+  { value: WebhookTrigger.BudgetCreated, label: t('webhook.budgetCreated') },
+  { value: WebhookTrigger.BudgetUpdated, label: t('webhook.budgetUpdated') },
+  { value: WebhookTrigger.BudgetDeleted, label: t('webhook.budgetDeleted') },
 ]
 
-const form = ref<CreateWebhookReq>({ name: '', url: '', trigger: 'STORE_TRANSACTION' })
+const form = ref<CreateWebhookReq & { is_active?: boolean }>({
+  name: '',
+  url: '',
+  trigger: WebhookTrigger.TransactionCreated,
+  is_active: true,
+})
 
-/**
- * 获取Webhook列表
- * 传入分页参数，从后端获取当前页的数据和总记录数
- */
 async function fetchWebhooks() {
   loading.value = true
   try {
@@ -42,25 +48,17 @@ async function fetchWebhooks() {
     webhooks.value = res.items || []
     pagination.total = res.total || 0
   } catch {
-    ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 页码变化处理函数
- * @param page 新的页码
- */
 function handlePageChange(page: number) {
   pagination.page = page
   fetchWebhooks()
 }
 
-/**
- * 每页数量变化处理函数
- * @param size 新的每页数量
- */
 function handleSizeChange(size: number) {
   pagination.page_size = size
   pagination.page = 1
@@ -70,14 +68,14 @@ function handleSizeChange(size: number) {
 function handleCreate() {
   dialogTitle.value = t('webhook.create')
   editingId.value = null
-  form.value = { name: '', url: '', trigger: 'STORE_TRANSACTION' }
+  form.value = { name: '', url: '', trigger: WebhookTrigger.TransactionCreated, is_active: true }
   dialogVisible.value = true
 }
 
 function handleEdit(row: Webhook) {
   dialogTitle.value = t('webhook.edit')
   editingId.value = row.id
-  form.value = { name: row.name, url: row.url, trigger: row.trigger }
+  form.value = { name: row.name, url: row.url, trigger: row.trigger, is_active: row.is_active }
   dialogVisible.value = true
 }
 
@@ -88,7 +86,7 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchWebhooks()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
@@ -99,7 +97,13 @@ async function handleSubmit() {
   }
   try {
     if (editingId.value) {
-      await update(editingId.value, form.value as UpdateWebhookReq)
+      const updateData: UpdateWebhookReq = {
+        name: form.value.name,
+        url: form.value.url,
+        trigger: form.value.trigger,
+        is_active: form.value.is_active,
+      }
+      await update(editingId.value, updateData)
     } else {
       await create(form.value)
     }
@@ -124,10 +128,15 @@ onMounted(fetchWebhooks)
     <el-table :data="webhooks" v-loading="loading" stripe>
       <el-table-column prop="name" :label="t('webhook.name')" />
       <el-table-column prop="url" :label="t('webhook.url')" min-width="200" />
-      <el-table-column prop="trigger" :label="t('webhook.trigger')" width="180" />
+      <el-table-column prop="trigger" :label="t('webhook.trigger')" width="180">
+        <template #default="{ row }">
+          {{ triggerOptions.find(o => o.value === row.trigger)?.label || row.trigger }}
+        </template>
+      </el-table-column>
+      <!-- is_active 字段名与后端 WebhookResp JSON tag 对应（非 active） -->
       <el-table-column :label="t('webhook.active')" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.active ? 'success' : 'info'" size="small">{{ row.active ? t('rule.enabled') : t('rule.disabled') }}</el-tag>
+          <el-tag :type="row.is_active ? 'success' : 'info'" size="small">{{ row.is_active ? t('rule.enabled') : t('rule.disabled') }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="last_delivered_at" :label="t('webhook.lastDelivered')" width="160">
@@ -158,9 +167,12 @@ onMounted(fetchWebhooks)
           <el-input v-model="form.url" />
         </el-form-item>
         <el-form-item :label="t('webhook.trigger')">
-          <el-select v-model="form.trigger">
+          <el-select v-model="form.trigger" style="width: 100%">
             <el-option v-for="opt in triggerOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item :label="t('webhook.active')">
+          <el-switch v-model="form.is_active" />
         </el-form-item>
       </el-form>
       <template #footer>

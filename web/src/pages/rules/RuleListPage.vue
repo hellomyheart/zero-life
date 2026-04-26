@@ -1,40 +1,94 @@
 <script setup lang="ts">
-// 规则列表页面 - 展示规则处理顺序支持启用禁用和手动执行
+/**
+ * 规则列表页面
+ * 字段名与后端 JSON tag 完全对应：
+ * - RuleAction 仅有 type 和 value（无 field）
+ * - CreateRuleReq 必须包含 logic_type 和 trigger
+ * - ExecuteRuleReq 使用 start_date/end_date（非 transaction_ids）
+ */
 import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, remove, toggleStatus, execute } from '@/api/rule'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { Rule, CreateRuleReq } from '@/types/rule'
+import type { Rule, CreateRuleReq, RuleConditionReq, RuleActionReq } from '@/types/rule'
 import Pagination from '@/components/common/Pagination.vue'
 
 const { t } = useI18n()
 
-/** 规则列表数据 */
 const rules = ref<Rule[]>([])
-/** 加载状态 */
 const loading = ref(false)
-/** 对话框显示状态 */
 const dialogVisible = ref(false)
-/** 对话框标题 */
 const dialogTitle = ref('')
-/** 当前编辑的规则 ID，null表示新建 */
 const editingId = ref<number | null>(null)
-/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
 const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
-/** 规则创建/编辑表单数据 - 包含条件列表和动作列表 */
+/** 逻辑类型选项 */
+const logicTypeOptions = [
+  { value: 'and', label: t('rule.logicAnd') },
+  { value: 'or', label: t('rule.logicOr') },
+]
+
+/** 触发时机选项 */
+const triggerOptions = [
+  { value: 'on_create', label: t('rule.triggerOnCreate') },
+  { value: 'on_update', label: t('rule.triggerOnUpdate') },
+]
+
+/** 条件字段选项（对应后端 oneof 验证） */
+const conditionFieldOptions = [
+  { value: 'description', label: t('rule.fieldDescription') },
+  { value: 'amount', label: t('rule.fieldAmount') },
+  { value: 'source_account', label: t('rule.fieldSourceAccount') },
+  { value: 'destination_account', label: t('rule.fieldDestinationAccount') },
+  { value: 'category', label: t('rule.fieldCategory') },
+  { value: 'tag', label: t('rule.fieldTag') },
+  { value: 'transaction_type', label: t('rule.fieldTransactionType') },
+  { value: 'budget', label: t('rule.fieldBudget') },
+  { value: 'bill', label: t('rule.fieldBill') },
+  { value: 'notes', label: t('rule.fieldNotes') },
+  { value: 'date_after', label: t('rule.fieldDateAfter') },
+  { value: 'date_before', label: t('rule.fieldDateBefore') },
+]
+
+/** 条件运算符选项（对应后端 oneof 验证） */
+const conditionOperatorOptions = [
+  { value: 'contains', label: t('rule.opContains') },
+  { value: 'equals', label: t('rule.opEquals') },
+  { value: 'starts_with', label: t('rule.opStartsWith') },
+  { value: 'ends_with', label: t('rule.opEndsWith') },
+  { value: 'not_contains', label: t('rule.opNotContains') },
+  { value: 'not_equals', label: t('rule.opNotEquals') },
+  { value: 'less', label: t('rule.opLess') },
+  { value: 'more', label: t('rule.opMore') },
+  { value: 'is_empty', label: t('rule.opIsEmpty') },
+  { value: 'is_not_empty', label: t('rule.opIsNotEmpty') },
+]
+
+/** 动作类型选项（对应后端 oneof 验证） */
+const actionTypeOptions = [
+  { value: 'set_category', label: t('rule.actionSetCategory') },
+  { value: 'add_tag', label: t('rule.actionAddTag') },
+  { value: 'set_notes', label: t('rule.actionSetNotes') },
+  { value: 'set_budget', label: t('rule.actionSetBudget') },
+  { value: 'remove_tag', label: t('rule.actionRemoveTag') },
+  { value: 'set_description', label: t('rule.actionSetDescription') },
+  { value: 'clear_category', label: t('rule.actionClearCategory') },
+  { value: 'clear_budget', label: t('rule.actionClearBudget') },
+  { value: 'clear_notes', label: t('rule.actionClearNotes') },
+  { value: 'append_notes', label: t('rule.actionAppendNotes') },
+  { value: 'prepend_notes', label: t('rule.actionPrependNotes') },
+]
+
 const form = ref<CreateRuleReq>({
   name: '',
+  logic_type: 'and',
+  trigger: 'on_create',
   conditions: [{ field: '', operator: '', value: '' }],
-  actions: [{ type: '', field: '', value: '' }],
+  actions: [{ type: '', value: '' }],
   is_enabled: true,
   priority: 0,
 })
 
-/**
- * 获取规则列表
- * 传入分页参数，从后端获取当前页的数据和总记录数
- */
 async function fetchRules() {
   loading.value = true
   try {
@@ -42,71 +96,53 @@ async function fetchRules() {
     rules.value = res.items || []
     pagination.total = res.total || 0
   } catch {
-    ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 页码变化处理函数
- * @param page 新的页码
- */
 function handlePageChange(page: number) {
   pagination.page = page
   fetchRules()
 }
 
-/**
- * 每页数量变化处理函数
- * @param size 新的每页数量
- */
 function handleSizeChange(size: number) {
   pagination.page_size = size
   pagination.page = 1
   fetchRules()
 }
 
-/**
- * 打开创建规则对话框
- * 初始化表单，包含一个空条件和一个空动作
- */
 function handleCreate() {
   dialogTitle.value = t('rule.create')
   editingId.value = null
   form.value = {
     name: '',
+    logic_type: 'and',
+    trigger: 'on_create',
     conditions: [{ field: '', operator: '', value: '' }],
-    actions: [{ type: '', field: '', value: '' }],
+    actions: [{ type: '', value: '' }],
     is_enabled: true,
     priority: 0,
   }
   dialogVisible.value = true
 }
 
-/**
- * 打开编辑规则对话框
- * 将现有规则的条件和动作映射到表单
- * @param rule 要编辑的规则数据
- */
 function handleEdit(rule: Rule) {
   dialogTitle.value = t('rule.edit')
   editingId.value = rule.id
   form.value = {
     name: rule.name,
-    conditions: rule.conditions.map((c) => ({ field: c.field, operator: c.operator, value: c.value })),
-    actions: rule.actions.map((a) => ({ type: a.type, field: a.field, value: a.value })),
+    logic_type: rule.logic_type,
+    trigger: rule.trigger,
+    conditions: rule.conditions.map((c): RuleConditionReq => ({ field: c.field, operator: c.operator, value: c.value })),
+    actions: rule.actions.map((a): RuleActionReq => ({ type: a.type, value: a.value })),
     is_enabled: rule.is_enabled,
     priority: rule.priority,
   }
   dialogVisible.value = true
 }
 
-/**
- * 删除规则
- * 弹出确认框后调用API删除
- * @param id 规则ID
- */
 async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('rule.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -114,7 +150,7 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchRules()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
@@ -130,11 +166,11 @@ async function handleToggleStatus(rule: Rule) {
 
 async function handleExecute(rule: Rule) {
   try {
-    await ElMessageBox.confirm(`Execute rule "${rule.name}"?`, t('common.confirm'), { type: 'info' })
-    await execute(rule.id, { transaction_ids: [] })
+    await ElMessageBox.confirm(t('rule.executeConfirm', { name: rule.name }), t('common.confirm'), { type: 'info' })
+    await execute(rule.id, { start_date: '', end_date: '' })
     ElMessage.success(t('common.success'))
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
@@ -147,7 +183,7 @@ function removeCondition(index: number) {
 }
 
 function addAction() {
-  form.value.actions.push({ type: '', field: '', value: '' })
+  form.value.actions.push({ type: '', value: '' })
 }
 
 function removeAction(index: number) {
@@ -179,7 +215,7 @@ function getConditionSummary(rule: Rule): string {
 }
 
 function getActionSummary(rule: Rule): string {
-  return rule.actions.map((a) => `${a.type}: ${a.field} = ${a.value}`).join(', ')
+  return rule.actions.map((a) => `${a.type}: ${a.value}`).join(', ')
 }
 </script>
 
@@ -192,6 +228,12 @@ function getActionSummary(rule: Rule): string {
 
     <el-table :data="rules" v-loading="loading" stripe>
       <el-table-column prop="name" :label="t('rule.name')" />
+      <el-table-column prop="logic_type" :label="t('rule.logicType')" width="80">
+        <template #default="{ row }">{{ logicTypeOptions.find(o => o.value === row.logic_type)?.label || row.logic_type }}</template>
+      </el-table-column>
+      <el-table-column prop="trigger" :label="t('rule.trigger')" width="120">
+        <template #default="{ row }">{{ triggerOptions.find(o => o.value === row.trigger)?.label || row.trigger }}</template>
+      </el-table-column>
       <el-table-column :label="t('rule.conditions')" min-width="200">
         <template #default="{ row }">{{ getConditionSummary(row) }}</template>
       </el-table-column>
@@ -225,6 +267,16 @@ function getActionSummary(rule: Rule): string {
         <el-form-item :label="t('rule.name')">
           <el-input v-model="form.name" />
         </el-form-item>
+        <el-form-item :label="t('rule.logicType')">
+          <el-select v-model="form.logic_type" style="width: 100%">
+            <el-option v-for="opt in logicTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('rule.trigger')">
+          <el-select v-model="form.trigger" style="width: 100%">
+            <el-option v-for="opt in triggerOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="t('rule.priority')">
           <el-input-number v-model="form.priority" :min="0" />
         </el-form-item>
@@ -232,24 +284,23 @@ function getActionSummary(rule: Rule): string {
         <el-divider>{{ t('rule.conditions') }}</el-divider>
         <div v-for="(cond, index) in form.conditions" :key="'c' + index" class="rule-item">
           <el-row :gutter="8">
-            <el-col :span="6"><el-input v-model="cond.field" :placeholder="t('rule.field')" /></el-col>
-            <el-col :span="6"><el-input v-model="cond.operator" :placeholder="t('rule.operator')" /></el-col>
+            <el-col :span="6"><el-select v-model="cond.field" :placeholder="t('rule.field')" filterable><el-option v-for="opt in conditionFieldOptions" :key="opt.value" :label="opt.label" :value="opt.value" /></el-select></el-col>
+            <el-col :span="6"><el-select v-model="cond.operator" :placeholder="t('rule.operator')" filterable><el-option v-for="opt in conditionOperatorOptions" :key="opt.value" :label="opt.label" :value="opt.value" /></el-select></el-col>
             <el-col :span="8"><el-input v-model="cond.value" :placeholder="t('rule.value')" /></el-col>
             <el-col :span="4"><el-button type="danger" link @click="removeCondition(index)">{{ t('common.delete') }}</el-button></el-col>
           </el-row>
         </div>
-        <el-button type="primary" link @click="addCondition">+ Condition</el-button>
+        <el-button type="primary" link @click="addCondition">+ {{ t('rule.conditions') }}</el-button>
 
         <el-divider>{{ t('rule.actions') }}</el-divider>
         <div v-for="(act, index) in form.actions" :key="'a' + index" class="rule-item">
           <el-row :gutter="8">
-            <el-col :span="5"><el-input v-model="act.type" :placeholder="t('rule.actionType')" /></el-col>
-            <el-col :span="6"><el-input v-model="act.field" :placeholder="t('rule.field')" /></el-col>
-            <el-col :span="8"><el-input v-model="act.value" :placeholder="t('rule.value')" /></el-col>
-            <el-col :span="5"><el-button type="danger" link @click="removeAction(index)">{{ t('common.delete') }}</el-button></el-col>
+            <el-col :span="6"><el-select v-model="act.type" :placeholder="t('rule.actionType')" filterable><el-option v-for="opt in actionTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" /></el-select></el-col>
+            <el-col :span="10"><el-input v-model="act.value" :placeholder="t('rule.value')" /></el-col>
+            <el-col :span="8"><el-button type="danger" link @click="removeAction(index)">{{ t('common.delete') }}</el-button></el-col>
           </el-row>
         </div>
-        <el-button type="primary" link @click="addAction">+ Action</el-button>
+        <el-button type="primary" link @click="addAction">+ {{ t('rule.actions') }}</el-button>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>

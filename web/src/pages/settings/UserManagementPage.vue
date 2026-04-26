@@ -1,8 +1,13 @@
 <script setup lang="ts">
-// 用户管理页面管理员 - 管理用户角色邀请禁用和删除
+/**
+ * 用户管理页面
+ * 字段名与后端 JSON tag 完全对应：
+ * - mfa_enabled（非 locked）
+ * - 后端无 lock/unlock 端点，移除相关功能
+ */
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { list, update, remove, lock, unlock } from '@/api/user'
+import { list, update, remove } from '@/api/user'
 import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { User, UpdateUserReq } from '@/types/user'
@@ -21,7 +26,7 @@ async function fetchUsers() {
     const res = await list({}) as unknown as { items: User[] }
     users.value = res.items || []
   } catch {
-    ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
@@ -52,27 +57,7 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchUsers()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
-  }
-}
-
-async function handleLock(id: number) {
-  try {
-    await lock(id)
-    ElMessage.success(t('common.success'))
-    await fetchUsers()
-  } catch (err) {
-    ElMessage.error((err as Error).message || t('common.failed'))
-  }
-}
-
-async function handleUnlock(id: number) {
-  try {
-    await unlock(id)
-    ElMessage.success(t('common.success'))
-    await fetchUsers()
-  } catch (err) {
-    ElMessage.error((err as Error).message || t('common.failed'))
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
@@ -88,18 +73,18 @@ onMounted(fetchUsers)
       <el-table-column prop="nickname" :label="t('auth.nickname')" width="120" />
       <el-table-column prop="role" :label="t('user.role')" width="100" />
       <el-table-column prop="language" :label="t('profile.language')" width="100" />
-      <el-table-column :label="t('user.locked')" width="80">
+      <!-- mfa_enabled 字段名与后端 UserResp JSON tag 对应（非 locked） -->
+      <el-table-column :label="t('user.mfaEnabled')" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.locked ? 'danger' : 'success'" size="small">{{ row.locked ? t('common.yes') : t('common.no') }}</el-tag>
+          <el-tag :type="row.mfa_enabled ? 'success' : 'info'" size="small">{{ row.mfa_enabled ? t('common.yes') : t('common.no') }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="created_at" :label="t('attachment.createdAt')" width="160">
         <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
       </el-table-column>
-      <el-table-column :label="t('common.edit')" width="260" fixed="right">
+      <el-table-column :label="t('common.edit')" width="160" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="handleEdit(row)">{{ t('common.edit') }}</el-button>
-          <el-button link :type="row.locked ? 'success' : 'warning'" @click="row.locked ? handleUnlock(row.id) : handleLock(row.id)">{{ row.locked ? t('user.unlock') : t('user.lock') }}</el-button>
           <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>

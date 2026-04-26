@@ -10,26 +10,23 @@ import { useI18n } from 'vue-i18n'
 import { getProfile, updateProfile, changePassword } from '@/api/profile'
 import { ElMessage } from 'element-plus'
 import type { FormRules } from 'element-plus'
-import type { User } from '@/types/user'
+import type { ProfileResp } from '@/types/auth'
 
 const { t } = useI18n()
 
-// 用户信息
-const user = ref<User>({
+const user = ref<ProfileResp>({
   id: 0,
   email: '',
   nickname: '',
-  role: '',
   language: '',
   timezone: '',
-  locked: false,
   created_at: '',
-  updated_at: '',
 })
 
 const form = ref({
   nickname: '',
-  email: '',
+  language: '',
+  timezone: '',
 })
 
 // 密码表单
@@ -48,10 +45,8 @@ const passwordFormRef = ref()
 // 个人资料表单验证规则 - 姓名必填、邮箱格式校验
 const profileRules: FormRules = {
   nickname: [{ required: true, message: t('profile.nameRequired'), trigger: 'blur' }],
-  email: [
-    { required: true, message: t('profile.emailRequired'), trigger: 'blur' },
-    { type: 'email', message: t('profile.emailInvalid'), trigger: 'blur' },
-  ],
+  language: [{ required: true, message: t('common.required'), trigger: 'blur' }],
+  timezone: [{ required: true, message: t('common.required'), trigger: 'blur' }],
 }
 
 // 密码表单验证规则 - 新密码最小长度6位
@@ -72,7 +67,8 @@ async function fetchProfile() {
     const res = await getProfile()
     user.value = res as unknown as User
     form.value.nickname = user.value.nickname
-    form.value.email = user.value.email
+    form.value.language = user.value.language
+    form.value.timezone = user.value.timezone
   } catch {
     ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
@@ -150,8 +146,14 @@ onMounted(() => {
         <el-form-item :label="t('profile.name')" prop="nickname">
           <el-input v-model="form.nickname" />
         </el-form-item>
-        <el-form-item :label="t('profile.email')" prop="email">
-          <el-input v-model="form.email" />
+        <el-form-item :label="t('profile.language')" prop="language">
+          <el-select v-model="form.language" style="width: 100%">
+            <el-option label="简体中文" value="zh-CN" />
+            <el-option label="English" value="en-US" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('profile.timezone')" prop="timezone">
+          <el-input v-model="form.timezone" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleUpdateProfile" :loading="loading">

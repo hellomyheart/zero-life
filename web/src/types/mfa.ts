@@ -1,29 +1,35 @@
 /**
  * 多因素认证（MFA/2FA）相关类型定义
- * 用于双因素认证的状态查询、设置和验证
+ * 字段名与后端 JSON tag 完全对应
  */
 
 /**
- * MFA状态接口
- * 查询当前用户是否已启用双因素认证
+ * MFA状态接口（对应后端 MFAStatusResp）
  */
 export interface MFAStatus {
-  enabled: boolean             // 是否已启用MFA
+  enabled: boolean
 }
 
 /**
- * MFA设置响应接口
- * 初始化MFA设置时返回的密钥和二维码信息
+ * MFA设置响应接口（对应后端 MFASetupResp）
+ * 后端字段名为 qr_code（非 qr_code_url）
  */
 export interface MFASetupResp {
-  secret: string               // MFA密钥，用于手动输入到验证器App中
-  qr_code_url: string          // 二维码URL，验证器App扫描此二维码即可绑定
+  secret: string
+  qr_code: string
 }
 
 /**
- * MFA验证请求接口
- * 提交验证器App生成的动态验证码
+ * MFA验证请求接口（对应后端 MFAVerifyReq）
  */
 export interface MFAVerifyReq {
-  code: string                 // 6位数字验证码，由验证器App生成
+  code: string
+}
+
+/**
+ * MFA验证响应接口（对应后端 MFAVerifyResp）
+ */
+export interface MFAVerifyResp {
+  verified: boolean
+  message: string
 }
