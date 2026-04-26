@@ -166,7 +166,6 @@ onMounted(async () => {
           <DateRangePicker
             v-model:start-date="filter.start_date"
             v-model:end-date="filter.end_date"
-            style="width: 100%"
           />
         </el-form-item>
         <el-form-item :label="t('transaction.sourceAccount')">

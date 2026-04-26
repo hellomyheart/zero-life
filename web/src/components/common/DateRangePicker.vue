@@ -46,6 +46,7 @@ function handleChange(val: [string, string] | null) {
     :start-placeholder="$t('common.startDate')"
     :end-placeholder="$t('common.endDate')"
     value-format="YYYY-MM-DD"
+    style="width: 100%"
     @change="handleChange"
   />
 </template>
