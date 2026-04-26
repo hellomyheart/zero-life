@@ -3,13 +3,11 @@
 package service
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/hellomyheart/zero-life/server/internal/config"
 	"github.com/hellomyheart/zero-life/server/internal/dto/request"
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
@@ -24,10 +22,10 @@ import (
 )
 
 const (
-	loginFailKeyPrefix  = "login_fail:"   // 登录失败次数Redis键前缀
-	loginLockKeyPrefix  = "login_lock:"   // 登录锁定Redis键前缀
-	resetTokenKeyPrefix = "reset_token:"  // 密码重置令牌Redis键前缀
-	maxLoginFails       = 5               // 最大登录失败次数
+	loginFailKeyPrefix  = "login_fail:"    // 登录失败次数键前缀
+	loginLockKeyPrefix  = "login_lock:"    // 登录锁定键前缀
+	resetTokenKeyPrefix = "reset_token:"   // 密码重置令牌键前缀
+	maxLoginFails       = 5                // 最大登录失败次数
 	loginLockDuration   = 30 * time.Minute // 登录锁定时长
 	resetTokenTTL       = 24 * time.Hour   // 密码重置令牌有效期
 )
@@ -37,19 +35,19 @@ const (
 type AuthService struct {
 	authRepo   *repository.AuthRepository // 用户仓储
 	jwtService *jwt.Service               // JWT服务
-	rdb        *redis.Client              // Redis客户端（用于登录限制和令牌管理）
+	kvRepo     *repository.KVRepository   // 键值存储（用于登录限制和令牌管理，替代 Redis）
 }
 
 // NewAuthService 创建认证服务实例
 // 参数：
 //   authRepo: 用户仓储
 //   jwtService: JWT服务
-//   rdb: Redis客户端
-func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service, rdb *redis.Client) *AuthService {
+//   kvRepo: 键值存储仓库（替代 Redis）
+func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service, kvRepo *repository.KVRepository) *AuthService {
 	return &AuthService{
 		authRepo:   authRepo,
 		jwtService: jwtService,
-		rdb:        rdb,
+		kvRepo:     kvRepo,
 	}
 }
 
@@ -65,7 +63,6 @@ func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service
 //   LoginResp: 登录响应（包含访问令牌和刷新令牌）
 //   error: 错误信息
 func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, error) {
-	// Check email uniqueness
 	existing, err := s.authRepo.FindByEmail(req.Email)
 	if err == nil && existing != nil {
 		return nil, errcode.ErrEmailExists
@@ -74,13 +71,11 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 		return nil, errcode.ErrInternal
 	}
 
-	// Hash password
 	hashedPassword, err := hash.HashPassword(req.Password)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	// Create user
 	user := &model.User{
 		Email:    req.Email,
 		Password: hashedPassword,
@@ -90,7 +85,6 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 		return nil, errcode.ErrInternal
 	}
 
-	// Generate token pair
 	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -105,10 +99,10 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 
 // Login 用户登录
 // 业务流程：
-// 1. 检查账户是否被锁定（Redis中存在锁定键则拒绝登录）
+// 1. 检查账户是否被锁定（kv_store 中存在锁定键则拒绝登录）
 // 2. 根据邮箱查找用户
 // 3. 验证密码是否正确
-// 4. 密码错误时：记录失败次数到Redis，连续失败5次则锁定账户30分钟
+// 4. 密码错误时：记录失败次数到 kv_store，连续失败5次则锁定账户30分钟
 // 5. 密码正确时：清除失败计数，生成JWT令牌对
 // 参数：
 //   - req: 登录请求（邮箱、密码）
@@ -116,12 +110,10 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 //   - *response.LoginResp: 登录响应（包含访问令牌和刷新令牌）
 //   - error: 错误信息（如账户锁定、凭证错误）
 func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) {
-	ctx := context.Background()
-
-	// 步骤1：检查账户是否被锁定（Redis中存在锁定键则拒绝登录）
+	// 步骤1：检查账户是否被锁定
 	lockKey := loginLockKeyPrefix + req.Email
-	locked, err := s.rdb.Exists(ctx, lockKey).Result()
-	if err == nil && locked > 0 {
+	locked, err := s.kvRepo.Exists(lockKey)
+	if err == nil && locked {
 		return nil, errcode.ErrAccountLocked
 	}
 
@@ -136,17 +128,17 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 
 	// 步骤3：验证密码
 	if !hash.CheckPassword(req.Password, user.Password) {
-		// 步骤3a：密码错误，记录失败次数到Redis
+		// 步骤3a：密码错误，记录失败次数
 		failKey := loginFailKeyPrefix + req.Email
-		count, _ := s.rdb.Incr(ctx, failKey).Result()
+		count, _ := s.kvRepo.Incr(failKey)
 		if count == 1 {
 			// 首次失败，设置失败计数器的过期时间（与锁定时长相同）
-			s.rdb.Expire(ctx, failKey, loginLockDuration)
+			s.kvRepo.Expire(failKey, loginLockDuration)
 		}
 		if count >= maxLoginFails {
 			// 连续失败5次，锁定账户30分钟，并清除失败计数器
-			s.rdb.Set(ctx, lockKey, "1", loginLockDuration)
-			s.rdb.Del(ctx, failKey)
+			s.kvRepo.Set(lockKey, "1", loginLockDuration)
+			s.kvRepo.Del(failKey)
 			return nil, errcode.ErrAccountLocked
 		}
 		return nil, errcode.ErrInvalidCredential
@@ -154,7 +146,7 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 
 	// 步骤4：密码正确，清除失败计数
 	failKey := loginFailKeyPrefix + req.Email
-	s.rdb.Del(ctx, failKey)
+	s.kvRepo.Del(failKey)
 
 	// 步骤5：生成JWT令牌对
 	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
@@ -186,7 +178,6 @@ func (s *AuthService) RefreshToken(refreshToken string) (*response.LoginResp, er
 		return nil, errcode.ErrInvalidToken
 	}
 
-	// Verify user still exists
 	user, err := s.authRepo.GetByID(claims.UserID)
 	if err != nil {
 		return nil, errcode.ErrInvalidToken
@@ -208,14 +199,13 @@ func (s *AuthService) RefreshToken(refreshToken string) (*response.LoginResp, er
 // 业务流程：
 // 1. 查找用户（用户不存在时不暴露此信息，直接返回nil防止邮箱枚举攻击）
 // 2. 生成32字节随机令牌
-// 3. 将令牌存入Redis，有效期24小时，值为用户ID
+// 3. 将令牌存入 kv_store，有效期24小时，值为用户ID
 // 4. 发送包含重置链接的邮件（发送失败不阻断请求，令牌仍有效）
 // 参数：
 //   - emailAddr: 用户邮箱地址
 // 返回：
 //   - error: 错误信息（注意：用户不存在时也返回nil）
 func (s *AuthService) ForgotPassword(emailAddr string) error {
-	// Check user exists
 	user, err := s.authRepo.FindByEmail(emailAddr)
 	if err != nil {
 		// Don't reveal whether email exists
@@ -229,10 +219,9 @@ func (s *AuthService) ForgotPassword(emailAddr string) error {
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	// Store in Redis with 24h TTL
-	ctx := context.Background()
+	// Store in kv_store with 24h TTL
 	key := resetTokenKeyPrefix + token
-	if err := s.rdb.Set(ctx, key, fmt.Sprintf("%d", user.ID), resetTokenTTL).Err(); err != nil {
+	if err := s.kvRepo.Set(key, fmt.Sprintf("%d", user.ID), resetTokenTTL); err != nil {
 		return errcode.ErrInternal
 	}
 
@@ -244,7 +233,7 @@ func (s *AuthService) ForgotPassword(emailAddr string) error {
 	resetURL := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, token)
 	if err := email.SendPasswordReset(user.Email, resetURL); err != nil {
 		zap.L().Error("failed to send password reset email", zap.Error(err), zap.String("email", user.Email))
-		// Don't fail the request - token is still stored in Redis
+		// Don't fail the request - token is still stored
 	}
 
 	return nil
@@ -252,7 +241,7 @@ func (s *AuthService) ForgotPassword(emailAddr string) error {
 
 // ResetPassword 重置密码
 // 业务流程：
-// 1. 从Redis中验证重置令牌，获取用户ID
+// 1. 从 kv_store 中验证重置令牌，获取用户ID
 // 2. 验证用户存在
 // 3. 加密新密码并更新用户记录
 // 4. 删除已使用的令牌（防止重复使用）
@@ -262,11 +251,10 @@ func (s *AuthService) ForgotPassword(emailAddr string) error {
 // 返回：
 //   - error: 错误信息（如令牌无效、用户不存在）
 func (s *AuthService) ResetPassword(token, newPassword string) error {
-	ctx := context.Background()
 	key := resetTokenKeyPrefix + token
 
 	// Verify token
-	userIDStr, err := s.rdb.Get(ctx, key).Result()
+	userIDStr, err := s.kvRepo.Get(key)
 	if err != nil {
 		return errcode.ErrInvalidToken
 	}
@@ -291,7 +279,7 @@ func (s *AuthService) ResetPassword(token, newPassword string) error {
 	}
 
 	// Delete used token
-	s.rdb.Del(ctx, key)
+	s.kvRepo.Del(key)
 
 	return nil
 }

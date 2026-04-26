@@ -21,13 +21,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"github.com/glebarez/sqlite"
 	"github.com/hellomyheart/zero-life/server/internal/config"
 	"github.com/hellomyheart/zero-life/server/internal/controller"
@@ -121,6 +119,7 @@ func main() {
 		&model.ObjectGroup{},
 		&model.Configuration{},
 		&model.BackupCode{},
+		&model.KVStore{},
 	); err != nil {
 		logger.Fatal("Failed to auto migrate", zap.Error(err))
 	}
@@ -134,12 +133,8 @@ func main() {
 		logger.Fatal("Failed to create attachment directory", zap.Error(err))
 	}
 
-	// 初始化Redis客户端，用于JWT令牌存储和缓存
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", config.C.Redis.Host, config.C.Redis.Port),
-		Password: config.C.Redis.Password,
-		DB:       config.C.Redis.DB,
-	})
+	// 初始化键值存储仓库（替代 Redis，用于登录限制、密码重置令牌、请求限流）
+	kvRepo := repository.NewKVRepository(db)
 
 	// 初始化JWT服务，用于生成和验证访问令牌
 	jwtService := jwt.NewService()
@@ -170,7 +165,7 @@ func main() {
 
 	// 初始化业务逻辑层（Service），Service组合Repository实现业务逻辑
 	// 依赖注入：Service通过构造函数接收所需的Repository和其他Service
-	authService := service.NewAuthService(authRepo, jwtService, rdb)
+	authService := service.NewAuthService(authRepo, jwtService, kvRepo)
 	accountService := service.NewAccountService(accountRepo)
 	ruleService := service.NewRuleService(ruleRepo, txnRepo, categoryRepo, budgetRepo, tagRepo)
 	webhookService := service.NewWebhookService(webhookRepo)

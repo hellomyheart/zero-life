@@ -9,7 +9,6 @@ import (
 type Config struct {
 	App      AppConfig      `mapstructure:"app"`
 	DB       DBConfig       `mapstructure:"db"`
-	Redis    RedisConfig    `mapstructure:"redis"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	SMTP     SMTPConfig     `mapstructure:"smtp"`
 	CORS     CORSConfig     `mapstructure:"cors"`
@@ -29,13 +28,6 @@ type DBConfig struct {
 	MaxIdleConns int           `mapstructure:"max_idle_conns"`
 	MaxOpenConns int           `mapstructure:"max_open_conns"`
 	MaxLifetime  time.Duration `mapstructure:"max_lifetime"`
-}
-
-type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
 }
 
 type JWTConfig struct {

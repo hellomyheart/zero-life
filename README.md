@@ -6,7 +6,7 @@ Zero-Life 是 [Firefly III](https://www.firefly-iii.org/) 的 Go + Vue 重写版
 
 | 层 | 技术 |
 |---|------|
-| 后端 | Go 1.22+、Gin、GORM、SQLite、Redis、JWT |
+| 后端 | Go 1.22+、Gin、GORM、SQLite、JWT |
 | 前端 | Vue 3、TypeScript 6.0、Element Plus、Pinia、vue-i18n、ECharts、Vite |
 | 部署 | Docker、Docker Compose、Nginx |
 
@@ -41,9 +41,9 @@ zero-life/
 │   │   ├── controller/      # HTTP 控制器（34 个）
 │   │   ├── dto/             # 请求/响应 DTO
 │   │   ├── middleware/       # 中间件（认证、CORS、日志等）
-│   │   ├── model/           # 数据模型（22 个）
+│   │   ├── model/           # 数据模型（23 个）
 │   │   ├── pkg/             # 工具包（errcode、jwt、pagination）
-│   │   ├── repository/      # 数据访问层（23 个）
+│   │   ├── repository/      # 数据访问层（24 个）
 │   │   ├── router/          # 路由注册
 │   │   └── service/         # 业务逻辑层（31 个）
 │   ├── config.yaml          # 配置文件
@@ -70,24 +70,13 @@ zero-life/
 
 - **Go** 1.22+
 - **Node.js** 20+
-- **Redis** 7.0+
 - **SQLite**（Go 内置驱动，无需单独安装）
 
 ---
 
 ### 方式一：本地开发启动
 
-#### 1. 启动 Redis
-
-```bash
-# 方式 A：本地安装 Redis 后启动
-redis-server
-
-# 方式 B：用 Docker 快速启动 Redis
-docker run -d --name redis -p 6379:6379 redis:7.0-alpine
-```
-
-#### 2. 启动后端
+#### 1. 启动后端
 
 ```bash
 cd server
@@ -112,13 +101,11 @@ go run ./cmd/server/
 |--------|------|--------|
 | `app.port` | 后端监听端口 | `8080` |
 | `db.path` | SQLite 数据库路径 | `./data/zero-life.db` |
-| `redis.host` | Redis 地址 | `localhost` |
-| `redis.port` | Redis 端口 | `6379` |
 | `jwt.secret` | JWT 签名密钥（**生产环境务必修改**） | `change-me-in-production` |
 | `cors.allow_origins` | 允许的前端跨域来源 | `http://localhost:5173` |
 | `attach.path` | 附件存储路径 | `./data/attachments` |
 
-#### 3. 启动前端
+#### 2. 启动前端
 
 ```bash
 cd web
@@ -134,7 +121,7 @@ npm run dev
 
 访问 `http://localhost:5173` 即可使用。
 
-#### 4. 构建生产版本
+#### 3. 构建生产版本
 
 ```bash
 # 构建后端
@@ -151,7 +138,7 @@ npm run build
 
 ### 方式二：Docker Compose 一键启动（推荐）
 
-这是最简单的方式，一条命令启动所有服务（Redis + 后端 + 前端）。
+这是最简单的方式，一条命令启动所有服务（后端 + 前端）。
 
 #### 1. 修改 JWT 密钥（重要）
 
@@ -166,11 +153,10 @@ echo 'JWT_SECRET=your-secure-random-secret-here' > .env
 docker compose up -d
 ```
 
-启动后包含三个服务：
+启动后包含两个服务：
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| `redis` | 6379 | Redis 缓存 |
 | `api` | 8080 | Go 后端 API |
 | `web` | 80 | Nginx 前端（反向代理 API） |
 
@@ -197,10 +183,9 @@ docker compose up -d --build
 
 #### 4. 数据持久化
 
-Docker Compose 使用了两个命名卷来持久化数据：
+Docker Compose 使用了命名卷来持久化数据：
 
 - `sqlite_data` — SQLite 数据库文件
-- `redis_data` — Redis 数据
 
 数据不会因容器重启而丢失，除非执行 `docker compose down -v`。
 
@@ -214,11 +199,10 @@ Docker Compose 使用了两个命名卷来持久化数据：
 cd server
 docker build -t zero-life-api .
 
-# 运行（需要先启动 Redis）
+# 运行
 docker run -d \
   --name zero-life-api \
   -p 8080:8080 \
-  -e REDIS_HOST=host.docker.internal \
   -e JWT_SECRET=your-secret \
   -v zero-life-data:/app/data \
   zero-life-api
@@ -271,7 +255,7 @@ docker run -d \
 ```bash
 # 后端代码检查
 cd server
-go vet ./...
+go vet./...
 
 # 前端类型检查 + 构建
 cd web

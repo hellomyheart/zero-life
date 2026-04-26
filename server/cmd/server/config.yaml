@@ -8,12 +8,6 @@ db:
   max_open_conns: 1
   max_lifetime: 0s
 
-redis:
-  host: localhost
-  port: 6379
-  password: ""
-  db: 8
-
 jwt:
   secret: "change-me-in-production"
   access_token_ttl: 15m
