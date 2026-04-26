@@ -115,7 +115,7 @@ function getAmountColor(type: string) {
               </el-table-column>
               <el-table-column prop="usage_rate" :label="t('budget.usageRate')">
                 <template #default="{ row }">
-                  <el-progress :percentage="Math.min(Math.round(row.usage_rate * 100), 100)" :status="row.status === 'overspent' ? 'exception' : row.status === 'warning' ? 'warning' : undefined" />
+                  <el-progress :percentage="Math.round(row.usage_rate * 100)" :stroke-width="18" :text-inside="true" :status="row.status === 'overspent' ? 'exception' : row.status === 'warning' ? 'warning' : undefined" />
                 </template>
               </el-table-column>
             </el-table>

@@ -98,11 +98,22 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	}
 	// 第3步：计算预算预警（使用率>=80%为warning，>=100%为overspent）
 	// 使用 GetDescendantIDs 展开子分类，选择父分类时自动包含所有子分类的交易
+	// 根据预算周期（monthly/yearly）确定统计的时间范围
 	budgetAlerts := make([]response.BudgetAlertResp, 0)
 	for _, b := range budgets {
 		if !b.IsEnabled {
 			continue
 		}
+
+		// 根据预算周期确定统计的起始日期
+		var periodStart time.Time
+		switch b.Period {
+		case model.BudgetPeriodYearly:
+			periodStart = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+		default: // monthly
+			periodStart = monthStart
+		}
+
 		// 收集预算关联的所有分类ID（含子分类）
 		catIDs := make([]uint64, 0, len(b.Categories))
 		for _, cat := range b.Categories {
@@ -115,7 +126,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 
 		catFilter := repository.TransactionFilter{
-			StartDate:    monthStart.Format("2006-01-02"),
+			StartDate:    periodStart.Format("2006-01-02"),
 			EndDate:      now.AddDate(0, 0, 1).Format("2006-01-02"),
 			CategoryIDs:  descendantIDs,
 		}
