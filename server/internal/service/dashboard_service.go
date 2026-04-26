@@ -16,10 +16,11 @@ import (
 // 负责汇总首页展示数据，包括月度收支、总资产余额、预算预警、账单提醒和最近交易
 // 依赖txnRepo查询交易统计，依赖accountRepo查询资产余额，依赖budgetRepo查询预算使用率，依赖billRepo查询到期账单
 type DashboardService struct {
-	txnRepo    *repository.TransactionRepository  // 交易数据访问对象
-	accountRepo *repository.AccountRepository     // 账户数据访问对象
-	budgetRepo *repository.BudgetRepository       // 预算数据访问对象
-	billRepo   *repository.BillRepository         // 账单数据访问对象
+	txnRepo     *repository.TransactionRepository  // 交易数据访问对象
+	accountRepo *repository.AccountRepository      // 账户数据访问对象
+	budgetRepo  *repository.BudgetRepository       // 预算数据访问对象
+	billRepo    *repository.BillRepository         // 账单数据访问对象
+	categoryRepo *repository.CategoryRepository    // 分类数据访问对象（用于展开子分类）
 }
 
 // NewDashboardService 创建仪表盘服务实例
@@ -35,12 +36,14 @@ func NewDashboardService(
 	accountRepo *repository.AccountRepository,
 	budgetRepo *repository.BudgetRepository,
 	billRepo *repository.BillRepository,
+	categoryRepo *repository.CategoryRepository,
 ) *DashboardService {
 	return &DashboardService{
-		txnRepo:    txnRepo,
+		txnRepo:     txnRepo,
 		accountRepo: accountRepo,
-		budgetRepo: budgetRepo,
-		billRepo:   billRepo,
+		budgetRepo:  budgetRepo,
+		billRepo:    billRepo,
+		categoryRepo: categoryRepo,
 	}
 }
 
@@ -56,9 +59,10 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	// Monthly income & expense
+	// 注意：EndDate 使用明天日期，确保包含当天的所有交易
 	monthFilter := repository.TransactionFilter{
 		StartDate: monthStart.Format("2006-01-02"),
-		EndDate:   now.Format("2006-01-02"),
+		EndDate:   now.AddDate(0, 0, 1).Format("2006-01-02"),
 	}
 	monthTxns, err := s.txnRepo.List(userID, monthFilter, 0, 10000)
 	if err != nil {
@@ -93,30 +97,37 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		return nil, errcode.ErrInternal
 	}
 	// 第3步：计算预算预警（使用率>=80%为warning，>=100%为overspent）
-	// 只统计withdrawal类型的交易，避免将deposit/transfer计入预算支出
+	// 使用 GetDescendantIDs 展开子分类，选择父分类时自动包含所有子分类的交易
 	budgetAlerts := make([]response.BudgetAlertResp, 0)
 	for _, b := range budgets {
 		if !b.IsEnabled {
 			continue
 		}
-		// Calculate spent for this budget's categories
-		spent := decimal.Zero
+		// 收集预算关联的所有分类ID（含子分类）
+		catIDs := make([]uint64, 0, len(b.Categories))
 		for _, cat := range b.Categories {
-			catID := cat.ID
-			catFilter := repository.TransactionFilter{
-				StartDate:  monthStart.Format("2006-01-02"),
-				EndDate:    now.Format("2006-01-02"),
-				CategoryID: &catID,
-			}
-			catTxns, err := s.txnRepo.List(userID, catFilter, 0, 10000)
-			if err != nil {
-				continue
-			}
-			for _, txn := range catTxns {
-				// 只统计支出交易，收入和转账不应计入预算支出
-				if txn.Type == model.TransactionTypeWithdrawal {
-					spent = spent.Add(txn.Amount)
-				}
+			catIDs = append(catIDs, cat.ID)
+		}
+		// 展开子分类：选择父分类时自动包含所有子分类的交易
+		descendantIDs, err := s.categoryRepo.GetDescendantIDs(catIDs, userID)
+		if err != nil {
+			continue
+		}
+
+		catFilter := repository.TransactionFilter{
+			StartDate:    monthStart.Format("2006-01-02"),
+			EndDate:      now.AddDate(0, 0, 1).Format("2006-01-02"),
+			CategoryIDs:  descendantIDs,
+		}
+		catTxns, err := s.txnRepo.List(userID, catFilter, 0, 10000)
+		if err != nil {
+			continue
+		}
+
+		spent := decimal.Zero
+		for _, txn := range catTxns {
+			if txn.Type == model.TransactionTypeWithdrawal {
+				spent = spent.Add(txn.Amount)
 			}
 		}
 
@@ -193,7 +204,22 @@ func transactionModelToResp(t *model.Transaction) *response.TransactionResp {
 		UpdatedAt:     t.UpdatedAt,
 	}
 
-	if t.Destination != nil {
+	if t.Source.ID > 0 {
+		resp.Source = response.AccountResp{
+			ID:             t.Source.ID,
+			Name:           t.Source.Name,
+			Type:           string(t.Source.Type),
+			CurrencyID:     t.Source.CurrencyID,
+			InitialBalance: t.Source.InitialBalance.StringFixed(4),
+			CurrentBalance: t.Source.CurrentBalance.StringFixed(4),
+			IsVirtual:      t.Source.IsVirtual,
+			Notes:          t.Source.Notes,
+			CreatedAt:      t.Source.CreatedAt,
+			UpdatedAt:      t.Source.UpdatedAt,
+		}
+	}
+
+	if t.Destination != nil && t.Destination.ID > 0 {
 		resp.Destination = &response.AccountResp{
 			ID:             t.Destination.ID,
 			Name:           t.Destination.Name,
