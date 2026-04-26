@@ -9,7 +9,7 @@
  * - 类型标签用不同颜色区分：存款(绿)，取款(红)，转账(蓝)
  * - 响应式：筛选区自适应网格，手机端隐藏部分列
  */
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { list, remove } from '@/api/transaction'
@@ -17,6 +17,7 @@ import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
 import { useCategoryStore } from '@/stores/category'
+import type { Category } from '@/types/category'
 import type { Transaction } from '@/types/transaction'
 import { TransactionType } from '@/types/transaction'
 import Pagination from '@/components/common/Pagination.vue'
@@ -36,10 +37,26 @@ const filter = reactive({
   start_date: '',
   end_date: '',
   account_id: undefined as number | undefined,
-  category_id: undefined as number | undefined,
+  category_id: undefined as number | number[] | undefined,
   keyword: '',
   page: 1,
   page_size: 20,
+})
+
+const categoryTreeData = computed(() => {
+  function transform(categories: Category[]): { value: number; label: string; children?: { value: number; label: string }[] }[] {
+    return categories.map(cat => {
+      const node: { value: number; label: string; children?: { value: number; label: string }[] } = {
+        value: cat.id,
+        label: cat.name,
+      }
+      if (cat.children?.length) {
+        node.children = transform(cat.children)
+      }
+      return node
+    })
+  }
+  return transform(categoryStore.categories)
 })
 
 function formatTransactionAmount(row: Transaction): string {
@@ -80,7 +97,13 @@ async function fetchTransactions() {
     if (filter.start_date) params.start_date = filter.start_date
     if (filter.end_date) params.end_date = filter.end_date
     if (filter.account_id) params.account_id = filter.account_id
-    if (filter.category_id) params.category_id = filter.category_id
+    if (filter.category_id) {
+      if (Array.isArray(filter.category_id)) {
+        params.category_ids = filter.category_id
+      } else {
+        params.category_id = filter.category_id
+      }
+    }
     if (filter.keyword) params.keyword = filter.keyword
 
     const res = await list(params as unknown as typeof filter)
@@ -134,7 +157,7 @@ function resetFilter() {
   filter.start_date = ''
   filter.end_date = ''
   filter.account_id = undefined
-  filter.category_id = undefined
+  filter.category_id = undefined as number | number[] | undefined
   filter.keyword = ''
   filter.page = 1
   fetchTransactions()
@@ -174,9 +197,19 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.category')">
-          <el-select v-model="filter.category_id" clearable :placeholder="t('common.selectPlaceholder')" filterable style="width: 100%">
-            <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-          </el-select>
+          <el-tree-select
+            v-model="filter.category_id"
+            :data="categoryTreeData"
+            :placeholder="t('common.selectPlaceholder')"
+            check-strictly
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            style="width: 100%"
+            :render-after-expand="false"
+          />
         </el-form-item>
         <el-form-item :label="t('transaction.search')">
           <el-input v-model="filter.keyword" clearable :placeholder="t('common.inputPlaceholder')" style="width: 100%" />
