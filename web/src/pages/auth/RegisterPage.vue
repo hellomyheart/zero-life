@@ -37,19 +37,22 @@ const form = reactive<RegisterReq & { confirmPassword: string }>({
 
 // 表单验证规则
 const rules: FormRules<typeof form> = {
-  // 邮箱：必�?+ 格式校验
+  // 邮箱：必填 + 格式校验
   email: [
     { required: true, message: t('common.required'), trigger: 'blur' },
     { type: 'email', message: 'Please enter a valid email', trigger: 'blur' },
   ],
-  // 密码：必�?+ 最�?�?  password: [
+  // 密码：必填 + 最少8位
+  password: [
     { required: true, message: t('common.required'), trigger: 'blur' },
     { min: 8, message: 'Password must be at least 8 characters', trigger: 'blur' },
   ],
-  // 确认密码：必�?+ 必须与密码一�?  confirmPassword: [
+  // 确认密码：必填 + 必须与密码一致
+  confirmPassword: [
     { required: true, message: t('common.required'), trigger: 'blur' },
     {
-      // 自定义验证器：检查两次输入的密码是否一�?      validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+      // 自定义验证器：检查两次输入的密码是否一致
+      validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
         if (value !== form.password) {
           callback(new Error('Passwords do not match'))
         } else {
@@ -59,7 +62,8 @@ const rules: FormRules<typeof form> = {
       trigger: 'blur',
     },
   ],
-  // 昵称：必�?  nickname: [
+  // 昵称：必填
+  nickname: [
     { required: true, message: t('common.required'), trigger: 'blur' },
   ],
 }
@@ -72,9 +76,11 @@ async function handleRegister() {
 
   loading.value = true
   try {
-    // 调用认证 store 的注册方�?    await authStore.register(form)
+    // 调用认证 store 的注册方法
+    await authStore.register(form)
     ElMessage.success(t('auth.registerSuccess'))
-    // 注册成功后跳转首�?    router.push('/')
+    // 注册成功后跳转首页
+    router.push('/')
   } catch (err) {
     // 注册失败显示错误信息
     ElMessage.error((err as Error).message || t('common.failed'))
@@ -85,7 +91,7 @@ async function handleRegister() {
 </script>
 
 <template>
-  <!-- 注册页面容器，垂直水平居�?-->
+  <!-- 注册页面容器，垂直水平居中 -->
   <div class="register-page">
     <el-card class="register-card">
       <!-- 卡片标题 -->
@@ -94,7 +100,7 @@ async function handleRegister() {
       </template>
       <!-- 注册表单，提交时调用 handleRegister -->
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleRegister">
-        <!-- 邮箱输入�?-->
+        <!-- 邮箱输入框 -->
         <el-form-item :label="t('auth.email')" prop="email">
           <el-input v-model="form.email" type="email" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
@@ -102,11 +108,11 @@ async function handleRegister() {
         <el-form-item :label="t('auth.password')" prop="password">
           <el-input v-model="form.password" type="password" show-password :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
-        <!-- 确认密码输入�?-->
+        <!-- 确认密码输入框 -->
         <el-form-item :label="t('auth.confirmPassword')" prop="confirmPassword">
           <el-input v-model="form.confirmPassword" type="password" show-password :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
-        <!-- 昵称输入�?-->
+        <!-- 昵称输入框 -->
         <el-form-item :label="t('auth.nickname')" prop="nickname">
           <el-input v-model="form.nickname" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>

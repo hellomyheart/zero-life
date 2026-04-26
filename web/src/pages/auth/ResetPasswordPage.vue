@@ -44,8 +44,10 @@ const emailRules: FormRules = {
 
 // 重置密码表单验证规则
 const resetRules: FormRules = {
-  // 重置令牌：必�?  token: [{ required: true, message: t('common.required'), trigger: 'blur' }],
-  // 新密码：必填 + 最�?�?  new_password: [
+  // 重置令牌：必填
+  token: [{ required: true, message: t('common.required'), trigger: 'blur' }],
+  // 新密码：必填 + 最少8位
+  new_password: [
     { required: true, message: t('common.required'), trigger: 'blur' },
     { min: 8, message: 'Password must be at least 8 characters', trigger: 'blur' },
   ],
@@ -79,7 +81,8 @@ async function handleReset() {
 
   loading.value = true
   try {
-    // 调用重置密码 API，提交令牌和新密�?    await resetPassword({ token: resetForm.token, password: resetForm.new_password })
+    // 调用重置密码 API，提交令牌和新密码
+    await resetPassword({ token: resetForm.token, password: resetForm.new_password })
     ElMessage.success('Password reset successfully')
     // 进入第三步：显示成功提示
     step.value = 3
@@ -92,7 +95,7 @@ async function handleReset() {
 </script>
 
 <template>
-  <!-- 重置密码页面容器，垂直水平居�?-->
+  <!-- 重置密码页面容器，垂直水平居中 -->
   <div class="reset-page">
     <el-card class="reset-card">
       <!-- 卡片标题 -->
@@ -100,7 +103,7 @@ async function handleReset() {
         <h2>{{ t('auth.resetPassword') }}</h2>
       </template>
 
-      <!-- 第一步：输入邮箱发送重置邮�?-->
+      <!-- 第一步：输入邮箱发送重置邮件 -->
       <template v-if="step === 1">
         <el-form ref="emailFormRef" :model="emailForm" :rules="emailRules" label-position="top" @submit.prevent="handleSendEmail">
           <el-form-item :label="t('auth.email')" prop="email">
@@ -142,7 +145,7 @@ async function handleReset() {
         </el-result>
       </template>
 
-      <!-- 前两步显示返回登录链�?-->
+      <!-- 前两步显示返回登录链接 -->
       <div v-if="step < 3" class="reset-links">
         <router-link to="/login">{{ t('auth.goLogin') }}</router-link>
       </div>
