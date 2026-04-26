@@ -200,8 +200,8 @@ function handleSelect(index: string) {
 
 <style scoped>
 .app-sidebar {
-  background: #fff;
-  border-right: 1px solid var(--el-border-color-light);
+  background: var(--app-sidebar-bg);
+  border-right: 1px solid var(--app-border);
   overflow-y: auto;
   transition: width 0.3s;
 }

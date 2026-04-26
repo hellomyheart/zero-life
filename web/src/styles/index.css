@@ -1,0 +1,206 @@
+/**
+ * 全局样式 - 暗黑模式变量、Element Plus暗黑覆盖、响应式工具
+ *
+ * 暗黑模式机制：
+ * - html.dark 类触发所有暗黑样式
+ * - Element Plus 内置暗黑模式通过 html.dark 自动生效
+ * - 自定义变量在 :root 和 html.dark 中定义
+ *
+ * 响应式断点：
+ * - sm: >= 640px（大手机横屏）
+ * - md: >= 768px（平板竖屏）
+ * - lg: >= 1024px（平板横屏/小笔记本）
+ * - xl: >= 1280px（桌面）
+ */
+
+/* ========== Element Plus 暗黑模式 ========== */
+@import 'element-plus/theme-chalk/dark/css-vars.css';
+
+/* ========== 自定义CSS变量 ========== */
+:root {
+  /* 布局颜色 */
+  --app-bg: #f5f7fa;
+  --app-sidebar-bg: #fff;
+  --app-header-bg: #fff;
+  --app-card-bg: #fff;
+  --app-text-primary: #303133;
+  --app-text-secondary: #606266;
+  --app-border: #e4e7ed;
+
+  /* 金额颜色 */
+  --app-amount-deposit: #67C23A;
+  --app-amount-withdrawal: #F56C6C;
+  --app-amount-transfer: #909399;
+
+  /* 侧边栏 */
+  --app-sidebar-width: 220px;
+  --app-sidebar-collapsed-width: 64px;
+  --app-header-height: 56px;
+
+  /* 遮罩 */
+  --app-overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+html.dark {
+  --app-bg: #141414;
+  --app-sidebar-bg: #1d1e1f;
+  --app-header-bg: #1d1e1f;
+  --app-card-bg: #1d1e1f;
+  --app-text-primary: #e5eaf3;
+  --app-text-secondary: #a3a6ad;
+  --app-border: #4c4d4f;
+
+  --app-amount-deposit: #95d475;
+  --app-amount-withdrawal: #f89898;
+  --app-amount-transfer: #a3a6ad;
+
+  --app-overlay-bg: rgba(0, 0, 0, 0.7);
+}
+
+/* ========== 全局基础 ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+}
+
+/* ========== 响应式工具类 ========== */
+
+/* 小屏幕隐藏 */
+@media (max-width: 767px) {
+  .hidden-sm-and-down {
+    display: none !important;
+  }
+}
+
+/* 平板及以上显示 */
+@media (min-width: 768px) {
+  .hidden-md-and-up {
+    display: none !important;
+  }
+}
+
+/* 手机端隐藏 */
+@media (max-width: 1023px) {
+  .hidden-lg-and-down {
+    display: none !important;
+  }
+}
+
+/* 桌面端隐藏 */
+@media (min-width: 1024px) {
+  .hidden-xl-and-up {
+    display: none !important;
+  }
+}
+
+/* ========== 页面通用布局 ========== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--app-text-primary);
+}
+
+/* 筛选区域响应式网格 */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+}
+
+.filter-grid .el-form-item {
+  margin-bottom: 0;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 手机端筛选区域单列 */
+@media (max-width: 767px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+  }
+
+  .el-dialog {
+    width: 92% !important;
+    margin: 16px auto !important;
+  }
+}
+
+/* 平板端筛选区域两列 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ========== 表格响应式 ========== */
+@media (max-width: 767px) {
+  .el-table {
+    font-size: 13px;
+  }
+
+  .el-table th.el-table__cell {
+    padding: 8px 0;
+  }
+
+  .el-table td.el-table__cell {
+    padding: 8px 0;
+  }
+}
+
+/* ========== 暗黑模式下的额外调整 ========== */
+html.dark {
+  /* el-card 暗黑背景 */
+  .el-card {
+    --el-card-bg-color: var(--app-card-bg);
+  }
+
+  /* el-table 暗黑行悬浮 */
+  .el-table__body tr:hover > td.el-table__cell {
+    background-color: var(--el-table-row-hover-bg-color);
+  }
+
+  /* 金额颜色 */
+  .amount-deposit {
+    color: var(--app-amount-deposit);
+  }
+
+  .amount-withdrawal {
+    color: var(--app-amount-withdrawal);
+  }
+
+  .amount-transfer {
+    color: var(--app-amount-transfer);
+  }
+}

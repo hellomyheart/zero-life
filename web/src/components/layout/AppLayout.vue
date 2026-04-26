@@ -1,19 +1,49 @@
 <script setup lang="ts">
-// 主布局组件 - 包含侧边栏、顶栏和内容区
+/**
+ * 主布局组件 - 包含侧边栏、顶栏和内容区
+ * 响应式行为：
+ * - 桌面端(>=1024px)：侧边栏固定在左侧，可折叠
+ * - 平板/手机(<1024px)：侧边栏为抽屉覆盖模式，点击遮罩关闭
+ */
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
+import { useAppStore } from '@/stores/app'
+import { computed } from 'vue'
+
+const appStore = useAppStore()
+
+/** 是否为桌面端（侧边栏固定模式） */
+const isDesktop = computed(() => window.innerWidth >= 1024)
+
+/** 关闭移动端侧边栏 */
+function closeMobileMenu() {
+  appStore.closeMobileMenu()
+}
 </script>
 
 <template>
-  <!-- 整体布局：左侧侧边栏 + 右侧主内容区 -->
   <el-container class="app-layout">
-    <AppSidebar />
+    <!-- 桌面端：固定侧边栏 -->
+    <AppSidebar v-if="isDesktop" />
+    <!-- 移动端：抽屉覆盖侧边栏 -->
+    <template v-else>
+      <el-drawer
+        v-model="appStore.mobileMenuOpen"
+        direction="ltr"
+        :show-close="false"
+        :with-header="false"
+        size="220px"
+        class="mobile-sidebar-drawer"
+        @close="closeMobileMenu"
+      >
+        <AppSidebar />
+      </el-drawer>
+    </template>
+
     <el-container class="main-container">
-      <!-- 顶部导航栏 -->
       <el-header class="app-header">
         <AppHeader />
       </el-header>
-      <!-- 页面内容区，通过router-view渲染当前路由页面 -->
       <el-main class="app-main">
         <router-view />
       </el-main>
@@ -34,14 +64,33 @@ import AppSidebar from './AppSidebar.vue'
 
 .app-header {
   padding: 0;
-  height: 56px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  background: #fff;
+  height: var(--app-header-height);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-header-bg);
 }
 
 .app-main {
-  background: #f5f7fa;
+  background: var(--app-bg);
   overflow-y: auto;
   padding: 20px;
+}
+
+@media (max-width: 767px) {
+  .app-main {
+    padding: 12px;
+  }
+}
+</style>
+
+<style>
+/* 移动端侧边栏抽屉样式（非scoped，影响el-drawer内部） */
+.mobile-sidebar-drawer .el-drawer__body {
+  padding: 0;
+  background: var(--app-sidebar-bg);
+}
+
+.mobile-sidebar-drawer .el-drawer__body .app-sidebar {
+  border-right: none;
+  height: 100%;
 }
 </style>

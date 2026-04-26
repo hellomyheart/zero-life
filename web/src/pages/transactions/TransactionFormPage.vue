@@ -238,14 +238,14 @@ async function handleSubmit() {
   <div class="transaction-form-page">
     <h2>{{ isEdit ? t('transaction.edit') : t('transaction.create') }}</h2>
     <el-card>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="txn-form">
         <el-form-item :label="t('transaction.type')" prop="type">
           <el-radio-group v-model="form.type" @change="handleTypeChange">
             <el-radio v-for="opt in transactionTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('transaction.date')" prop="date">
-          <el-date-picker v-model="form.date" type="datetime" value-format="YYYY-MM-DD HH:mm" />
+          <el-date-picker v-model="form.date" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width: 100%" />
         </el-form-item>
         <el-form-item :label="t('transaction.description')" prop="description">
           <el-input v-model="form.description" :placeholder="t('common.inputPlaceholder')" />
@@ -254,12 +254,12 @@ async function handleSubmit() {
           <AmountInput v-model="form.amount" />
         </el-form-item>
         <el-form-item :label="sourceAccountLabel" prop="source_id">
-          <el-select v-model="form.source_id" :placeholder="t('common.selectPlaceholder')" filterable>
+          <el-select v-model="form.source_id" :placeholder="t('common.selectPlaceholder')" filterable style="width: 100%">
             <el-option v-for="acc in sourceAccountOptions" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="showDestination" :label="destinationAccountLabel" prop="destination_id">
-          <el-select v-model="form.destination_id" :placeholder="t('common.selectPlaceholder')" filterable>
+          <el-select v-model="form.destination_id" :placeholder="t('common.selectPlaceholder')" filterable style="width: 100%">
             <el-option v-for="acc in destinationAccountOptions" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
@@ -271,6 +271,7 @@ async function handleSubmit() {
             check-strictly
             filterable
             clearable
+            style="width: 100%"
             :render-after-expand="false"
           />
         </el-form-item>
@@ -283,6 +284,7 @@ async function handleSubmit() {
             multiple
             filterable
             clearable
+            style="width: 100%"
             :render-after-expand="false"
           />
         </el-form-item>
@@ -298,12 +300,12 @@ async function handleSubmit() {
           <el-divider>{{ t('transaction.splits') }}</el-divider>
           <div v-for="(split, index) in form.splits" :key="index" class="split-item">
             <el-row :gutter="10">
-              <el-col :span="6">
+              <el-col :xs="24" :sm="12" :md="6">
                 <el-form-item :label="t('transaction.amount')">
                   <AmountInput v-model="split.amount" />
                 </el-form-item>
               </el-col>
-              <el-col :span="6">
+              <el-col :xs="24" :sm="12" :md="6">
                 <el-form-item :label="t('transaction.category')">
                   <el-tree-select
                     v-model="split.category_id"
@@ -312,11 +314,12 @@ async function handleSubmit() {
                     check-strictly
                     filterable
                     clearable
+                    style="width: 100%"
                     :render-after-expand="false"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="6">
+              <el-col :xs="24" :sm="12" :md="6">
                 <el-form-item :label="t('transaction.tags')">
                   <el-tree-select
                     v-model="split.tags"
@@ -326,23 +329,24 @@ async function handleSubmit() {
                     multiple
                     filterable
                     clearable
+                    style="width: 100%"
                     :render-after-expand="false"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="6">
+              <el-col :xs="24" :sm="12" :md="6">
                 <el-form-item :label="t('common.delete')">
                   <el-button type="danger" link @click="removeSplit(index)">{{ t('common.delete') }}</el-button>
                 </el-form-item>
               </el-col>
             </el-row>
             <el-row :gutter="10">
-              <el-col :span="12">
+              <el-col :xs="24" :sm="12">
                 <el-form-item :label="t('transaction.description')">
                   <el-input v-model="split.description" />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
+              <el-col :xs="24" :sm="12">
                 <el-form-item :label="t('transaction.notes')">
                   <el-input v-model="split.notes" />
                 </el-form-item>
@@ -365,5 +369,11 @@ async function handleSubmit() {
 .split-item {
   padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+@media (max-width: 767px) {
+  .txn-form :deep(.el-form-item__label) {
+    width: 80px !important;
+  }
 }
 </style>

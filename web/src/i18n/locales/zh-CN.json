@@ -3,6 +3,11 @@
     "title": "Zero Life",
     "loading": "加载中..."
   },
+  "theme": {
+    "light": "明亮模式",
+    "dark": "黑暗模式",
+    "system": "跟随系统"
+  },
   "nav": {
     "dashboard": "仪表盘",
     "accounts": "账户",

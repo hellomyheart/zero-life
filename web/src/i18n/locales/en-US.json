@@ -3,6 +3,11 @@
     "title": "Zero Life",
     "loading": "Loading..."
   },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "accounts": "Accounts",

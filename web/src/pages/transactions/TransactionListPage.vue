@@ -7,12 +7,13 @@
  * - 支持创建、编辑、删除交易
  * - 金额按类型显示正负号和颜色：存款(+)绿色，取款(-)红色，转账灰色
  * - 类型标签用不同颜色区分：存款(绿)，取款(红)，转账(蓝)
+ * - 响应式：筛选区自适应网格，手机端隐藏部分列
  */
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { list, remove } from '@/api/transaction'
-import { formatAmount, formatDate } from '@/utils/format'
+import { formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
 import { useCategoryStore } from '@/stores/category'
@@ -41,56 +42,30 @@ const filter = reactive({
   page_size: 20,
 })
 
-/**
- * 根据交易类型格式化金额显示
- * - 存款(deposit)：显示 +金额，绿色
- * - 取款(withdrawal)：显示 -金额，红色
- * - 转账(transfer)：显示金额，灰色（内部转移，不增减总资产）
- */
 function formatTransactionAmount(row: Transaction): string {
   const num = Number(row.amount)
   if (isNaN(num)) return row.amount
-
   const absFormatted = Math.abs(num).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
-
-  if (row.type === TransactionType.Deposit) {
-    return `+${absFormatted}`
-  } else if (row.type === TransactionType.Withdrawal) {
-    return `-${absFormatted}`
-  }
+  if (row.type === TransactionType.Deposit) return `+${absFormatted}`
+  if (row.type === TransactionType.Withdrawal) return `-${absFormatted}`
   return absFormatted
 }
 
-/**
- * 根据交易类型返回金额的CSS类名
- * - 存款：绿色（收入）
- * - 取款：红色（支出）
- * - 转账：灰色（内部转移）
- */
 function amountClass(row: Transaction): string {
   if (row.type === TransactionType.Deposit) return 'amount-deposit'
   if (row.type === TransactionType.Withdrawal) return 'amount-withdrawal'
   return 'amount-transfer'
 }
 
-/**
- * 根据交易类型返回标签的type
- * - 存款：success(绿色)
- * - 取款：danger(红色)
- * - 转账：info(蓝色)
- */
 function typeTagType(row: Transaction): '' | 'success' | 'danger' | 'info' {
   if (row.type === TransactionType.Deposit) return 'success'
   if (row.type === TransactionType.Withdrawal) return 'danger'
   return 'info'
 }
 
-/**
- * 获取交易类型的显示文本
- */
 function typeLabel(row: Transaction): string {
   if (row.type === TransactionType.Deposit) return t('transaction.deposit')
   if (row.type === TransactionType.Withdrawal) return t('transaction.withdrawal')
@@ -179,9 +154,9 @@ onMounted(async () => {
     </div>
 
     <el-card class="filter-card">
-      <el-form inline>
+      <div class="filter-grid">
         <el-form-item :label="t('transaction.type')">
-          <el-select v-model="filter.type" clearable :placeholder="t('common.selectPlaceholder')">
+          <el-select v-model="filter.type" clearable :placeholder="t('common.selectPlaceholder')" style="width: 100%">
             <el-option :label="t('transaction.deposit')" :value="TransactionType.Deposit" />
             <el-option :label="t('transaction.withdrawal')" :value="TransactionType.Withdrawal" />
             <el-option :label="t('transaction.transfer')" :value="TransactionType.Transfer" />
@@ -191,26 +166,27 @@ onMounted(async () => {
           <DateRangePicker
             v-model:start-date="filter.start_date"
             v-model:end-date="filter.end_date"
+            style="width: 100%"
           />
         </el-form-item>
         <el-form-item :label="t('transaction.sourceAccount')">
-          <el-select v-model="filter.account_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
+          <el-select v-model="filter.account_id" clearable :placeholder="t('common.selectPlaceholder')" filterable style="width: 100%">
             <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.category')">
-          <el-select v-model="filter.category_id" clearable :placeholder="t('common.selectPlaceholder')" filterable>
+          <el-select v-model="filter.category_id" clearable :placeholder="t('common.selectPlaceholder')" filterable style="width: 100%">
             <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('transaction.search')">
-          <el-input v-model="filter.keyword" clearable :placeholder="t('common.inputPlaceholder')" />
+          <el-input v-model="filter.keyword" clearable :placeholder="t('common.inputPlaceholder')" style="width: 100%" />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleFilter">{{ t('transaction.filter') }}</el-button>
-          <el-button @click="resetFilter">{{ t('common.reset') }}</el-button>
-        </el-form-item>
-      </el-form>
+      </div>
+      <div class="filter-actions">
+        <el-button type="primary" @click="handleFilter">{{ t('transaction.filter') }}</el-button>
+        <el-button @click="resetFilter">{{ t('common.reset') }}</el-button>
+      </div>
     </el-card>
 
     <el-table :data="transactions" v-loading="loading" stripe style="margin-top: 16px">
@@ -228,16 +204,16 @@ onMounted(async () => {
           <span :class="amountClass(row)" class="amount-text">{{ formatTransactionAmount(row) }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="t('transaction.sourceAccount')" width="130" show-overflow-tooltip>
+      <el-table-column :label="t('transaction.sourceAccount')" width="130" show-overflow-tooltip class-name="hidden-md-and-down-col">
         <template #default="{ row }">{{ row.source?.name || '' }}</template>
       </el-table-column>
-      <el-table-column :label="t('transaction.destinationAccount')" width="130" show-overflow-tooltip>
+      <el-table-column :label="t('transaction.destinationAccount')" width="130" show-overflow-tooltip class-name="hidden-md-and-down-col">
         <template #default="{ row }">{{ row.destination?.name || '' }}</template>
       </el-table-column>
-      <el-table-column :label="t('transaction.category')" width="120" show-overflow-tooltip>
+      <el-table-column :label="t('transaction.category')" width="120" show-overflow-tooltip class-name="hidden-md-and-down-col">
         <template #default="{ row }">{{ row.category?.name || '' }}</template>
       </el-table-column>
-      <el-table-column :label="t('transaction.tags')" width="150">
+      <el-table-column :label="t('transaction.tags')" width="150" class-name="hidden-md-and-down-col">
         <template #default="{ row }">
           <el-tag
             v-for="tag in (row.tags || []).slice(0, 3)"
@@ -268,17 +244,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-}
-
 .filter-card {
   margin-bottom: 0;
 }
@@ -289,20 +254,27 @@ onMounted(async () => {
 }
 
 .amount-deposit {
-  color: #67C23A;
+  color: var(--app-amount-deposit);
 }
 
 .amount-withdrawal {
-  color: #F56C6C;
+  color: var(--app-amount-withdrawal);
 }
 
 .amount-transfer {
-  color: #909399;
+  color: var(--app-amount-transfer);
 }
 
 .more-tags {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
   margin-left: 4px;
+}
+
+/* 平板以下隐藏部分列 */
+@media (max-width: 1023px) {
+  :deep(.hidden-md-and-down-col) {
+    display: none;
+  }
 }
 </style>

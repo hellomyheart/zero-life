@@ -3,19 +3,18 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia' // Pinia状态管理
 import ElementPlus from 'element-plus' // Element Plus UI组件库
 import 'element-plus/dist/index.css' // Element Plus样式
-import zhCn from 'element-plus/es/locale/lang/zh-cn' // Element Plus 中文语言包
 import * as ElementPlusIconsVue from '@element-plus/icons-vue' // Element Plus图标
 import i18n from './i18n' // 国际化
 import router from './router' // 路由
 import App from './App.vue' // 根组件
+import './styles/index.css' // 全局样式（暗黑模式、响应式）
 
 const app = createApp(App)
 
 // 注册全局插件
 app.use(createPinia()) // 状态管理
 app.use(router) // 路由
-// Element Plus 使用中文语言包，使分页、日期选择等组件显示中文
-app.use(ElementPlus, { locale: zhCn })
+app.use(ElementPlus) // Element Plus（locale由el-config-provider动态控制）
 app.use(i18n) // 国际化
 
 // 全局注册所有Element Plus图标组件，可在模板中直接使用图标名
