@@ -87,9 +87,9 @@ async function fetchBills() {
   loading.value = true
   try {
     const res = await list()
-    const data = res as unknown as { items: Bill[]; total: number }
-    bills.value = data.items || (res as unknown as Bill[])
-    pagination.total = data.total || 0
+    const data = res as unknown as Bill[]
+    bills.value = data
+    pagination.total = data.length
   } catch {
     ElMessage.error(t('common.fetchError'))
   } finally {

@@ -1,8 +1,9 @@
-<!-- 重置密码页面 - 分三步完成密码重置：1.输入邮箱发送重置邮�?2.输入令牌和新密码 3.重置成功 -->
+<!-- 重置密码页面 - 分三步完成密码重置：1.输入邮箱发送重置邮件 2.输入令牌和新密码 3.重置成功 -->
 <script setup lang="ts">
-// 导入 Vue 响应�?API
+// 导入 Vue 响应式 API
 import { ref, reactive } from 'vue'
-// 导入国际化钩子函�?import { useI18n } from 'vue-i18n'
+// 导入国际化钩子函数
+import { useI18n } from 'vue-i18n'
 // 导入认证相关 API（忘记密码、重置密码）
 import { forgotPassword, resetPassword } from '@/api/auth'
 // 导入 Element Plus 消息提示组件
@@ -10,9 +11,11 @@ import { ElMessage } from 'element-plus'
 // 导入表单类型定义
 import type { FormInstance, FormRules } from 'element-plus'
 
-// 国际化翻译函�?const { t } = useI18n()
+// 国际化翻译函数
+const { t } = useI18n()
 
-// 当前步骤�?=输入邮箱, 2=输入令牌和新密码, 3=重置成功�?const step = ref(1)
+// 当前步骤：1=输入邮箱, 2=输入令牌和新密码, 3=重置成功
+const step = ref(1)
 // 加载状态，防止重复提交
 const loading = ref(false)
 // 邮箱表单引用
@@ -25,7 +28,8 @@ const emailForm = reactive({
   email: '',
 })
 
-// 第二步：重置密码表单数据（token 从邮件中获取�?const resetForm = reactive({
+// 第二步：重置密码表单数据（token 从邮件中获取）
+const resetForm = reactive({
   token: '',
   new_password: '',
 })
@@ -55,7 +59,8 @@ async function handleSendEmail() {
 
   loading.value = true
   try {
-    // 调用忘记密码 API，发送重置邮�?    await forgotPassword({ email: emailForm.email })
+    // 调用忘记密码 API，发送重置邮件
+    await forgotPassword({ email: emailForm.email })
     ElMessage.success('Reset email sent')
     // 进入第二步：输入令牌和新密码
     step.value = 2
@@ -66,7 +71,8 @@ async function handleSendEmail() {
   }
 }
 
-// 处理重置密码提交（第二步�?async function handleReset() {
+// 处理重置密码提交（第二步）
+async function handleReset() {
   // 验证重置密码表单
   const valid = await resetFormRef.value?.validate().catch(() => false)
   if (!valid) return

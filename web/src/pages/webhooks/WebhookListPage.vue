@@ -44,9 +44,10 @@ const form = ref<CreateWebhookReq & { is_active?: boolean }>({
 async function fetchWebhooks() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Webhook[], total: number }
-    webhooks.value = res.items || []
-    pagination.total = res.total || 0
+    const res = await list()
+    const data = res as unknown as Webhook[]
+    webhooks.value = data
+    pagination.total = data.length
   } catch {
     ElMessage.error(t('common.fetchError'))
   } finally {

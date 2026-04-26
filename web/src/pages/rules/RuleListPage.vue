@@ -92,9 +92,10 @@ const form = ref<CreateRuleReq>({
 async function fetchRules() {
   loading.value = true
   try {
-    const res = await list() as unknown as { items: Rule[], total: number }
-    rules.value = res.items || []
-    pagination.total = res.total || 0
+    const res = await list()
+    const data = res as unknown as Rule[]
+    rules.value = data
+    pagination.total = data.length
   } catch {
     ElMessage.error(t('common.fetchError'))
   } finally {

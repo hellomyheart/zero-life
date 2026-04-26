@@ -62,10 +62,3 @@ export interface UpdateWebhookReq {
   is_active?: boolean | null
 }
 
-/**
- * Webhook列表查询请求接口
- */
-export interface WebhookListReq {
-  page?: number
-  page_size?: number
-}

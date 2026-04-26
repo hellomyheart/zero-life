@@ -4,18 +4,16 @@
  * 附件可以关联到交易、账单等实体上，用于保存票据、收据等文件
  */
 import { get, post, del } from '@/utils/request'
-import type { Attachment, AttachmentListReq } from '@/types/attachment'
-import type { PageResult } from '@/types/common'
+import type { Attachment } from '@/types/attachment'
 
 /**
- * 获取附件列表（分页）
- * 支持按关联实体类型和ID进行筛选
- * @param params - 查询参数（可选：关联实体类型、关联实体ID、页码、每页数量）
- * @returns 附件分页列表
+ * 获取附件列表
+ * 后端返回扁平数组（非分页）
+ * @returns 附件数组
  * @endpoint GET /attachments
  */
-export function list(params: AttachmentListReq) {
-  return get<PageResult<Attachment>>('/attachments', params as Record<string, unknown>)
+export function list() {
+  return get<Attachment[]>('/attachments')
 }
 
 /**

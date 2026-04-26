@@ -28,9 +28,10 @@ const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 async function fetchAttachments() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: Attachment[], total: number }
-    attachments.value = res.items || []
-    pagination.total = res.total || 0
+    const res = await list()
+    const data = res as unknown as Attachment[]
+    attachments.value = data
+    pagination.total = data.length
   } catch {
     ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {

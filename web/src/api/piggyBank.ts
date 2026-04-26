@@ -4,18 +4,17 @@
  * 存钱罐用于设定储蓄目标，跟踪存款进度（如旅行基金、应急储备金等）
  */
 import { get, post, put, del } from '@/utils/request'
-import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, RemoveAmountReq, PiggyBankListReq } from '@/types/piggyBank'
+import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, RemoveAmountReq } from '@/types/piggyBank'
 import type { PiggyEvent } from '@/types/piggyBank'
-import type { PageResult } from '@/types/common'
 
 /**
- * 获取存钱罐列表（分页）
- * @param params - 查询参数（可选：页码、每页数量）
- * @returns 存钱罐分页列表
+ * 获取存钱罐列表
+ * 后端返回扁平数组（非分页）
+ * @returns 存钱罐数组
  * @endpoint GET /piggy-banks
  */
-export function list(params: PiggyBankListReq) {
-  return get<PageResult<PiggyBank>>('/piggy-banks', params as Record<string, unknown>)
+export function list() {
+  return get<PiggyBank[]>('/piggy-banks')
 }
 
 /**

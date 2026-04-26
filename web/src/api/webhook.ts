@@ -5,17 +5,16 @@
  * 实现系统与其他服务的集成
  */
 import { get, post, put, del } from '@/utils/request'
-import type { Webhook, CreateWebhookReq, UpdateWebhookReq, WebhookListReq, WebhookDelivery } from '@/types/webhook'
-import type { PageResult } from '@/types/common'
+import type { Webhook, CreateWebhookReq, UpdateWebhookReq, WebhookDelivery } from '@/types/webhook'
 
 /**
- * 获取Webhook列表（分页）
- * @param params - 查询参数（可选：页码、每页数量）
- * @returns Webhook分页列表
+ * 获取Webhook列表
+ * 后端返回扁平数组（非分页）
+ * @returns Webhook数组
  * @endpoint GET /webhooks
  */
-export function list(params: WebhookListReq) {
-  return get<PageResult<Webhook>>('/webhooks', params as Record<string, unknown>)
+export function list() {
+  return get<Webhook[]>('/webhooks')
 }
 
 /**
@@ -57,4 +56,4 @@ export function remove(id: number) { return del<void>(`/webhooks/${id}`) }
  * @returns 投递记录分页列表
  * @endpoint GET /webhooks/:id/deliveries
  */
-export function listDeliveries(id: number) { return get<PageResult<WebhookDelivery>>(`/webhooks/${id}/deliveries`) }
+export function listDeliveries(id: number) { return get<WebhookDelivery[]>(`/webhooks/${id}/deliveries`) }

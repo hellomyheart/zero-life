@@ -70,10 +70,3 @@ export interface RemoveAmountReq {
   note?: string
 }
 
-/**
- * 存钱罐列表查询请求接口
- */
-export interface PiggyBankListReq {
-  page?: number
-  page_size?: number
-}

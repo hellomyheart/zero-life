@@ -52,9 +52,10 @@ const form = ref<CreatePiggyBankReq>({
 async function fetchPiggyBanks() {
   loading.value = true
   try {
-    const res = await list({ page: pagination.page, page_size: pagination.page_size }) as unknown as { items: PiggyBank[], total: number }
-    piggyBanks.value = res.items || []
-    pagination.total = res.total || 0
+    const res = await list()
+    const data = res as unknown as PiggyBank[]
+    piggyBanks.value = data
+    pagination.total = data.length
   } catch {
     ElMessage.error(t('common.fetchError') || 'Failed to load data')
   } finally {

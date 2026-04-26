@@ -17,12 +17,3 @@ export interface Attachment {
   created_at: string
 }
 
-/**
- * 附件列表查询请求接口
- */
-export interface AttachmentListReq {
-  attachable_type?: string
-  attachable_id?: number
-  page?: number
-  page_size?: number
-}
