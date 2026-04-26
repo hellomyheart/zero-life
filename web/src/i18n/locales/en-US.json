@@ -196,10 +196,9 @@
     "daily": "Daily",
     "weekly": "Weekly",
     "monthly": "Monthly",
-    "quarterly": "Quarterly",
     "yearly": "Yearly",
     "deleteConfirm": "Are you sure you want to delete this bill?",
-    "description": "Description"
+    "notes": "Notes"
   },
   "currency": {
     "title": "Currency Management",

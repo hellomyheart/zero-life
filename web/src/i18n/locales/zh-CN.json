@@ -196,10 +196,9 @@
     "daily": "每天",
     "weekly": "每周",
     "monthly": "每月",
-    "quarterly": "每季度",
     "yearly": "每年",
     "deleteConfirm": "确定要删除该账单吗？",
-    "description": "描述"
+    "notes": "备注"
   },
   "currency": {
     "title": "货币管理",

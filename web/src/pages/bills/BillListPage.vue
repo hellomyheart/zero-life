@@ -6,17 +6,23 @@
  * - 显示账单重复频率、到期日和逾期状态
  * - 支持创建、编辑、删除账单
  * - 关联账户和分类选择
+ * 
+ * 字段名与后端 JSON tag 完全对应：
+ * - source_id（非 account_id）
+ * - next_due（非 next_due_date）
+ * - notes（非 description）
  */
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/bill'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
 import { useCategoryStore } from '@/stores/category'
-import type { Bill, CreateBillReq } from '@/types/bill'
+import type { Bill, CreateBillReq, UpdateBillReq } from '@/types/bill'
 import { RepeatRule } from '@/types/bill'
 import Pagination from '@/components/common/Pagination.vue'
+import dayjs from 'dayjs'
 
 const { t } = useI18n()
 const accountStore = useAccountStore()
@@ -40,25 +46,38 @@ const pagination = reactive({
   total: 0,
 })
 
-/** 表单数据 - 创建/编辑账单时使用 */
-const form = ref<CreateBillReq>({
+/**
+ * 表单数据 - 创建/编辑账单时使用
+ * 字段名与后端 CreateBillReq / UpdateBillReq 的 JSON tag 完全对应
+ */
+const form = ref<CreateBillReq & { source_id: number | null }>({
   name: '',
   amount: '0',
-  account_id: 0,
-  category_id: null,
   repeat_rule: RepeatRule.Monthly,
-  next_due_date: '',
-  description: '',
+  next_due: '',
+  source_id: null,
+  category_id: null,
+  notes: '',
 })
 
-/** 重复规则选项 */
+/** 重复规则选项（后端仅支持 daily/weekly/monthly/yearly） */
 const repeatRuleOptions = [
   { value: RepeatRule.Daily, label: t('bill.daily') },
   { value: RepeatRule.Weekly, label: t('bill.weekly') },
   { value: RepeatRule.Monthly, label: t('bill.monthly') },
-  { value: RepeatRule.Quarterly, label: t('bill.quarterly') },
   { value: RepeatRule.Yearly, label: t('bill.yearly') },
 ]
+
+/**
+ * 判断账单是否逾期
+ * 后端 BillResp 不返回 is_overdue 字段，前端根据 next_due 与当前日期比较计算
+ * @param bill 账单数据
+ * @returns 是否逾期
+ */
+function isOverdue(bill: Bill): boolean {
+  if (!bill.next_due) return false
+  return dayjs(bill.next_due).isBefore(dayjs(), 'day')
+}
 
 /**
  * 获取账单列表
@@ -72,7 +91,7 @@ async function fetchBills() {
     bills.value = data.items || (res as unknown as Bill[])
     pagination.total = data.total || 0
   } catch {
-    ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
@@ -82,12 +101,21 @@ async function fetchBills() {
 function handleCreate() {
   dialogTitle.value = t('bill.create')
   editingId.value = null
-  form.value = { name: '', amount: '0', account_id: 0, category_id: null, repeat_rule: RepeatRule.Monthly, next_due_date: '', description: '' }
+  form.value = {
+    name: '',
+    amount: '0',
+    repeat_rule: RepeatRule.Monthly,
+    next_due: '',
+    source_id: null,
+    category_id: null,
+    notes: '',
+  }
   dialogVisible.value = true
 }
 
 /**
  * 打开编辑账单对话框
+ * 将后端返回的 Bill 数据映射到表单字段
  * @param bill 要编辑的账单数据
  */
 function handleEdit(bill: Bill) {
@@ -96,11 +124,11 @@ function handleEdit(bill: Bill) {
   form.value = {
     name: bill.name,
     amount: bill.amount,
-    account_id: bill.account_id,
-    category_id: bill.category_id,
     repeat_rule: bill.repeat_rule,
-    next_due_date: bill.next_due_date,
-    description: bill.description,
+    next_due: bill.next_due ? dayjs(bill.next_due).format('YYYY-MM-DD') : '',
+    source_id: bill.source_id ?? null,
+    category_id: bill.category_id ?? null,
+    notes: bill.notes || '',
   }
   dialogVisible.value = true
 }
@@ -116,13 +144,14 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchBills()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
 /**
  * 提交表单
  * 根据editingId判断是创建还是编辑操作
+ * 提交前将 source_id 为 0 或 null 的字段设为 null（后端 *uint64 期望 null 表示未选择）
  */
 async function handleSubmit() {
   if (!form.value.name) {
@@ -130,10 +159,21 @@ async function handleSubmit() {
     return
   }
   try {
+    // 构建请求数据，确保 source_id 和 category_id 的 null 值正确传递
+    const payload: CreateBillReq | UpdateBillReq = {
+      name: form.value.name,
+      amount: form.value.amount,
+      repeat_rule: form.value.repeat_rule,
+      next_due: form.value.next_due,
+      source_id: form.value.source_id || null,
+      category_id: form.value.category_id || null,
+      notes: form.value.notes,
+    }
+
     if (editingId.value) {
-      await update(editingId.value, form.value)
+      await update(editingId.value, payload as UpdateBillReq)
     } else {
-      await create(form.value)
+      await create(payload as CreateBillReq)
     }
     ElMessage.success(t('common.success'))
     dialogVisible.value = false
@@ -179,12 +219,14 @@ onMounted(async () => {
           {{ repeatRuleOptions.find(r => r.value === row.repeat_rule)?.label || row.repeat_rule }}
         </template>
       </el-table-column>
-      <el-table-column prop="next_due_date" :label="t('bill.nextDueDate')" width="150">
-        <template #default="{ row }">{{ formatDate(row.next_due_date) }}</template>
+      <!-- next_due 字段名与后端 BillResp JSON tag 对应 -->
+      <el-table-column prop="next_due" :label="t('bill.nextDueDate')" width="150">
+        <template #default="{ row }">{{ formatDate(row.next_due) }}</template>
       </el-table-column>
+      <!-- 逾期状态由前端根据 next_due 与当前日期比较计算 -->
       <el-table-column :label="t('bill.overdue')" width="100">
         <template #default="{ row }">
-          <el-tag v-if="row.is_overdue" type="danger" size="small">{{ t('bill.overdue') }}</el-tag>
+          <el-tag v-if="isOverdue(row)" type="danger" size="small">{{ t('bill.overdue') }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column :label="t('common.edit')" width="160" fixed="right">
@@ -212,27 +254,28 @@ onMounted(async () => {
           <el-input v-model="form.amount" />
         </el-form-item>
         <el-form-item :label="t('bill.repeatRule')">
-          <el-select v-model="form.repeat_rule">
+          <el-select v-model="form.repeat_rule" style="width: 100%">
             <el-option v-for="opt in repeatRuleOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
+        <!-- next_due 字段名与后端 CreateBillReq JSON tag 对应 -->
         <el-form-item :label="t('bill.nextDueDate')">
-          <el-date-picker v-model="form.next_due_date" type="date" value-format="YYYY-MM-DD" />
+          <el-date-picker v-model="form.next_due" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
         </el-form-item>
-        <!-- 账户选择下拉框 - 选择账单关联的扣款账户 -->
+        <!-- source_id 字段名与后端 CreateBillReq JSON tag 对应（非 account_id） -->
         <el-form-item :label="t('transaction.sourceAccount')">
-          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+          <el-select v-model="form.source_id" :placeholder="t('common.selectPlaceholder')" filterable clearable style="width: 100%">
             <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
-        <!-- 分类选择下拉框 - 选择账单所属的分类 -->
         <el-form-item :label="t('transaction.category')">
-          <el-select v-model="form.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
+          <el-select v-model="form.category_id" :placeholder="t('common.selectPlaceholder')" filterable clearable style="width: 100%">
             <el-option v-for="cat in categoryStore.categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
         </el-form-item>
-        <el-form-item :label="t('transaction.description')">
-          <el-input v-model="form.description" type="textarea" />
+        <!-- notes 字段名与后端 CreateBillReq JSON tag 对应（非 description） -->
+        <el-form-item :label="t('bill.notes')">
+          <el-input v-model="form.notes" type="textarea" />
         </el-form-item>
       </el-form>
       <template #footer>
