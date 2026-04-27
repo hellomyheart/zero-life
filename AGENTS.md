@@ -198,13 +198,13 @@ docker compose up -d --build  # 代码更新后重新构建
 
 **MFA**：基于 TOTP（`pquerna/otp`），兼容 Google Authenticator
 - Setup → 生成 20 字节随机密钥 → Base32 编码 → 写入 `user.mfa_secret`（未启用） → 返回 `otpauth://totp` URL
-- Enable → 验证 TOTP 6 位码 → `mfa_enabled=true`
-- Disable → 验证码 → `mfa_enabled=false` + 清除 `mfa_secret`
+- Enable → 验证 TOTP 6 位码 → `mfa_enabled=true` → 生成 10 个备用码（bcrypt 哈希存储，明文仅此一次返回前端）
+- Disable → 验证码 → `mfa_enabled=false` + 清除 `mfa_secret` + 清除备用码
+- 备用码格式：`XXXX-XXXX`（8位大写字母数字），登录 MFA 验证时 TOTP 失败会自动尝试备用码
+- 重新生成备用码：`POST /mfa/backup-codes`，旧码全部失效
 
 ### 已知问题
 
-1. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
+1. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
 
-2. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
-
-3. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
+2. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。

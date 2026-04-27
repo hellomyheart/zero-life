@@ -12,6 +12,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/dto/response"
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
@@ -92,37 +93,33 @@ func (s *MFAService) Setup(userID uint64) (*response.MFASetupResp, error) {
 }
 
 // Enable 启用MFA
-// 业务流程：
-// 1. 获取用户信息
-// 2. 检查是否已启用（防止重复启用）
-// 3. 检查是否有MFA密钥（必须先调用Setup）
-// 4. 验证用户提供的TOTP代码是否正确
-// 5. 验证通过后，将mfa_enabled设为true
+// 验证TOTP码后启用MFA，并生成10个备用码
 // 参数：
 //   - userID: 用户ID
 //   - code: TOTP验证码（6位数字）
 // 返回：
-//   - error: 错误信息（如已启用、密钥不存在、验证码错误）
-func (s *MFAService) Enable(userID uint64, code string) error {
+//   - *response.BackupCodesResp: 备用码列表（明文，仅此一次展示）
+//   - error: 错误信息
+func (s *MFAService) Enable(userID uint64, code string) (*response.BackupCodesResp, error) {
 	// 获取用户信息
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
-		return errcode.ErrInternal
+		return nil, errcode.ErrInternal
 	}
 
 	// 检查是否已启用
 	if user.MFAEnabled {
-		return errcode.ErrMFAAlreadyEnabled
+		return nil, errcode.ErrMFAAlreadyEnabled
 	}
 
 	// 检查是否有密钥
 	if user.MFASecret == "" {
-		return errcode.ErrMFASetupNotFound
+		return nil, errcode.ErrMFASetupNotFound
 	}
 
 	// 验证MFA代码
 	if !totp.Validate(code, user.MFASecret) {
-		return errcode.ErrMFAInvalidCode
+		return nil, errcode.ErrMFAInvalidCode
 	}
 
 	// 启用MFA
@@ -133,10 +130,16 @@ func (s *MFAService) Enable(userID uint64, code string) error {
 			"mfa_enabled": true,
 			"updated_at":  now,
 		}).Error; err != nil {
-		return errcode.ErrInternal
+		return nil, errcode.ErrInternal
 	}
 
-	return nil
+	// 生成备用码
+	plainCodes, err := s.generateBackupCodes(userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return &response.BackupCodesResp{Codes: plainCodes}, nil
 }
 
 // Disable 禁用MFA
@@ -229,6 +232,102 @@ func (s *MFAService) Status(userID uint64) (*response.MFAStatusResp, error) {
 	return &response.MFAStatusResp{
 		Enabled: user.MFAEnabled,
 	}, nil
+}
+
+// RegenerateBackupCodes 重新生成备用码
+// 先删除用户所有旧的备用码，再生成新的
+// 参数：
+//   - userID: 用户ID
+// 返回：
+//   - *response.BackupCodesResp: 新的备用码列表（明文，仅此一次展示）
+//   - error: 错误信息
+func (s *MFAService) RegenerateBackupCodes(userID uint64) (*response.BackupCodesResp, error) {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	if !user.MFAEnabled {
+		return nil, errcode.ErrMFANotEnabled
+	}
+
+	codes, err := s.generateBackupCodes(userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	return &response.BackupCodesResp{Codes: codes}, nil
+}
+
+// VerifyBackupCode 验证备用码
+// 遍历用户所有未使用的备用码，逐个bcrypt比对
+// 验证通过后标记为已使用
+// 参数：
+//   - userID: 用户ID
+//   - code: 用户输入的备用码
+// 返回：
+//   - bool: 是否验证成功
+func (s *MFAService) VerifyBackupCode(userID uint64, code string) bool {
+	var codes []model.BackupCode
+	if err := s.db.Where("user_id = ? AND used_at IS NULL", userID).Find(&codes).Error; err != nil {
+		return false
+	}
+
+	for _, c := range codes {
+		if hash.CheckPassword(code, c.Code) {
+			now := time.Now()
+			s.db.Model(&model.BackupCode{}).Where("id = ?", c.ID).Update("used_at", now)
+			return true
+		}
+	}
+	return false
+}
+
+// generateBackupCodes 为用户生成10个备用码
+// 先删除旧码，再批量插入bcrypt哈希后的新码
+// 返回明文备用码列表（仅此一次展示给用户）
+func (s *MFAService) generateBackupCodes(userID uint64) ([]string, error) {
+	s.db.Where("user_id = ?", userID).Delete(&model.BackupCode{})
+
+	var plainCodes []string
+	var records []model.BackupCode
+	now := time.Now()
+
+	for i := 0; i < 10; i++ {
+		plain, hashed, err := generateOneBackupCode()
+		if err != nil {
+			return nil, err
+		}
+		plainCodes = append(plainCodes, plain)
+		records = append(records, model.BackupCode{
+			UserID:    userID,
+			Code:      hashed,
+			CreatedAt: now,
+		})
+	}
+
+	if err := s.db.Create(&records).Error; err != nil {
+		return nil, err
+	}
+
+	return plainCodes, nil
+}
+
+// generateOneBackupCode 生成单个备用码
+// 格式：XXXX-XXXX（8位大写字母数字，中间带分隔符）
+// 返回明文码、bcrypt哈希、错误
+func generateOneBackupCode() (string, string, error) {
+	bytes := make([]byte, 5)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", "", err
+	}
+	encoded := base32.StdEncoding.EncodeToString(bytes)
+	encoded = strings.TrimRight(encoded, "=")
+	code := encoded[:4] + "-" + encoded[4:8]
+
+	hashed, err := hash.HashPassword(code)
+	if err != nil {
+		return "", "", err
+	}
+	return code, hashed, nil
 }
 
 // generateMFASecret 生成MFA密钥

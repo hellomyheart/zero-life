@@ -501,7 +501,11 @@
     "verifyCode": "Verification Code",
     "disableConfirm": "Are you sure you want to disable 2FA? This will reduce your account security.",
     "loginHint": "Please enter the 6-digit code from your authenticator app",
-    "loginVerify": "Verify"
+    "loginVerify": "Verify",
+    "loginBackupCodeHint": "If you can't use your authenticator app, enter a backup code instead",
+    "backupCodes": "Backup Codes",
+    "backupCodesWarning": "Save these backup codes securely! You won't be able to see them again. Each code can only be used once.",
+    "regenerateCodes": "Regenerate Backup Codes"
   },
   "user": {
     "title": "User Management",

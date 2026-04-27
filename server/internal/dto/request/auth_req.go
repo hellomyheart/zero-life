@@ -55,5 +55,5 @@ type ChangePasswordReq struct {
 // 用户启用MFA后，登录时需提交此请求完成二次验证
 type MFALoginVerifyReq struct {
 	MFAToken string `json:"mfa_token" binding:"required"` // 登录时返回的临时MFA验证令牌
-	Code     string `json:"code" binding:"required,len=6"` // TOTP 6位验证码
+	Code     string `json:"code" binding:"required"`      // TOTP 6位验证码或备用码
 }

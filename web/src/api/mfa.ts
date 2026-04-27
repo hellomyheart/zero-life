@@ -4,7 +4,7 @@
  * 启用MFA后，用户登录时除了密码还需要输入验证器App生成的动态验证码，提高账户安全性
  */
 import { get, post } from '@/utils/request'
-import type { MFAStatus, MFASetupResp, MFAVerifyReq } from '@/types/mfa'
+import type { MFAStatus, MFASetupResp, MFAVerifyReq, BackupCodesResp } from '@/types/mfa'
 
 /**
  * 获取当前用户的MFA状态
@@ -27,7 +27,7 @@ export function setup() { return post<MFASetupResp>('/mfa/setup') }
  * @param data - 验证请求参数（验证器App生成的动态验证码）
  * @endpoint POST /mfa/enable
  */
-export function enable(data: MFAVerifyReq) { return post<void>('/mfa/enable', data) }
+export function enable(data: MFAVerifyReq) { return post<BackupCodesResp>('/mfa/enable', data) }
 
 /**
  * 禁用MFA
@@ -44,3 +44,11 @@ export function disable(data: MFAVerifyReq) { return post<void>('/mfa/disable', 
  * @endpoint POST /mfa/verify
  */
 export function verify(data: MFAVerifyReq) { return post<void>('/mfa/verify', data) }
+
+/**
+ * 重新生成备用码
+ * 旧的备用码将全部失效，返回新的备用码列表（仅此一次展示）
+ * @returns 备用码列表
+ * @endpoint POST /mfa/backup-codes
+ */
+export function regenerateBackupCodes() { return post<BackupCodesResp>('/mfa/backup-codes') }

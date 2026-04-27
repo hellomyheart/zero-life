@@ -416,6 +416,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 			mfa.POST("/disable", r.mfaCtrl.Disable)
 			mfa.POST("/verify", r.mfaCtrl.Verify)
 			mfa.GET("/status", r.mfaCtrl.Status)
+			mfa.POST("/backup-codes", r.mfaCtrl.BackupCodes)
 		}
 
 		// User management routes - 用户管理API（管理员）

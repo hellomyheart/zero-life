@@ -36,21 +36,18 @@ const (
 // AuthService 认证服务
 // 处理用户注册、登录、密码重置等认证相关业务逻辑
 type AuthService struct {
-	authRepo   *repository.AuthRepository // 用户仓储
-	jwtService *jwt.Service               // JWT服务
-	kvRepo     *repository.KVRepository   // 键值存储（用于登录限制和令牌管理，替代 Redis）
+	authRepo   *repository.AuthRepository
+	jwtService *jwt.Service
+	kvRepo     *repository.KVRepository
+	mfaService *MFAService
 }
 
-// NewAuthService 创建认证服务实例
-// 参数：
-//   authRepo: 用户仓储
-//   jwtService: JWT服务
-//   kvRepo: 键值存储仓库（替代 Redis）
-func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service, kvRepo *repository.KVRepository) *AuthService {
+func NewAuthService(authRepo *repository.AuthRepository, jwtService *jwt.Service, kvRepo *repository.KVRepository, mfaService *MFAService) *AuthService {
 	return &AuthService{
 		authRepo:   authRepo,
 		jwtService: jwtService,
 		kvRepo:     kvRepo,
+		mfaService: mfaService,
 	}
 }
 
@@ -438,7 +435,10 @@ func (s *AuthService) MFALoginVerify(req *request.MFALoginVerifyReq) (*response.
 	}
 
 	if !totp.Validate(req.Code, user.MFASecret) {
-		return nil, errcode.ErrMFAInvalidCode
+		// TOTP验证失败，尝试备用码
+		if !s.mfaService.VerifyBackupCode(userID, req.Code) {
+			return nil, errcode.ErrMFAInvalidCode
+		}
 	}
 
 	s.kvRepo.Del(mfaKey)

@@ -33,3 +33,7 @@ export interface MFAVerifyResp {
   verified: boolean
   message: string
 }
+
+export interface BackupCodesResp {
+  codes: string[]
+}

@@ -47,47 +47,11 @@ import "time"
 //   备用码 2: B8L0-N3Q6-R9S4 (已使用，UsedAt=2026-04-20)
 //   备用码 3: C9M1-P4R7-S0T5 (未使用)
 type BackupCode struct {
-	// ID 备用码唯一标识，主键自增
-	// gorm:"primaryKey" 表示这是主键
-	// gorm:"autoIncrement" 表示主键自动递增
-	ID uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
-	
-	// UserID 所属用户 ID，关联 users 表
-	// 每个用户可以有多个备用码
-	// gorm:"not null" 表示数据库字段不允许为空
-	// gorm:"index" 为此字段创建索引，加速按用户查询备用码
-	UserID uint64 `gorm:"not null;index" json:"user_id"`
-	
-	// Code 备用码字符串
-	// 通常是随机生成的 8-10 位字母数字组合
-	// 格式示例：A7K9-M2P5-Q8R3（带分隔符便于阅读）
-	// gorm:"size:20" 限制数据库字段最大长度为 20 个字符
-	// gorm:"index" 为此字段创建索引，登录验证时快速查找备用码
-	// 
-	// 存储方式：
-	// - 方案 1：明文存储（不推荐，安全性低）
-	// - 方案 2：bcrypt 哈希（推荐，与密码处理相同）
-	// - 方案 3：SHA256 哈希（推荐，计算速度快）
-	Code string `gorm:"not null;size:20;index" json:"code"`
-	
-	// UsedAt 备用码使用时间，指针类型表示可为 nil（未使用）
-	// nil: 备用码尚未使用，可以使用
-	// 非 nil: 备用码已使用，值为使用时间
-	// 
-	// 验证逻辑：
-	//   if UsedAt == nil {
-	//     // 备用码可用，允许登录
-	//     UsedAt = time.Now() // 标记为已使用
-	//   } else {
-	//     // 备用码已使用，拒绝登录
-	//     return error
-	//   }
-	UsedAt *time.Time `gorm:"index" json:"used_at"`
-	
-	// CreatedAt 备用码创建时间
-	// 即生成备用码的时间
-	// 可用于判断备用码是否过期（如超过 90 天）
-	CreatedAt time.Time `gorm:"not null" json:"created_at"`
+	ID        uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uint64     `gorm:"not null;index" json:"user_id"`
+	Code      string     `gorm:"not null;size:255;index" json:"-"` // bcrypt哈希，不返回前端
+	UsedAt    *time.Time `gorm:"index" json:"used_at"`
+	CreatedAt time.Time  `gorm:"not null" json:"created_at"`
 }
 
 // TableName 指定 BackupCode 模型对应的数据库表名为 backup_codes

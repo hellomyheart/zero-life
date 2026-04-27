@@ -54,7 +54,7 @@ async function handleLogin() {
 }
 
 async function handleMFAVerify() {
-  if (!mfaCode.value || mfaCode.value.length !== 6) {
+  if (!mfaCode.value) {
     ElMessage.warning(t('mfa.enterCode'))
     return
   }
@@ -83,9 +83,10 @@ async function handleMFAVerify() {
       <!-- MFA二次验证 -->
       <div v-if="authStore.mfaRequired">
         <p class="mfa-hint">{{ t('mfa.loginHint') }}</p>
+        <p class="mfa-hint-secondary">{{ t('mfa.loginBackupCodeHint') }}</p>
         <el-form label-position="top" @submit.prevent="handleMFAVerify">
           <el-form-item :label="t('mfa.verifyCode')">
-            <el-input v-model="mfaCode" maxlength="6" :placeholder="t('mfa.enterCode')" />
+            <el-input v-model="mfaCode" :placeholder="t('mfa.enterCode')" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :loading="mfaLoading" style="width: 100%" native-type="submit">

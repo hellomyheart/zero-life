@@ -71,12 +71,37 @@ func (c *MFAController) Enable(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.mfaService.Enable(userID, req.Code); err != nil {
+	result, err := c.mfaService.Enable(userID, req.Code)
+	if err != nil {
 		handleError(ctx, err)
 		return
 	}
 
-	Success(ctx, nil)
+	Success(ctx, result)
+}
+
+// BackupCodes 重新生成备用码
+// POST /api/v1/mfa/backup-codes
+// @Summary      Regenerate backup codes
+// @Description  Regenerate MFA backup codes
+// @Tags         mfa
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/mfa/backup-codes [post]
+// @Security     BearerAuth
+func (c *MFAController) BackupCodes(ctx *gin.Context) {
+	userID := ctx.GetUint64("user_id")
+
+	result, err := c.mfaService.RegenerateBackupCodes(userID)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	Success(ctx, result)
 }
 
 // Disable 禁用MFA

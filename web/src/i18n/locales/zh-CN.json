@@ -501,7 +501,11 @@
     "verifyCode": "验证码",
     "disableConfirm": "确定要禁用两步验证吗？禁用后账户安全性将降低。",
     "loginHint": "请输入验证器App上的6位验证码",
-    "loginVerify": "验证"
+    "loginVerify": "验证",
+    "loginBackupCodeHint": "如果无法使用验证器App，可输入备用码",
+    "backupCodes": "备用码",
+    "backupCodesWarning": "请妥善保存这些备用码！关闭后无法再次查看。每个备用码只能使用一次。",
+    "regenerateCodes": "重新生成备用码"
   },
   "user": {
     "title": "用户管理",

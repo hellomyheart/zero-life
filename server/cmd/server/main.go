@@ -163,9 +163,11 @@ func main() {
 	ogRepo := repository.NewObjectGroupRepository(db)
 	configRepo := repository.NewConfigurationRepository(db)
 
+	// 新增MFA服务（需在authService之前初始化，因为authService依赖mfaService）
+	mfaService := service.NewMFAService(userRepo, db)
 	// 初始化业务逻辑层（Service），Service组合Repository实现业务逻辑
 	// 依赖注入：Service通过构造函数接收所需的Repository和其他Service
-	authService := service.NewAuthService(authRepo, jwtService, kvRepo)
+	authService := service.NewAuthService(authRepo, jwtService, kvRepo, mfaService)
 	accountService := service.NewAccountService(accountRepo)
 	ruleService := service.NewRuleService(ruleRepo, txnRepo, categoryRepo, budgetRepo, tagRepo)
 	webhookService := service.NewWebhookService(webhookRepo)
@@ -194,8 +196,6 @@ func main() {
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	insightService := service.NewInsightService(txnRepo, accountRepo, categoryRepo)
-	// 新增MFA服务
-	mfaService := service.NewMFAService(userRepo, db)
 	// 新增用户管理服务
 	userService := service.NewUserService(userRepo, db)
 
