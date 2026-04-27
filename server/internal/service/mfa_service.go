@@ -165,12 +165,14 @@ func (s *MFAService) Disable(userID uint64, code string) error {
 		return errcode.ErrMFANotEnabled
 	}
 
-	// 验证MFA代码
+	// 验证MFA代码：先尝试TOTP，失败后尝试备用码
 	if !totp.Validate(code, user.MFASecret) {
-		return errcode.ErrMFAInvalidCode
+		if !s.VerifyBackupCode(userID, code) {
+			return errcode.ErrMFAInvalidCode
+		}
 	}
 
-	// 禁用MFA并清除密钥
+	// 禁用MFA并清除密钥和备用码
 	now := time.Now()
 	if err := s.db.Model(&model.User{}).
 		Where("id = ?", userID).
@@ -181,6 +183,8 @@ func (s *MFAService) Disable(userID uint64, code string) error {
 		}).Error; err != nil {
 		return errcode.ErrInternal
 	}
+
+	s.db.Where("user_id = ?", userID).Delete(&model.BackupCode{})
 
 	return nil
 }
