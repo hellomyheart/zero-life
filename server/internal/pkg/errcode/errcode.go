@@ -66,7 +66,7 @@ var (
 
 	// 分类错误 4xxxx
 	ErrCategoryNameExists = &Error{Code: 40001, Message: "category name already exists"}
-	ErrCategoryTooDeep   = &Error{Code: 40002, Message: "category hierarchy exceeds 2 levels"}
+	ErrCategoryTooDeep   = &Error{Code: 40002, Message: "category hierarchy exceeds 5 levels"}
 
 	// 标签错误 5xxxx
 	ErrTagNameExists   = &Error{Code: 50001, Message: "tag name already exists"}

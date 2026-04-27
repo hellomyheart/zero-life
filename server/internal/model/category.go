@@ -11,18 +11,19 @@ import (
 // Category 分类模型，对应 categories 表
 //
 // 功能说明：
-// - 支持两级分类结构（父分类 + 子分类），用于对交易进行分类管理
+// - 支持最多5级分类结构，用于对交易进行分类管理
 // - 每笔交易只能属于一个分类（与标签的多对多不同）
 // - 分类用于预算控制和报表统计
 //
-// 两级分类结构：
-// - 一级分类（父分类）：ParentID 为 nil
-//   如："餐饮"、"交通"、"居住"
-// - 二级分类（子分类）：ParentID 指向父分类
-//   如："餐饮"下的"外卖"、"堂食"、"咖啡"
+// 多级分类结构（最多5级）：
+// - 一级分类：ParentID 为 nil，如："日常开销"
+// - 二级分类：ParentID 指向一级分类，如："餐饮"
+// - 三级分类：ParentID 指向二级分类，如："外卖"
+// - 四级分类：ParentID 指向三级分类
+// - 五级分类：ParentID 指向四级分类（最深层级）
 //
 // 与标签的区别：
-// - 分类是树形结构（两级），标签是扁平结构
+// - 分类是树形结构（最多5级），标签是扁平结构
 // - 一个交易只能有一个分类，但可以有多个标签
 // - 分类用于预算控制，标签用于灵活标记
 //
@@ -32,13 +33,13 @@ import (
 // - Bill: 一对多关系，账单可关联分类
 //
 // 示例：
-//   一级分类：餐饮 (ParentID=nil)
-//     二级分类：外卖 (ParentID=1)
-//     二级分类：堂食 (ParentID=1)
-//     二级分类：咖啡 (ParentID=1)
-//   一级分类：交通 (ParentID=nil)
-//     二级分类：公交 (ParentID=4)
-//     二级分类：打车 (ParentID=4)
+//   一级分类：日常开销 (ParentID=nil)
+//     二级分类：餐饮 (ParentID=1)
+//       三级分类：外卖 (ParentID=2)
+//       三级分类：堂食 (ParentID=2)
+//     二级分类：交通 (ParentID=1)
+//       三级分类：公交 (ParentID=4)
+//       三级分类：打车 (ParentID=4)
 type Category struct {
 	// ID 分类唯一标识，主键自增
 	ID uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -55,7 +56,8 @@ type Category struct {
 
 	// ParentID 父分类 ID
 	// nil: 表示这是一级分类（顶级分类）
-	// 非 nil: 表示这是二级分类，ParentID 指向其父分类
+	// 非 nil: 表示这是子分类，ParentID 指向其父分类
+	// 最多5级深度，服务层校验
 	// gorm:"index" 创建索引，加速按父分类查询子分类
 	ParentID *uint64 `gorm:"index" json:"parent_id"`
 
@@ -89,7 +91,6 @@ type Category struct {
 
 	// Children 子分类列表
 	// 通过 ParentID 外键关联，获取当前分类下的所有子分类
-	// 仅一级分类会有子分类，二级分类的 Children 为空
 	// json:"children,omitempty" 当字段为零值时 JSON 序列化时忽略
 	Children []Category `gorm:"foreignKey:ParentID" json:"children,omitempty"`
 }

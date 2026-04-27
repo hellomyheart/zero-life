@@ -12,13 +12,16 @@ import (
 )
 
 // CategoryService 分类服务
-// 负责处理分类的增删改查，支持两级树形结构
-// 业务规则：分类名称唯一；最多两级（父分类下不能再有子分类的子分类）
+// 负责处理分类的增删改查，支持最多5级树形结构
+// 业务规则：分类名称唯一；最多5级深度
 // 依赖categoryRepo进行分类数据访问，依赖db执行删除事务
 type CategoryService struct {
 	categoryRepo *repository.CategoryRepository // 分类数据访问对象
 	db           *gorm.DB                       // 数据库连接，用于删除分类时的事务操作
 }
+
+// maxCategoryDepth 分类最大层级深度
+const maxCategoryDepth = 5
 
 // NewCategoryService 创建分类服务实例
 func NewCategoryService(categoryRepo *repository.CategoryRepository, db *gorm.DB) *CategoryService {
@@ -29,7 +32,7 @@ func NewCategoryService(categoryRepo *repository.CategoryRepository, db *gorm.DB
 }
 
 // Create 创建分类
-// 检查名称唯一性和两级深度限制
+// 检查名称唯一性和最大5级深度限制
 // 参数：
 //   - userID: 用户ID
 //   - req: 创建请求参数（名称、父分类ID、图标、备注）
@@ -48,13 +51,26 @@ func (s *CategoryService) Create(userID uint64, req *request.CreateCategoryReq) 
 		}
 	}
 
-	// Check two-level limit
+	// Check max depth limit: 沿 parent 链向上计算深度，深度 = 层级数
 	if req.ParentID != nil {
-		parent, err := s.categoryRepo.GetByID(*req.ParentID, userID)
-		if err != nil {
-			return nil, errcode.ErrNotFound
+		depth := 1
+		parentID := *req.ParentID
+		for {
+			parent, err := s.categoryRepo.GetByID(parentID, userID)
+			if err != nil {
+				return nil, errcode.ErrNotFound
+			}
+			if parent.ParentID == nil {
+				break
+			}
+			depth++
+			if depth >= maxCategoryDepth {
+				return nil, errcode.ErrCategoryTooDeep
+			}
+			parentID = *parent.ParentID
 		}
-		if parent.ParentID != nil {
+		// depth 是父分类的层级数（根=1），子分类层级 = depth+1
+		if depth+1 > maxCategoryDepth {
 			return nil, errcode.ErrCategoryTooDeep
 		}
 	}
@@ -75,7 +91,7 @@ func (s *CategoryService) Create(userID uint64, req *request.CreateCategoryReq) 
 }
 
 // List 获取分类树形列表
-// 返回两级树形结构的分类数据
+// 返回最多5级树形结构的分类数据
 // 参数：
 //   - userID: 用户ID
 // 返回：
@@ -160,10 +176,10 @@ func (s *CategoryService) Update(userID, id uint64, req *request.UpdateCategoryR
 
 // Delete 删除分类
 // 在数据库事务中执行以下操作，确保数据一致性：
-// 1. 删除所有子分类
-// 2. 置空父分类及所有子分类关联交易的 category_id
+// 1. 使用 GetDescendantIDs 收集所有后代分类ID（含自身）
+// 2. 置空所有被删分类关联交易的 category_id
 // 3. 清理 budget_categories 关联表中引用被删分类的记录
-// 4. 删除分类本身
+// 4. 删除所有后代分类及自身
 // 参数：
 //   - userID: 用户ID
 //   - id: 分类ID
@@ -178,37 +194,26 @@ func (s *CategoryService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
-	// 收集所有需要删除的分类ID（父分类 + 子分类）
-	categoryIDs := []uint64{id}
-	subCategories, err := s.categoryRepo.GetSubCategories(id, userID)
+	// 使用 GetDescendantIDs 收集所有后代分类ID（含自身），支持任意深度
+	descendantIDs, err := s.categoryRepo.GetDescendantIDs([]uint64{id}, userID)
 	if err != nil {
 		return errcode.ErrInternal
-	}
-	for _, sub := range subCategories {
-		categoryIDs = append(categoryIDs, sub.ID)
 	}
 
 	// 在数据库事务中执行所有删除和清理操作
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		// 1. 删除所有子分类
-		for _, sub := range subCategories {
-			if err := tx.Where("id = ? AND user_id = ?", sub.ID, userID).Delete(&model.Category{}).Error; err != nil {
-				return err
-			}
-		}
-
-		// 2. 置空父分类及所有子分类关联交易的 category_id
-		if err := tx.Model(&model.Transaction{}).Where("category_id IN ?", categoryIDs).Update("category_id", nil).Error; err != nil {
+		// 1. 置空所有被删分类关联交易的 category_id
+		if err := tx.Model(&model.Transaction{}).Where("category_id IN ?", descendantIDs).Update("category_id", nil).Error; err != nil {
 			return err
 		}
 
-		// 3. 清理 budget_categories 关联表中引用被删分类的记录
-		if err := tx.Where("category_id IN ?", categoryIDs).Delete(&model.BudgetCategory{}).Error; err != nil {
+		// 2. 清理 budget_categories 关联表中引用被删分类的记录
+		if err := tx.Where("category_id IN ?", descendantIDs).Delete(&model.BudgetCategory{}).Error; err != nil {
 			return err
 		}
 
-		// 4. 删除父分类本身
-		if err := tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Category{}).Error; err != nil {
+		// 3. 删除所有后代分类及自身
+		if err := tx.Where("id IN ? AND user_id = ?", descendantIDs, userID).Delete(&model.Category{}).Error; err != nil {
 			return err
 		}
 
