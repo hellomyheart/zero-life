@@ -99,25 +99,19 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 
 // Login 用户登录
 // 业务流程：
-// 1. 检查账户是否被锁定（kv_store 中存在锁定键则拒绝登录）
-// 2. 根据邮箱查找用户
-// 3. 验证密码是否正确
-// 4. 密码错误时：记录失败次数到 kv_store，连续失败5次则锁定账户30分钟
-// 5. 密码正确时：清除失败计数，生成JWT令牌对
+// 1. 根据邮箱查找用户
+// 2. 检查账户是否被管理员锁定（user.IsLocked）
+// 3. 检查账户是否被临时锁定（kv_store 中存在锁定键则拒绝登录）
+// 4. 验证密码是否正确
+// 5. 密码错误时：记录失败次数到 kv_store，连续失败5次则锁定账户30分钟
+// 6. 密码正确时：清除失败计数，生成JWT令牌对
 // 参数：
 //   - req: 登录请求（邮箱、密码）
 // 返回：
 //   - *response.LoginResp: 登录响应（包含访问令牌和刷新令牌）
 //   - error: 错误信息（如账户锁定、凭证错误）
 func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) {
-	// 步骤1：检查账户是否被锁定
-	lockKey := loginLockKeyPrefix + req.Email
-	locked, err := s.kvRepo.Exists(lockKey)
-	if err == nil && locked {
-		return nil, errcode.ErrAccountLocked
-	}
-
-	// 步骤2：根据邮箱查找用户
+	// 步骤1：根据邮箱查找用户
 	user, err := s.authRepo.FindByEmail(req.Email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -126,9 +120,21 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 		return nil, errcode.ErrInternal
 	}
 
-	// 步骤3：验证密码
+	// 步骤2：检查管理员手动锁定（持久锁定）
+	if user.IsLocked {
+		return nil, errcode.ErrAccountLocked
+	}
+
+	// 步骤3：检查临时锁定（kv_store 连续失败5次锁定）
+	lockKey := loginLockKeyPrefix + req.Email
+	locked, err := s.kvRepo.Exists(lockKey)
+	if err == nil && locked {
+		return nil, errcode.ErrAccountLocked
+	}
+
+	// 步骤4：验证密码
 	if !hash.CheckPassword(req.Password, user.Password) {
-		// 步骤3a：密码错误，记录失败次数
+	// 步骤4a：密码错误，记录失败次数
 		failKey := loginFailKeyPrefix + req.Email
 		count, _ := s.kvRepo.Incr(failKey)
 		if count == 1 {
@@ -144,11 +150,11 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 		return nil, errcode.ErrInvalidCredential
 	}
 
-	// 步骤4：密码正确，清除失败计数
+	// 步骤5：密码正确，清除失败计数
 	failKey := loginFailKeyPrefix + req.Email
 	s.kvRepo.Del(failKey)
 
-	// 步骤5：生成JWT令牌对
+	// 步骤6：生成JWT令牌对
 	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		return nil, errcode.ErrInternal

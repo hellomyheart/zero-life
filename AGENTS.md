@@ -173,10 +173,11 @@ docker compose up -d --build  # 代码更新后重新构建
 **注册**：检查邮箱唯一 → bcrypt 加密 → INSERT → 返回 TokenPair（注册即登录）
 
 **登录**（含暴力破解防护）：
-1. 检查 `login_lock:{email}` 是否存在（kv_store 临时锁定）→ 存在则拒绝
-2. 查找用户 → 不存在返回 `ErrInvalidCredential`（不暴露"用户不存在"）
-3. 密码错误 → `Incr(login_fail:{email})`，首次设 Expire 30min；失败 ≥ 5 次 → 写锁定标记 + 删除计数器
-4. 密码正确 → `Del(login_fail:{email})` → 生成 TokenPair
+1. 根据邮箱查找用户 → 不存在返回 `ErrInvalidCredential`（不暴露"用户不存在"）
+2. 检查 `user.IsLocked`（管理员手动锁定）→ 锁定则拒绝
+3. 检查 `login_lock:{email}` 是否存在（kv_store 临时锁定）→ 存在则拒绝
+4. 密码错误 → `Incr(login_fail:{email})`，首次设 Expire 30min；失败 ≥ 5 次 → 写锁定标记 + 删除计数器
+5. 密码正确 → `Del(login_fail:{email})` → 生成 TokenPair
 
 **Token 机制**：双 Token，结构相同（`Claims{UserID, Email}`），签名算法 HMAC-SHA256，密钥相同
 - AccessToken：TTL 15min，用于 API 认证
@@ -194,12 +195,10 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 已知问题
 
-1. **`IsLocked` 未在登录流程中检查**：管理员通过 `/users/:id/lock` 设置的 `is_locked=true` 不会阻止登录，只有 kv_store 的临时锁定（连续失败 5 次）才生效。两套锁定机制未打通。
+1. **MFA 未接入登录流程**：`Login` 方法没有检查 `user.MFAEnabled`，也没有要求二次验证。启用 MFA 的用户仍只需密码即可登录。
 
-2. **MFA 未接入登录流程**：`Login` 方法没有检查 `user.MFAEnabled`，也没有要求二次验证。启用 MFA 的用户仍只需密码即可登录。
+2. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
 
-3. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
+3. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
 
-4. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
-
-5. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
+4. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
