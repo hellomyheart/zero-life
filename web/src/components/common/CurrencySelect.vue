@@ -21,7 +21,7 @@ const emit = defineEmits<{
 }>()
 
 // 只显示已启用的货币
-const enabledCurrencies = computed(() => props.currencies.filter((c) => c.is_enabled))
+const enabledCurrencies = computed(() => (props.currencies ?? []).filter((c) => c.is_enabled))
 
 // 选择货币时触发更新，根据模式返回 ID 或代码
 function handleChange(val: string | number) {

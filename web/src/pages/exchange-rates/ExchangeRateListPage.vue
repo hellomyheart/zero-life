@@ -11,7 +11,7 @@ import type { Currency } from '@/types/currency'
 const { t } = useI18n()
 const currencyStore = useCurrencyStore()
 
-const enabledCurrencies = computed(() => currencyStore.currencies.filter((c: Currency) => c.is_enabled))
+const enabledCurrencies = computed(() => (currencyStore.currencies ?? []).filter((c: Currency) => c.is_enabled))
 
 const exchangeRates = ref<ExchangeRate[]>([])
 const loading = ref(false)

@@ -48,7 +48,7 @@ const categoryTreeData = computed(() => {
       return node
     })
   }
-  return transform(categoryStore.categories)
+  return transform(categoryStore.categories ?? [])
 })
 
 async function fetchBudgets() {

@@ -105,9 +105,9 @@ const transactionTypeOptions = [
 ]
 
 // 根据交易类型筛选账户选项
-const assetAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Asset))
-const expenseAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Expense))
-const revenueAccounts = computed(() => accountStore.accounts.filter((a: { type: string }) => a.type === AccountType.Revenue))
+const assetAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Asset))
+const expenseAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Expense))
+const revenueAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Revenue))
 
 // 取款：source=资产账户，destination=支出账户
 // 存款：source=收入账户，destination=资产账户
@@ -143,7 +143,7 @@ const categoryTreeData = computed(() => {
       return node
     })
   }
-  return transform(categoryStore.categories)
+  return transform(categoryStore.categories ?? [])
 })
 
 const tagTreeData = computed(() => {
@@ -159,7 +159,7 @@ const tagTreeData = computed(() => {
       return node
     })
   }
-  return transform(tagStore.tags)
+  return transform(tagStore.tags ?? [])
 })
 
 function handleTypeChange() {

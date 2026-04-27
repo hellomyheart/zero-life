@@ -42,7 +42,7 @@ const rules: FormRules = {
 }
 
 const selectedCurrencyCode = computed(() => {
-  const c = currencyStore.currencies.find((c: { id: number }) => c.id === form.currency_id)
+  const c = (currencyStore.currencies ?? []).find((c: { id: number }) => c.id === form.currency_id)
   return c?.code || 'CNY'
 })
 
