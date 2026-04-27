@@ -284,7 +284,7 @@ func main() {
 		recurrenceCtrl,
 		ruleGroupCtrl,
 	)
-	r.Setup(jwtService)
+	r.Setup(jwtService, db)
 
 	// 启动HTTP服务器，监听配置的端口
 	addr := ":" + config.C.App.Port

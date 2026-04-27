@@ -47,6 +47,7 @@ func Admin(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
+		c.Set("role", user.Role)
 		c.Next()
 	}
 }

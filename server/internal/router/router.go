@@ -8,6 +8,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/controller"
 	"github.com/hellomyheart/zero-life/server/internal/middleware"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
+	"gorm.io/gorm"
 
 	_ "github.com/hellomyheart/zero-life/server/docs"
 )
@@ -128,7 +129,7 @@ func NewRouter(
 
 // Setup 注册所有API路由，包括公开路由和需要认证的路由
 // 路由结构：/api/v1 下分为公开路由（如注册登录）和认证路由（需JWT验证）
-func (r *Router) Setup(jwtService *jwt.Service) {
+func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 	// 全局CORS中间件，允许跨域请求
 	r.engine.Use(middleware.CORS())
 
@@ -421,6 +422,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 
 		// User management routes - 用户管理API（管理员）
 		users := authenticated.Group("/users")
+		users.Use(middleware.Admin(db))
 		{
 			users.GET("", r.userCtrl.List)
 			users.GET("/:id", r.userCtrl.Get)

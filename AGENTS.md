@@ -34,7 +34,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 共享包在 `internal/pkg/`：`errcode`、`jwt`、`pagination`、`totp`、`validator`、`webhook`、`email`、`hash`
 - 配置：Viper 读取 `config.yaml`，支持环境变量覆盖（`viper.AutomaticEnv()`）
 - 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
-- 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 检查 `user.Role == "admin"`
+- 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 查数据库校验 `user.Role == "admin"` 并注入 `role` 到上下文，挂载在 `/users/*` 路由组
 - 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
 - 定时任务端点：`GET /api/v1/cron/:token` — 基于 token 验证，非 JWT
 
@@ -206,4 +206,4 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 已知问题
 
-1. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
+（暂无）

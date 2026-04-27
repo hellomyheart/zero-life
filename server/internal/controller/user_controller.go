@@ -41,13 +41,6 @@ func NewUserController(userService *service.UserService) *UserController {
 // @Router       /api/v1/users [get]
 // @Security     BearerAuth
 func (c *UserController) List(ctx *gin.Context) {
-	// 检查是否为管理员
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	var req request.UserListReq
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		Error(ctx, http.StatusBadRequest, errcode.ErrBadRequest)
@@ -80,12 +73,6 @@ func (c *UserController) List(ctx *gin.Context) {
 // @Router       /api/v1/users/{id} [get]
 // @Security     BearerAuth
 func (c *UserController) Get(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -120,12 +107,6 @@ func (c *UserController) Get(ctx *gin.Context) {
 // @Router       /api/v1/users/{id} [put]
 // @Security     BearerAuth
 func (c *UserController) Update(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -165,12 +146,6 @@ func (c *UserController) Update(ctx *gin.Context) {
 // @Router       /api/v1/users/{id} [delete]
 // @Security     BearerAuth
 func (c *UserController) Delete(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -204,12 +179,6 @@ func (c *UserController) Delete(ctx *gin.Context) {
 // @Router       /api/v1/users/{id}/role [put]
 // @Security     BearerAuth
 func (c *UserController) ChangeRole(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -248,12 +217,6 @@ func (c *UserController) ChangeRole(ctx *gin.Context) {
 // @Router       /api/v1/users/{id}/lock [post]
 // @Security     BearerAuth
 func (c *UserController) Lock(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -286,12 +249,6 @@ func (c *UserController) Lock(ctx *gin.Context) {
 // @Router       /api/v1/users/{id}/unlock [post]
 // @Security     BearerAuth
 func (c *UserController) Unlock(ctx *gin.Context) {
-	role := ctx.GetString("role")
-	if role != "admin" {
-		Error(ctx, http.StatusForbidden, errcode.ErrForbidden)
-		return
-	}
-
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
