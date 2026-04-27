@@ -288,10 +288,12 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 树构建算法 (`buildTree`)
 
-O(n) 两遍扫描：
+O(n) 两遍扫描，`Children` 使用 `[]*CategoryResp` 指针切片避免值副本导致深层子节点丢失：
 1. 遍历所有分类，创建 `map[uint64]*CategoryResp` 用于 O(1) 查找
-2. 遍历所有分类，将有 `parent_id` 的节点挂到父节点的 `Children` 上
+2. 遍历所有分类，将有 `parent_id` 的节点**指针**挂到父节点的 `Children` 上
 3. 收集 `parent_id == nil` 的根节点
+
+**值语义陷阱**：如果 `Children` 使用 `[]CategoryResp`（值切片），`append` 时子节点是值副本。当三级节点被挂到二级节点时，一级节点中已持有的二级节点副本的 `Children` 不会更新，导致三级及更深层节点丢失。改用 `[]*CategoryResp` 指针切片后，所有引用指向同一份数据，深层子节点正确显示。
 
 **孤儿节点处理**：如果 `parent_id` 指向不存在的分类（被删除或数据不一致），该节点既不会出现在根节点中，也不会作为子节点，会被静默丢弃。
 

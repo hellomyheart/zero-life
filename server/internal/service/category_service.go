@@ -97,7 +97,7 @@ func (s *CategoryService) Create(userID uint64, req *request.CreateCategoryReq) 
 // 返回：
 //   - []response.CategoryResp: 分类树形列表
 //   - error: 错误信息
-func (s *CategoryService) List(userID uint64) ([]response.CategoryResp, error) {
+func (s *CategoryService) List(userID uint64) ([]*response.CategoryResp, error) {
 	categories, err := s.categoryRepo.List(userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -237,24 +237,29 @@ func (s *CategoryService) toResp(c *model.Category) *response.CategoryResp {
 
 // buildTree 将扁平的分类列表构建为树形结构
 // 使用map快速查找，将子分类挂载到父分类的Children字段
-func (s *CategoryService) buildTree(categories []model.Category) []response.CategoryResp {
+// 关键：Children 使用指针切片 []*CategoryResp，避免值副本导致深层子节点丢失
+// 算法：两遍扫描 — 第一遍创建节点映射，第二遍挂载子节点到父节点
+func (s *CategoryService) buildTree(categories []model.Category) []*response.CategoryResp {
 	nodeMap := make(map[uint64]*response.CategoryResp)
 	for _, c := range categories {
 		nodeMap[c.ID] = s.toResp(&c)
 	}
 
+	// 将子节点指针挂载到父节点的 Children 上
+	// 由于使用指针，后续对 nodeMap 中节点的 Children 修改会同步反映
 	for _, c := range categories {
 		if c.ParentID != nil {
 			if parent, ok := nodeMap[*c.ParentID]; ok {
-				parent.Children = append(parent.Children, *nodeMap[c.ID])
+				parent.Children = append(parent.Children, nodeMap[c.ID])
 			}
 		}
 	}
 
-	var roots []response.CategoryResp
+	// 收集根节点
+	var roots []*response.CategoryResp
 	for _, c := range categories {
 		if c.ParentID == nil {
-			roots = append(roots, *nodeMap[c.ID])
+			roots = append(roots, nodeMap[c.ID])
 		}
 	}
 

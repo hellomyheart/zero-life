@@ -12,7 +12,7 @@ type CategoryResp struct {
 	Icon      string         `json:"icon"`                // 分类图标
 	Notes     string         `json:"notes"`               // 备注
 	SortOrder int            `json:"sort_order"`          // 排序序号
-	Children  []CategoryResp `json:"children,omitempty"`  // 子分类列表
+	Children  []*CategoryResp `json:"children,omitempty"`  // 子分类列表
 	CreatedAt time.Time      `json:"created_at"`          // 创建时间
 	UpdatedAt time.Time      `json:"updated_at"`          // 更新时间
 }
