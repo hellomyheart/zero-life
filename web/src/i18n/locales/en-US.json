@@ -499,7 +499,9 @@
     "enabled": "Enabled",
     "disabled": "Not Enabled",
     "verifyCode": "Verification Code",
-    "disableConfirm": "Are you sure you want to disable 2FA? This will reduce your account security."
+    "disableConfirm": "Are you sure you want to disable 2FA? This will reduce your account security.",
+    "loginHint": "Please enter the 6-digit code from your authenticator app",
+    "loginVerify": "Verify"
   },
   "user": {
     "title": "User Management",

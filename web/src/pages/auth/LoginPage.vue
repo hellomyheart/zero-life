@@ -55,7 +55,7 @@ async function handleLogin() {
 
 async function handleMFAVerify() {
   if (!mfaCode.value || mfaCode.value.length !== 6) {
-    ElMessage.warning('Please enter 6-digit code')
+    ElMessage.warning(t('mfa.enterCode'))
     return
   }
 
@@ -82,14 +82,14 @@ async function handleMFAVerify() {
 
       <!-- MFA二次验证 -->
       <div v-if="authStore.mfaRequired">
-        <p class="mfa-hint">Please enter the 6-digit code from your authenticator app</p>
+        <p class="mfa-hint">{{ t('mfa.loginHint') }}</p>
         <el-form label-position="top" @submit.prevent="handleMFAVerify">
-          <el-form-item label="MFA Code">
-            <el-input v-model="mfaCode" maxlength="6" placeholder="000000" />
+          <el-form-item :label="t('mfa.verifyCode')">
+            <el-input v-model="mfaCode" maxlength="6" :placeholder="t('mfa.enterCode')" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :loading="mfaLoading" style="width: 100%" native-type="submit">
-              Verify
+              {{ t('mfa.loginVerify') }}
             </el-button>
           </el-form-item>
         </el-form>

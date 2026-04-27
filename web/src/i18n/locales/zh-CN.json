@@ -499,7 +499,9 @@
     "enabled": "已启用",
     "disabled": "未启用",
     "verifyCode": "验证码",
-    "disableConfirm": "确定要禁用两步验证吗？禁用后账户安全性将降低。"
+    "disableConfirm": "确定要禁用两步验证吗？禁用后账户安全性将降低。",
+    "loginHint": "请输入验证器App上的6位验证码",
+    "loginVerify": "验证"
   },
   "user": {
     "title": "用户管理",
