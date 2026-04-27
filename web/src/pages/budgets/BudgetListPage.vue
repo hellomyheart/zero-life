@@ -171,7 +171,7 @@ onMounted(async () => {
       </el-table-column>
       <el-table-column :label="t('budget.period')" width="80">
         <template #default="{ row }">
-          {{ row.period === 'monthly' ? t('budget.monthly') : t('budget.yearly') }}
+          {{ t(`budget.${row.period}`) }}
         </template>
       </el-table-column>
       <el-table-column :label="t('budget.status')" width="90">
@@ -198,7 +198,10 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item :label="t('budget.period')">
           <el-select v-model="form.period" style="width: 100%">
+            <el-option :label="t('budget.daily')" :value="BudgetPeriod.Daily" />
+            <el-option :label="t('budget.weekly')" :value="BudgetPeriod.Weekly" />
             <el-option :label="t('budget.monthly')" :value="BudgetPeriod.Monthly" />
+            <el-option :label="t('budget.quarterly')" :value="BudgetPeriod.Quarterly" />
             <el-option :label="t('budget.yearly')" :value="BudgetPeriod.Yearly" />
           </el-select>
         </el-form-item>

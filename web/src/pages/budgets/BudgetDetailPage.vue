@@ -29,17 +29,30 @@ const txnPageSize = ref(20)
 const periodRange = computed(() => {
   if (!budget.value) return { start: '', end: '' }
   const now = new Date()
-  if (budget.value.period === 'monthly') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1)
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    return {
-      start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`,
-      end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`,
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  switch (budget.value.period) {
+    case 'daily':
+      return { start: fmt(now), end: fmt(now) }
+    case 'weekly': {
+      const day = now.getDay() || 7
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1)
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+      return { start: fmt(start), end: fmt(end) }
     }
-  }
-  return {
-    start: `${now.getFullYear()}-01-01`,
-    end: `${now.getFullYear()}-12-31`,
+    case 'monthly': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      return { start: fmt(start), end: fmt(end) }
+    }
+    case 'quarterly': {
+      const q = Math.floor(now.getMonth() / 3)
+      const startMonth = q * 3
+      const start = new Date(now.getFullYear(), startMonth, 1)
+      const end = new Date(now.getFullYear(), startMonth + 3, 0)
+      return { start: fmt(start), end: fmt(end) }
+    }
+    default:
+      return { start: `${now.getFullYear()}-01-01`, end: `${now.getFullYear()}-12-31` }
   }
 })
 

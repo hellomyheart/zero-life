@@ -10,7 +10,10 @@
  * - Yearly: 年度预算，每年重置
  */
 export enum BudgetPeriod {
+  Daily = 'daily',
+  Weekly = 'weekly',
   Monthly = 'monthly',
+  Quarterly = 'quarterly',
   Yearly = 'yearly',
 }
 

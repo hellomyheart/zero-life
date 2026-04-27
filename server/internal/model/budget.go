@@ -14,15 +14,11 @@ import (
 type BudgetPeriod string
 
 const (
-	// BudgetPeriodMonthly 月度预算
-	// 每月重置预算额度，适合日常支出管理
-	// 如：每月餐饮预算 3000 元
-	BudgetPeriodMonthly BudgetPeriod = "monthly"
-
-	// BudgetPeriodYearly 年度预算
-	// 每年重置预算额度，适合长期支出管理
-	// 如：年度旅游预算 20000 元
-	BudgetPeriodYearly BudgetPeriod = "yearly"
+	BudgetPeriodDaily     BudgetPeriod = "daily"
+	BudgetPeriodWeekly    BudgetPeriod = "weekly"
+	BudgetPeriodMonthly   BudgetPeriod = "monthly"
+	BudgetPeriodQuarterly BudgetPeriod = "quarterly"
+	BudgetPeriodYearly    BudgetPeriod = "yearly"
 )
 
 // Budget 预算模型，对应 budgets 表

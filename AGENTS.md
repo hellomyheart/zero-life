@@ -204,6 +204,19 @@ docker compose up -d --build  # 代码更新后重新构建
 - 备用码格式：`XXXX-XXXX`（8位大写字母数字），登录 MFA 验证时 TOTP 失败会自动尝试备用码
 - 重新生成备用码：`POST /mfa/backup-codes`，旧码全部失效
 
+### 预算管理
+
+**数据模型**：
+- `Budget`：`name`、`amount`（限额）、`period`（daily/weekly/monthly/quarterly/yearly）、`is_enabled`，与 Category 多对多
+- `BudgetCategory`：多对多关联表，复合主键 `(budget_id, category_id)`
+- `BudgetHistory`：历史快照，`period_start`/`period_end`、`amount`（限额）、`spent`（实际支出）
+
+**支出计算**：`calculateSpent` 根据当前周期范围查询关联分类（含后代展开）的 withdrawal 交易金额总和。`is_enabled=false` 的预算跳过计算，返回零值。
+
+**状态判定**：使用率 ≥100% → `overspent`，≥80% → `warning`，<80% → `normal`
+
+**历史快照**：`CronService` 每月1号9:00自动生成所有启用预算的上月快照，写入 `BudgetHistory`。前端 `BudgetDetailPage` 折线图展示历史趋势（X轴=`period_start`，Y轴=限额+支出双线）。
+
 ### 已知问题
 
 1. **分类可重复关联多个预算**：没有校验，可能导致报表重复计算

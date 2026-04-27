@@ -6,7 +6,7 @@ package request
 type CreateBudgetReq struct {
 	Name        string   `json:"name" binding:"required"`                                // 预算名称
 	Amount      string   `json:"amount" binding:"required"`                              // 预算金额，必须大于0
-	Period      string   `json:"period" binding:"required,oneof=monthly yearly"`          // 预算周期：monthly(月度)/yearly(年度)
+	Period      string   `json:"period" binding:"required,oneof=daily weekly monthly quarterly yearly"`          // 预算周期
 	CategoryIDs []uint64 `json:"category_ids" binding:"required,min=1"`                  // 关联分类ID列表，至少1个
 }
 
@@ -14,7 +14,7 @@ type CreateBudgetReq struct {
 type UpdateBudgetReq struct {
 	Name        string   `json:"name"`                                           // 预算名称
 	Amount      string   `json:"amount"`                                         // 预算金额
-	Period      string   `json:"period" binding:"omitempty,oneof=monthly yearly"` // 预算周期
+	Period      string   `json:"period" binding:"omitempty,oneof=daily weekly monthly quarterly yearly"` // 预算周期
 	CategoryIDs []uint64 `json:"category_ids"`                                   // 关联分类ID列表
 	IsEnabled   *bool    `json:"is_enabled"`                                     // 是否启用
 }

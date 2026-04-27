@@ -162,14 +162,7 @@ func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingD
 	var spent decimal.Decimal
 	if budget.IsEnabled {
 		now := time.Now()
-		var start, end time.Time
-		if budget.Period == model.BudgetPeriodMonthly {
-			start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			end = start.AddDate(0, 1, 0).Add(-time.Second)
-		} else {
-			start = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
-			end = start.AddDate(1, 0, 0).Add(-time.Second)
-		}
+		start, end := budgetPeriodRange(budget.Period, now)
 
 		var allCategoryIDs []uint64
 		for _, cat := range budget.Categories {

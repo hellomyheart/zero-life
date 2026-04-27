@@ -246,13 +246,7 @@ func (s *BudgetService) SnapshotCurrentPeriod() (int, []string) {
 		b := &budgets[i]
 
 		var periodStart, periodEnd time.Time
-		if b.Period == model.BudgetPeriodMonthly {
-			periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			periodEnd = periodStart.AddDate(0, 1, 0).Add(-time.Second)
-		} else {
-			periodStart = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
-			periodEnd = periodStart.AddDate(1, 0, 0).Add(-time.Second)
-		}
+		periodStart, periodEnd = budgetPeriodRange(b.Period, now)
 
 		exists, err := s.budgetRepo.HasHistory(b.ID, periodStart)
 		if err != nil {
@@ -284,6 +278,33 @@ func (s *BudgetService) SnapshotCurrentPeriod() (int, []string) {
 	return created, errs
 }
 
+func budgetPeriodRange(period model.BudgetPeriod, now time.Time) (time.Time, time.Time) {
+	loc := now.Location()
+	switch period {
+	case model.BudgetPeriodDaily:
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+		return start, start.AddDate(0, 0, 1).Add(-time.Second)
+	case model.BudgetPeriodWeekly:
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		start := time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, loc)
+		return start, start.AddDate(0, 0, 7).Add(-time.Second)
+	case model.BudgetPeriodMonthly:
+		start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
+		return start, start.AddDate(0, 1, 0).Add(-time.Second)
+	case model.BudgetPeriodQuarterly:
+		quarter := (int(now.Month())-1)/3 + 1
+		startMonth := time.Month((quarter-1)*3 + 1)
+		start := time.Date(now.Year(), startMonth, 1, 0, 0, 0, 0, loc)
+		return start, start.AddDate(0, 3, 0).Add(-time.Second)
+	default:
+		start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, loc)
+		return start, start.AddDate(1, 0, 0).Add(-time.Second)
+	}
+}
+
 // calculateSpent 计算预算在当前周期内已花费金额
 // 业务流程：
 // 1. 根据预算周期（月度/年度）计算当前周期的起止时间
@@ -296,16 +317,7 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 	}
 
 	now := time.Now()
-	var start, end time.Time
-
-	// 根据预算周期计算时间范围
-	if budget.Period == model.BudgetPeriodMonthly {
-		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		end = start.AddDate(0, 1, 0).Add(-time.Second)
-	} else {
-		start = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
-		end = start.AddDate(1, 0, 0).Add(-time.Second)
-	}
+	start, end := budgetPeriodRange(budget.Period, now)
 
 	// 只统计支出类型交易，预算追踪的是支出而非收入
 	withdrawalType := string(model.TransactionTypeWithdrawal)
