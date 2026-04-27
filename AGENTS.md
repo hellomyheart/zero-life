@@ -240,3 +240,54 @@ docker compose up -d --build  # 代码更新后重新构建
 ### 已知问题
 
 1. **分类可重复关联多个预算**：没有校验，可能导致报表重复计算
+
+## 账户管理
+
+### 核心概念
+
+基于**复式记账法**，账户分为四种类型：
+
+| 类型 | 说明 | 示例 |
+|---|---|---|
+| `asset`（资产） | 你拥有的钱 | 银行存款、现金、投资 |
+| `expense`（支出） | 花钱的分类 | 餐饮、交通、购物 |
+| `revenue`（收入） | 赚钱的分类 | 工资、奖金 |
+| `liability`（负债） | 你欠的钱 | 信用卡、贷款 |
+
+### 数据模型
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ID | uint64 | 主键自增 |
+| UserID | uint64 | 所属用户，索引，数据隔离 |
+| Name | string (size:255) | 账户名称，同类型下唯一 |
+| Type | string (size:20) | 账户类型：asset/expense/revenue/liability |
+| CurrencyID | uint64 | 关联货币，外键 |
+| InitialBalance | decimal(19,4) | 初始余额，创建后不可修改 |
+| CurrentBalance | decimal(19,4) | 当前余额，系统自动计算 = 初始余额 + 收入 - 支出 |
+| IsVirtual | bool | 虚拟账户标记，不代表真实资金 |
+| Notes | text | 备注 |
+| Currency | Currency | 关联货币对象（Belongs To） |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+### 业务规则
+
+1. **同类型下账户名唯一**：同一用户的同类型账户不能重名
+2. **不可变字段**：账户类型、货币、初始余额创建后不可修改（修改会破坏交易余额计算）
+3. **删除保护**：有关联交易的账户不能删除
+4. **金额精度**：Go 用 `shopspring/decimal`，TS 用 `decimal.js`，禁止浮点数
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/accounts` | POST | 创建账户 |
+| `/api/v1/accounts` | GET | 列表（支持按类型/搜索/排序/分页） |
+| `/api/v1/accounts/:id` | GET | 详情 |
+| `/api/v1/accounts/:id` | PUT | 更新（仅 name/notes/is_virtual） |
+| `/api/v1/accounts/:id` | DELETE | 删除（软删除） |
+
+### 前端页面
+
+- **账户列表页**（`/accounts`）：四个 Tab 按类型筛选，展示名称、余额、货币、虚拟标记，支持编辑/删除
+- **账户表单页**（`/accounts/create` 和 `/accounts/:id/edit`）：创建时可设置所有字段，编辑时类型/货币/初始余额置灰不可改
