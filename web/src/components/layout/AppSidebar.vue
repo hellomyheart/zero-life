@@ -40,7 +40,9 @@ const sidebarWidth = computed(() => (appStore.sidebarCollapsed ? '64px' : '220px
 
 // 处理菜单项点击，跳转到对应路由
 function handleSelect(index: string) {
-  router.push(index)
+  if (index !== route.path) {
+    router.push(index)
+  }
 }
 </script>
 
@@ -51,7 +53,6 @@ function handleSelect(index: string) {
       :default-active="activeMenu"
       :collapse="appStore.sidebarCollapsed"
       :collapse-transition="false"
-      router
       @select="handleSelect"
     >
       <!-- 仪表盘 -->

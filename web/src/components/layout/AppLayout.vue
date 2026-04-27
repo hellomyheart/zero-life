@@ -8,12 +8,19 @@
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import { useAppStore } from '@/stores/app'
-import { computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const appStore = useAppStore()
 
 /** 是否为桌面端（侧边栏固定模式） */
-const isDesktop = computed(() => window.innerWidth >= 1024)
+const isDesktop = ref(window.innerWidth >= 1024)
+
+function onResize() {
+  isDesktop.value = window.innerWidth >= 1024
+}
+
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 /** 关闭移动端侧边栏 */
 function closeMobileMenu() {
