@@ -81,6 +81,15 @@ func (s *AuthService) Register(req *request.RegisterReq) (*response.LoginResp, e
 		Password: hashedPassword,
 		Nickname: req.Nickname,
 	}
+
+	count, err := s.authRepo.Count()
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	if count == 0 {
+		user.Role = "admin"
+	}
+
 	if err := s.authRepo.Create(user); err != nil {
 		return nil, errcode.ErrInternal
 	}

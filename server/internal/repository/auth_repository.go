@@ -52,6 +52,17 @@ func (r *AuthRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
 }
 
+// Count 统计用户总数，用于判断是否为首个注册用户。
+// 执行 SQL: SELECT COUNT(*) FROM users
+// 返回: 用户总数和错误信息。
+func (r *AuthRepository) Count() (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.User{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // GetByID 根据 ID 获取用户，用于认证中间件从 token 中解析用户 ID 后获取用户信息。
 // 注意：此方法不做用户权限校验，因为认证流程中用户身份尚未确认。
 // 执行 SQL: SELECT * FROM users WHERE id = ? LIMIT 1

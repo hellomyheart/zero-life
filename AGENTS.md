@@ -171,7 +171,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 核心流程
 
-**注册**：检查邮箱唯一 → bcrypt 加密 → INSERT → 返回 TokenPair（注册即登录）
+**注册**：检查邮箱唯一 → 判断是否首个用户（`authRepo.Count() == 0` 则 `Role = "admin"`）→ bcrypt 加密 → INSERT → 返回 TokenPair（注册即登录）。首个注册用户自动成为管理员，后续注册用户默认为普通用户。
 
 **登录**（含暴力破解防护 + MFA）：
 1. 根据邮箱查找用户 → 不存在返回 `ErrInvalidCredential`（不暴露"用户不存在"）
