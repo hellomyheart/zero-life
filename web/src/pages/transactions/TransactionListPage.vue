@@ -60,7 +60,7 @@ const categoryTreeData = computed(() => {
       return node
     })
   }
-  return transform(categoryStore.categories)
+  return transform(categoryStore.categories ?? [])
 })
 
 const tagTreeData = computed(() => {
@@ -76,7 +76,7 @@ const tagTreeData = computed(() => {
       return node
     })
   }
-  return transform(tagStore.tags)
+  return transform(tagStore.tags ?? [])
 })
 
 function formatTransactionAmount(row: Transaction): string {

@@ -25,8 +25,13 @@ export const useCurrencyStore = defineStore('currency', () => {
    * 从后端API获取所有货币数据，自动筛选出默认货币
    */
   async function fetchCurrencies() {
-    currencies.value = await listCurrencies() as unknown as Currency[]
-    defaultCurrency.value = currencies.value.find((c) => c.is_default) || null
+    try {
+      currencies.value = await listCurrencies() as unknown as Currency[]
+      defaultCurrency.value = currencies.value.find((c) => c.is_default) || null
+    } catch {
+      currencies.value = []
+      defaultCurrency.value = null
+    }
   }
 
   return {

@@ -25,8 +25,12 @@ export const useAccountStore = defineStore('account', () => {
    * 从后端API获取所有账户数据并缓存到store中
    */
   async function fetchAccounts() {
-    const res = await listAccounts({})
-    accounts.value = (res as unknown as { items: Account[] }).items || (res as unknown as Account[])
+    try {
+      const res = await listAccounts({})
+      accounts.value = (res as unknown as { items: Account[] }).items || (res as unknown as Account[])
+    } catch {
+      accounts.value = []
+    }
   }
 
   /**

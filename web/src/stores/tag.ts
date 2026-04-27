@@ -21,7 +21,11 @@ export const useTagStore = defineStore('tag', () => {
    * 从后端API获取所有标签数据并缓存
    */
   async function fetchTags() {
-    tags.value = await listTags() as unknown as Tag[]
+    try {
+      tags.value = await listTags() as unknown as Tag[]
+    } catch {
+      tags.value = []
+    }
   }
 
   return {

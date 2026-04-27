@@ -21,7 +21,11 @@ export const useCategoryStore = defineStore('category', () => {
    * 从后端API获取完整的分类树形结构并缓存
    */
   async function fetchCategories() {
-    categories.value = await listCategories() as unknown as Category[]
+    try {
+      categories.value = await listCategories() as unknown as Category[]
+    } catch {
+      categories.value = []
+    }
   }
 
   return {
