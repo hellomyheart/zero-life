@@ -187,9 +187,10 @@ docker compose up -d --build  # 代码更新后重新构建
 - 用户输入 6 位码后调 `POST /auth/mfa-verify {mfa_token, code}`
 - 后端从 kv_store 取出 userID → 验证 TOTP 码 → 删除临时令牌 → 返回真正的 TokenPair
 
-**Token 机制**：双 Token，结构相同（`Claims{UserID, Email}`），签名算法 HMAC-SHA256，密钥相同
-- AccessToken：TTL 15min，用于 API 认证
-- RefreshToken：TTL 168h（7天），用于续期
+**Token 机制**：双 Token，`Claims{UserID, Email, TokenType}`，签名算法 HMAC-SHA256，密钥相同
+- AccessToken：TTL 15min，TokenType="access"，用于 API 认证
+- RefreshToken：TTL 168h（7天），TokenType="refresh"，用于续期
+- `ParseAccessToken` 和 `ParseRefreshToken` 会校验 `token_type` 字段，RefreshToken 不能当作 AccessToken 使用
 - 前端自动续期：401 → 用 refreshToken 调 `/auth/refresh` → 其他请求排队等待 → 新 Token 到达后统一重发
 
 **密码重置**：
@@ -205,6 +206,4 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 已知问题
 
-1. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
-
-2. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
+1. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
