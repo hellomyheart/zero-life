@@ -18,7 +18,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LoginReq, RegisterReq, LoginResp, ProfileResp, UpdateProfileReq, ChangePasswordReq } from '@/types/auth'
-import { login as loginApi, register as registerApi, getProfile, updateProfile as updateProfileApi, changePassword as changePasswordApi } from '@/api/auth'
+import { login as loginApi, register as registerApi, mfaLoginVerify, getProfile, updateProfile as updateProfileApi, changePassword as changePasswordApi } from '@/api/auth'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -28,9 +28,14 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string>(localStorage.getItem('refreshToken') || '')
   /** 当前登录用户信息，未登录时为null */
   const user = ref<ProfileResp | null>(null)
+  /** MFA登录时临时令牌，用于二次验证 */
+  const mfaToken = ref<string>('')
 
   /** 是否已认证（有Token即为已登录） */
   const isAuthenticated = computed(() => !!token.value)
+
+  /** 是否处于MFA验证等待状态 */
+  const mfaRequired = computed(() => !!mfaToken.value)
 
   /**
    * 设置Token并持久化到localStorage
@@ -49,17 +54,34 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = ''
     refreshToken.value = ''
     user.value = null
+    mfaToken.value = ''
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
   }
 
   /**
    * 用户登录
-   * 调用登录API获取Token，存储后自动加载用户信息
+   * 调用登录API，如果用户启用了MFA则保存临时令牌等待二次验证，否则直接存储Token
    * @param data - 登录请求参数（邮箱、密码）
    */
   async function login(data: LoginReq) {
     const res = await loginApi(data) as unknown as LoginResp
+    if (res.mfa_required) {
+      mfaToken.value = res.access_token
+    } else {
+      setTokens(res.access_token, res.refresh_token)
+      await loadProfile()
+    }
+  }
+
+  /**
+   * MFA登录二次验证
+   * 用户输入TOTP码后调用，验证通过获取真正的TokenPair
+   * @param code - TOTP 6位验证码
+   */
+  async function verifyMFALogin(code: string) {
+    const res = await mfaLoginVerify({ mfa_token: mfaToken.value, code }) as unknown as LoginResp
+    mfaToken.value = ''
     setTokens(res.access_token, res.refresh_token)
     await loadProfile()
   }
@@ -116,9 +138,12 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     refreshToken,
     user,
+    mfaToken,
     isAuthenticated,
+    mfaRequired,
     setTokens,
     login,
+    verifyMFALogin,
     register,
     loadProfile,
     updateProfile,

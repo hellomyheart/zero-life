@@ -146,6 +146,7 @@ func (r *Router) Setup(jwtService *jwt.Service) {
 		auth.POST("/refresh", r.authCtrl.RefreshToken)
 		auth.POST("/forgot-password", r.authCtrl.ForgotPassword)
 		auth.POST("/reset-password", r.authCtrl.ResetPassword)
+		auth.POST("/mfa-verify", r.authCtrl.MFALoginVerify)
 	}
 
 	// 需要JWT认证的路由组，所有请求必须携带有效Token

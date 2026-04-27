@@ -23,11 +23,21 @@ export interface RegisterReq {
 
 /**
  * 登录响应接口（对应后端 LoginResp）
+ * 当用户启用了MFA时，mfa_required为true，access_token为临时验证令牌
  */
 export interface LoginResp {
+  mfa_required: boolean
   access_token: string
   refresh_token: string
   expires_at: string
+}
+
+/**
+ * MFA登录二次验证请求接口（对应后端 MFALoginVerifyReq）
+ */
+export interface MFALoginVerifyReq {
+  mfa_token: string
+  code: string
 }
 
 /**

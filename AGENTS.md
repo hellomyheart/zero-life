@@ -141,10 +141,11 @@ docker compose up -d --build  # 代码更新后重新构建
 | 端点 | 方法 | 说明 |
 |---|---|---|
 | `/api/v1/auth/register` | POST | 注册（成功即返回 TokenPair，自动登录） |
-| `/api/v1/auth/login` | POST | 登录 |
+| `/api/v1/auth/login` | POST | 登录（MFA 用户返回临时令牌） |
 | `/api/v1/auth/refresh` | POST | 刷新 Token |
 | `/api/v1/auth/forgot-password` | POST | 发送重置邮件 |
 | `/api/v1/auth/reset-password` | POST | 用令牌重置密码 |
+| `/api/v1/auth/mfa-verify` | POST | MFA 登录二次验证（用临时令牌+TOTP码换 TokenPair） |
 
 **认证后路由**（需 Bearer Token）：
 
@@ -172,12 +173,19 @@ docker compose up -d --build  # 代码更新后重新构建
 
 **注册**：检查邮箱唯一 → bcrypt 加密 → INSERT → 返回 TokenPair（注册即登录）
 
-**登录**（含暴力破解防护）：
+**登录**（含暴力破解防护 + MFA）：
 1. 根据邮箱查找用户 → 不存在返回 `ErrInvalidCredential`（不暴露"用户不存在"）
 2. 检查 `user.IsLocked`（管理员手动锁定）→ 锁定则拒绝
 3. 检查 `login_lock:{email}` 是否存在（kv_store 临时锁定）→ 存在则拒绝
 4. 密码错误 → `Incr(login_fail:{email})`，首次设 Expire 30min；失败 ≥ 5 次 → 写锁定标记 + 删除计数器
-5. 密码正确 → `Del(login_fail:{email})` → 生成 TokenPair
+5. 密码正确 → `Del(login_fail:{email})`
+6. 若 `user.MFAEnabled` → 生成 32 字节随机 mfa_token → `kv_store: Set(mfa_token:{token}, userID, 5min)` → 返回 `{mfa_required: true, access_token: mfa_token}`
+7. 若未启用 MFA → 直接生成 TokenPair 返回
+
+**MFA 登录二次验证**：
+- 前端收到 `mfa_required: true` 后展示 TOTP 码输入框
+- 用户输入 6 位码后调 `POST /auth/mfa-verify {mfa_token, code}`
+- 后端从 kv_store 取出 userID → 验证 TOTP 码 → 删除临时令牌 → 返回真正的 TokenPair
 
 **Token 机制**：双 Token，结构相同（`Claims{UserID, Email}`），签名算法 HMAC-SHA256，密钥相同
 - AccessToken：TTL 15min，用于 API 认证
@@ -195,10 +203,8 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 已知问题
 
-1. **MFA 未接入登录流程**：`Login` 方法没有检查 `user.MFAEnabled`，也没有要求二次验证。启用 MFA 的用户仍只需密码即可登录。
+1. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
 
-2. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
+2. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
 
-3. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
-
-4. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
+3. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。

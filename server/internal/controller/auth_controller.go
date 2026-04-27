@@ -155,6 +155,34 @@ func (ctrl *AuthController) ResetPassword(c *gin.Context) {
 	Success(c, nil)
 }
 
+// MFALoginVerify MFA登录二次验证
+// @Summary      MFA login verify
+// @Description  Verify MFA code during login to get access token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body request.MFALoginVerifyReq true "mfa verify request"
+// @Success      200  {object} map[string]interface{}
+// @Failure      400  {object} map[string]string
+// @Failure      401  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /api/v1/auth/mfa-verify [post]
+func (ctrl *AuthController) MFALoginVerify(c *gin.Context) {
+	var req request.MFALoginVerifyReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
+		return
+	}
+
+	result, err := ctrl.authService.MFALoginVerify(&req)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	Success(c, result)
+}
+
 // GetProfile 获取当前用户个人信息
 // @Summary      Get current user profile
 // @Description  Get the profile of the currently authenticated user

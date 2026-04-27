@@ -3,7 +3,7 @@
  * 提供用户注册、登录、Token刷新、密码重置、个人信息查看与修改等功能
  */
 import { post, get, put } from '@/utils/request'
-import type { LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, UpdateProfileReq, ChangePasswordReq, LoginResp, ProfileResp } from '@/types/auth'
+import type { LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, UpdateProfileReq, ChangePasswordReq, LoginResp, MFALoginVerifyReq, ProfileResp } from '@/types/auth'
 
 /**
  * 用户注册
@@ -85,4 +85,15 @@ export function updateProfile(data: UpdateProfileReq) {
  */
 export function changePassword(data: ChangePasswordReq) {
   return put<void>('/auth/password', data)
+}
+
+/**
+ * MFA登录二次验证
+ * 使用登录时返回的临时令牌和TOTP验证码，换取真正的访问令牌
+ * @param data - MFA验证请求参数（临时令牌 + TOTP验证码）
+ * @returns 登录响应（包含 access_token 和 refresh_token）
+ * @endpoint POST /auth/mfa-verify
+ */
+export function mfaLoginVerify(data: MFALoginVerifyReq) {
+  return post<LoginResp>('/auth/mfa-verify', data)
 }

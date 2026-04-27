@@ -50,3 +50,10 @@ type ChangePasswordReq struct {
 	OldPassword string `json:"old_password" binding:"required"`  // 当前密码
 	NewPassword string `json:"new_password" binding:"required,min=8"` // 新密码，至少8位
 }
+
+// MFALoginVerifyReq MFA登录二次验证请求
+// 用户启用MFA后，登录时需提交此请求完成二次验证
+type MFALoginVerifyReq struct {
+	MFAToken string `json:"mfa_token" binding:"required"` // 登录时返回的临时MFA验证令牌
+	Code     string `json:"code" binding:"required,len=6"` // TOTP 6位验证码
+}

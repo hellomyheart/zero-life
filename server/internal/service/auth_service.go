@@ -17,6 +17,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
+	"github.com/pquerna/otp/totp"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -25,9 +26,11 @@ const (
 	loginFailKeyPrefix  = "login_fail:"    // 登录失败次数键前缀
 	loginLockKeyPrefix  = "login_lock:"    // 登录锁定键前缀
 	resetTokenKeyPrefix = "reset_token:"   // 密码重置令牌键前缀
+	mfaTokenKeyPrefix   = "mfa_token:"     // MFA登录验证令牌键前缀
 	maxLoginFails       = 5                // 最大登录失败次数
 	loginLockDuration   = 30 * time.Minute // 登录锁定时长
 	resetTokenTTL       = 24 * time.Hour   // 密码重置令牌有效期
+	mfaTokenTTL         = 5 * time.Minute  // MFA登录验证令牌有效期
 )
 
 // AuthService 认证服务
@@ -154,7 +157,25 @@ func (s *AuthService) Login(req *request.LoginReq) (*response.LoginResp, error) 
 	failKey := loginFailKeyPrefix + req.Email
 	s.kvRepo.Del(failKey)
 
-	// 步骤6：生成JWT令牌对
+	// 步骤6：如果用户启用了MFA，生成临时验证令牌，不返回真正的TokenPair
+	if user.MFAEnabled {
+		mfaTokenBytes := make([]byte, 32)
+		if _, err := rand.Read(mfaTokenBytes); err != nil {
+			return nil, errcode.ErrInternal
+		}
+		mfaToken := hex.EncodeToString(mfaTokenBytes)
+		mfaKey := mfaTokenKeyPrefix + mfaToken
+		if err := s.kvRepo.Set(mfaKey, fmt.Sprintf("%d", user.ID), mfaTokenTTL); err != nil {
+			return nil, errcode.ErrInternal
+		}
+		return &response.LoginResp{
+			MFARequired: true,
+			AccessToken:  mfaToken,
+			ExpiresAt:    time.Now().Add(mfaTokenTTL),
+		}, nil
+	}
+
+	// 步骤7：未启用MFA，直接生成JWT令牌对
 	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -377,4 +398,60 @@ func (s *AuthService) ChangePassword(userID uint64, req *request.ChangePasswordR
 
 	user.Password = hashedPassword
 	return s.authRepo.Update(user)
+}
+
+// MFALoginVerify MFA登录二次验证
+// 用户启用MFA后，登录时密码正确会返回临时mfa_token，前端引导用户输入TOTP码后调用此方法
+// 业务流程：
+// 1. 从kv_store中验证mfa_token，获取用户ID
+// 2. 查找用户并验证MFA状态
+// 3. 验证TOTP码是否正确
+// 4. 验证通过后删除临时令牌，生成真正的JWT令牌对
+// 参数：
+//   - req: MFA验证请求（含临时令牌和TOTP码）
+// 返回：
+//   - *response.LoginResp: 登录响应（含真正的访问令牌和刷新令牌）
+//   - error: 错误信息
+func (s *AuthService) MFALoginVerify(req *request.MFALoginVerifyReq) (*response.LoginResp, error) {
+	mfaKey := mfaTokenKeyPrefix + req.MFAToken
+
+	userIDStr, err := s.kvRepo.Get(mfaKey)
+	if err != nil {
+		return nil, errcode.ErrMFAInvalidToken
+	}
+
+	var userID uint64
+	if _, err := fmt.Sscanf(userIDStr, "%d", &userID); err != nil {
+		s.kvRepo.Del(mfaKey)
+		return nil, errcode.ErrMFAInvalidToken
+	}
+
+	user, err := s.authRepo.GetByID(userID)
+	if err != nil {
+		s.kvRepo.Del(mfaKey)
+		return nil, errcode.ErrMFAInvalidToken
+	}
+
+	if !user.MFAEnabled || user.MFASecret == "" {
+		s.kvRepo.Del(mfaKey)
+		return nil, errcode.ErrMFANotEnabled
+	}
+
+	if !totp.Validate(req.Code, user.MFASecret) {
+		return nil, errcode.ErrMFAInvalidCode
+	}
+
+	s.kvRepo.Del(mfaKey)
+
+	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+
+	return &response.LoginResp{
+		MFARequired:  false,
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresAt:    tokenPair.ExpiresAt,
+	}, nil
 }
