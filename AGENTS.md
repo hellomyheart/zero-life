@@ -115,3 +115,91 @@ docker compose up -d --build  # 代码更新后重新构建
 - `cleanExpired()` 每次操作前执行 DELETE 全表扫描，高频场景有性能开销（`expires_at` 有索引缓解）
 - `Incr` 对非数字值静默重置为 1，无类型校验
 - SQLite 单进程部署，无法水平扩展
+
+## 用户认证体系
+
+### 数据模型 (`model/user.go`)
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ID | uint64 | 主键自增 |
+| Email | string (unique, size:255) | 登录标识，唯一索引 |
+| Password | string (size:255, json:"-") | bcrypt(cost=10) 哈希，不返回前端 |
+| Nickname | string (size:100) | 显示昵称 |
+| Role | string (default:"user") | 角色：`user` 或 `admin` |
+| IsLocked | bool (default:false) | 管理员手动锁定标记 |
+| MFASecret | string (size:255, json:"-") | TOTP 密钥（Base32） |
+| MFAEnabled | bool (default:false) | 是否启用 MFA |
+| Language | string (default:"zh-CN") | 语言偏好 |
+| Timezone | string (default:"Asia/Shanghai") | 时区偏好 |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+### API 路由
+
+**公开路由**（无需 Token）：
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/auth/register` | POST | 注册（成功即返回 TokenPair，自动登录） |
+| `/api/v1/auth/login` | POST | 登录 |
+| `/api/v1/auth/refresh` | POST | 刷新 Token |
+| `/api/v1/auth/forgot-password` | POST | 发送重置邮件 |
+| `/api/v1/auth/reset-password` | POST | 用令牌重置密码 |
+
+**认证后路由**（需 Bearer Token）：
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/auth/profile` | GET/PUT | 获取/更新个人信息 |
+| `/api/v1/auth/password` | PUT | 修改密码（需旧密码） |
+| `/api/v1/mfa/setup` | POST | 初始化 MFA（生成密钥+二维码URL） |
+| `/api/v1/mfa/enable` | POST | 启用 MFA（验证 TOTP 码） |
+| `/api/v1/mfa/disable` | POST | 禁用 MFA（验证 TOTP 码+清除密钥） |
+| `/api/v1/mfa/verify` | POST | 验证 MFA 码 |
+| `/api/v1/mfa/status` | GET | MFA 状态 |
+
+**管理员路由**（需 admin 角色，`/api/v1/users/*`）：
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/users` | GET | 用户列表 |
+| `/api/v1/users/:id` | GET/PUT/DELETE | 用户详情/更新/软删除 |
+| `/api/v1/users/:id/role` | PUT | 变更角色（user ↔ admin） |
+| `/api/v1/users/:id/lock` | POST | 锁定用户（`is_locked=true`） |
+| `/api/v1/users/:id/unlock` | POST | 解锁用户 |
+
+### 核心流程
+
+**注册**：检查邮箱唯一 → bcrypt 加密 → INSERT → 返回 TokenPair（注册即登录）
+
+**登录**（含暴力破解防护）：
+1. 检查 `login_lock:{email}` 是否存在（kv_store 临时锁定）→ 存在则拒绝
+2. 查找用户 → 不存在返回 `ErrInvalidCredential`（不暴露"用户不存在"）
+3. 密码错误 → `Incr(login_fail:{email})`，首次设 Expire 30min；失败 ≥ 5 次 → 写锁定标记 + 删除计数器
+4. 密码正确 → `Del(login_fail:{email})` → 生成 TokenPair
+
+**Token 机制**：双 Token，结构相同（`Claims{UserID, Email}`），签名算法 HMAC-SHA256，密钥相同
+- AccessToken：TTL 15min，用于 API 认证
+- RefreshToken：TTL 168h（7天），用于续期
+- 前端自动续期：401 → 用 refreshToken 调 `/auth/refresh` → 其他请求排队等待 → 新 Token 到达后统一重发
+
+**密码重置**：
+- `ForgotPassword` → 生成 32 字节随机 token → `kv_store: Set(reset_token:{token}, userID, 24h)` → 发邮件（发送失败不阻断）
+- `ResetPassword` → `kv_store: Get` 取出 userID → 验证 → 更新密码 → `Del` 令牌（一次性）
+
+**MFA**：基于 TOTP（`pquerna/otp`），兼容 Google Authenticator
+- Setup → 生成 20 字节随机密钥 → Base32 编码 → 写入 `user.mfa_secret`（未启用） → 返回 `otpauth://totp` URL
+- Enable → 验证 TOTP 6 位码 → `mfa_enabled=true`
+- Disable → 验证码 → `mfa_enabled=false` + 清除 `mfa_secret`
+
+### 已知问题
+
+1. **`IsLocked` 未在登录流程中检查**：管理员通过 `/users/:id/lock` 设置的 `is_locked=true` 不会阻止登录，只有 kv_store 的临时锁定（连续失败 5 次）才生效。两套锁定机制未打通。
+
+2. **MFA 未接入登录流程**：`Login` 方法没有检查 `user.MFAEnabled`，也没有要求二次验证。启用 MFA 的用户仍只需密码即可登录。
+
+3. **备用码功能未实现**：`model/backup_code.go` 已定义且已注册 AutoMigrate，但无生成/验证的业务代码。
+
+4. **AccessToken 和 RefreshToken 结构完全相同**：仅靠过期时间区分，`ParseAccessToken` 和 `ParseRefreshToken` 内部调用同一个 `parseToken`。未过期的 RefreshToken 也能当作 AccessToken 使用。
+
+5. **管理员权限校验不一致**：`UserController` 在每个方法内检查 `ctx.GetString("role")`，但 `middleware.Auth` 只注入 `user_id` 和 `email`，没有注入 `role`。`/users/*` 路由组也未挂载 `middleware.Admin`。因此管理员用户管理的权限检查可能失效。
