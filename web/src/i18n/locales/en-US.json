@@ -379,6 +379,7 @@
     "oldPassword": "Old Password",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
+    "confirmPassword": "Confirm Password",
     "passwordMismatch": "Passwords do not match",
     "nameRequired": "Please enter your name",
     "emailRequired": "Please enter your email",
