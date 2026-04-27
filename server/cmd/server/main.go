@@ -185,7 +185,7 @@ func main() {
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo, billRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	recurrenceService := service.NewRecurrenceService(recurrenceRepo, txnService, accountRepo, tagRepo)
-	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService, budgetService)
+	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService, budgetService, logger)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
@@ -235,7 +235,6 @@ func main() {
 	adminService := service.NewAdminService(userRepo, configRepo)
 	adminCtrl := controller.NewAdminController(adminService)
 	adminUserCtrl := controller.NewAdminUserController(adminService)
-	cronCtrl := controller.NewCronController(cronService)
 	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
 	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
 	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
@@ -279,17 +278,18 @@ func main() {
 		linkTypeCtrl,
 		adminCtrl,
 		adminUserCtrl,
-		cronCtrl,
 		txnBulkCtrl,
 		recurrenceCtrl,
 		ruleGroupCtrl,
 	)
 	r.Setup(jwtService, db)
 
-	// 启动HTTP服务器，监听配置的端口
+	cronService.StartScheduler()
+
 	addr := ":" + config.C.App.Port
 	logger.Info("Server starting", zap.String("addr", addr))
 	if err := engine.Run(addr); err != nil {
+		cronService.StopScheduler()
 		logger.Fatal("Failed to start server", zap.Error(err))
 	}
 }

@@ -36,7 +36,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
 - 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 查数据库校验 `user.Role == "admin"` 并注入 `role` 到上下文，挂载在 `/users/*` 路由组
 - 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
-- 定时任务端点：`GET /api/v1/cron/:token` — 基于 token 验证，非 JWT。CronRun 执行循环交易、到期账单、预算快照生成
+- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行循环交易和到期账单，每月1号9:00自动生成预算快照
 
 **前端** (`web/`) — Vue 3 + TypeScript + Vite
 - 路径别名：`@` → `src/`

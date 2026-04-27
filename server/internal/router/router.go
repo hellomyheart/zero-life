@@ -46,7 +46,6 @@ type Router struct {
 	linkTypeCtrl          *controller.LinkTypeController
 	adminCtrl             *controller.AdminController
 	adminUserCtrl         *controller.AdminUserController
-	cronCtrl              *controller.CronController
 	txnBulkCtrl           *controller.TransactionBulkController
 	recurrenceCtrl        *controller.RecurrenceController
 	ruleGroupCtrl         *controller.RuleGroupController
@@ -84,7 +83,6 @@ func NewRouter(
 	linkTypeCtrl *controller.LinkTypeController,
 	adminCtrl *controller.AdminController,
 	adminUserCtrl *controller.AdminUserController,
-	cronCtrl *controller.CronController,
 	txnBulkCtrl *controller.TransactionBulkController,
 	recurrenceCtrl *controller.RecurrenceController,
 	ruleGroupCtrl *controller.RuleGroupController,
@@ -120,9 +118,8 @@ func NewRouter(
 		linkTypeCtrl:         linkTypeCtrl,
 		adminCtrl:            adminCtrl,
 		adminUserCtrl:        adminUserCtrl,
-		cronCtrl:            cronCtrl,
 		txnBulkCtrl:         txnBulkCtrl,
-		recurrenceCtrl:      recurrenceCtrl,
+recurrenceCtrl:      recurrenceCtrl,
 		ruleGroupCtrl:       ruleGroupCtrl,
 	}
 }
@@ -468,9 +465,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 		// Health check (public within authenticated group)
 		authenticated.GET("/health", r.healthCheck)
 	}
-
-	// Cron route - 定时任务API（通过token验证，不需要JWT）
-	r.engine.GET("/api/v1/cron/:token", r.cronCtrl.Run)
 }
 
 func (r *Router) healthCheck(c *gin.Context) {
