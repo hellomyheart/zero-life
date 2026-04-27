@@ -35,7 +35,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 配置：Viper 读取 `config.yaml`，支持环境变量覆盖（`viper.AutomaticEnv()`）
 - 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
 - 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 检查 `user.Role == "admin"`
-- 限流：使用 `kv_store` 表（非 Redis）
+- 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
 - 定时任务端点：`GET /api/v1/cron/:token` — 基于 token 验证，非 JWT
 
 **前端** (`web/`) — Vue 3 + TypeScript + Vite
@@ -62,3 +62,56 @@ docker compose up -d --build  # 代码更新后重新构建
 - Docker Compose 从 `.env` 读取 `JWT_SECRET`（默认值为不安全的 `change-me-in-production`）
 - 前端 `nginx.conf` 硬编码 `proxy_pass http://api:8080` — 在 Docker Compose 外使用需修改
 - `Recurrence` 和 `RecurringTransaction` 是两个独立的模型/控制器，路由不同（`/recurrences` vs `/recurring-transactions`），不要混淆
+
+## SQLite 替代 Redis 方案
+
+用一张 `kv_store` 表模拟 Redis KV 存储，通过 `expires_at` 字段实现 TTL 过期。
+
+**表结构** (`model/kv_store.go`):
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `key` | string (PK, size:200) | 键名，如 `login_fail:user@example.com` |
+| `value` | text | 值内容，统一存字符串 |
+| `expires_at` | *time.Time (indexed) | 过期时间，NULL = 永不过期 |
+
+**API 映射** (`repository/kv_repository.go`):
+
+| Redis 命令 | KVRepository 方法 | 实现方式 |
+|---|---|---|
+| `SET key value [EX ttl]` | `Set(key, value, ttl)` | GORM `Save` 实现 UPSERT |
+| `GET key` | `Get(key)` | 查询，不存在返回 `gorm.ErrRecordNotFound` |
+| `DEL key [key ...]` | `Del(keys ...)` | 批量删除 |
+| `INCR key` | `Incr(key)` | 事务内读-改-写，键不存在从 1 开始 |
+| `EXISTS key` | `Exists(key)` | Count 查询 |
+| `EXPIRE key ttl` | `Expire(key, ttl)` | 更新 `expires_at` |
+
+**TTL 过期机制 — 惰性清理（lazy eviction）**：
+- 每次操作前调用 `cleanExpired()`：`DELETE FROM kv_store WHERE expires_at IS NOT NULL AND expires_at < now()`
+- 没有后台定期清理线程或定时任务
+- 从未被再次访问的过期 key 永远不会被清理，表会缓慢膨胀
+
+**原子性**：`Incr` 使用 GORM 事务保证一致性。在 SQLite 单写模式（`max_open_conns=1`）下事务串行执行，等价于原子操作。换 PostgreSQL/MySQL 时需改用 `SELECT ... FOR UPDATE`。
+
+**三大业务场景**：
+
+1. **登录失败计数 + 账户锁定** (`auth_service.go`)
+   - `login_fail:{email}` → 失败次数，TTL 30min，`Incr` 递增
+   - `login_lock:{email}` → 锁定标记 "1"，TTL 30min，`Exists` 检查
+   - 失败 ≥ 5 次 → 写锁定标记 + 删除计数器；密码正确 → 删除计数器
+
+2. **密码重置令牌** (`auth_service.go`)
+   - `reset_token:{token}` → 用户ID，TTL 24h，一次性令牌
+   - `ForgotPassword` 写入 → `ResetPassword` 读取验证后删除
+
+3. **请求限流** (`middleware/ratelimit.go`)
+   - `ratelimit:{IP}` → 请求计数，首次 `Incr` 后设 `Expire(window)`
+   - count > limit → 返回 429
+
+**依赖注入链路**：`kvRepo` 仅注入到 `AuthService` 和 `middleware.RateLimit`，职责边界清晰。
+
+**局限**：
+- 惰性清理死角：从未再被访问的过期 key 不会被删除
+- `cleanExpired()` 每次操作前执行 DELETE 全表扫描，高频场景有性能开销（`expires_at` 有索引缓解）
+- `Incr` 对非数字值静默重置为 1，无类型校验
+- SQLite 单进程部署，无法水平扩展
