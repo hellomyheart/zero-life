@@ -99,7 +99,6 @@ onMounted(fetchUsers)
           <el-select v-model="editForm.role">
             <el-option label="User" value="user" />
             <el-option label="Admin" value="admin" />
-            <el-option label="Owner" value="owner" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('profile.language')">
