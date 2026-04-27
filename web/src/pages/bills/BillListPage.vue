@@ -12,7 +12,7 @@
  * - next_due（非 next_due_date）
  * - notes（非 description）
  */
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { list, create, update, remove } from '@/api/bill'
 import { formatAmount, formatDate } from '@/utils/format'

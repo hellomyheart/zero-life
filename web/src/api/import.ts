@@ -28,7 +28,7 @@ export function upload(file: File) {
  * @returns 解析结果（预览数据）
  * @endpoint POST /imports/parse
  */
-export function parse(data: { file_id: string; column_mapping: Record<string, string> }) {
+export function parse(data: { file_id: string; mapping: Record<string, string> }) {
   return post<unknown>('/imports/parse', data)
 }
 
@@ -39,6 +39,6 @@ export function parse(data: { file_id: string; column_mapping: Record<string, st
  * @returns 导入结果
  * @endpoint POST /imports/execute
  */
-export function execute(data: { file_id: string; column_mapping: Record<string, string> }) {
+export function execute(data: { file_id: string; mapping: Record<string, string> }) {
   return post<unknown>('/imports/execute', data)
 }

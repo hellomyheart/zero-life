@@ -65,7 +65,7 @@ const passwordRules: FormRules = {
 async function fetchProfile() {
   try {
     const res = await getProfile()
-    user.value = res as unknown as User
+    user.value = res as unknown as ProfileResp
     form.value.nickname = user.value.nickname
     form.value.language = user.value.language
     form.value.timezone = user.value.timezone

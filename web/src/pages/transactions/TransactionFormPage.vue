@@ -9,7 +9,7 @@ import { useCategoryStore } from '@/stores/category'
 import { useTagStore } from '@/stores/tag'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { CreateTransactionReq, Transaction } from '@/types/transaction'
+import type { CreateTransactionReq, UpdateTransactionReq, Transaction } from '@/types/transaction'
 import type { Category } from '@/types/category'
 import type { Tag } from '@/types/tag'
 import { TransactionType } from '@/types/transaction'
@@ -230,7 +230,7 @@ async function handleSubmit() {
       data.splits = undefined
     }
     if (isEdit.value) {
-      await update(Number(route.params.id), data)
+      await update(Number(route.params.id), data as UpdateTransactionReq)
     } else {
       await create(data)
     }
