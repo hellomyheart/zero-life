@@ -194,6 +194,12 @@ function handleSelect(index: string) {
         <el-icon><Link /></el-icon>
         <template #title>{{ t('transactionLink.title') }}</template>
       </el-menu-item>
+
+      <!-- 定时任务 -->
+      <el-menu-item index="/cron">
+        <el-icon><Timer /></el-icon>
+        <template #title>{{ t('nav.cron') }}</template>
+      </el-menu-item>
     </el-menu>
   </el-aside>
 </template>

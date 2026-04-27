@@ -49,6 +49,7 @@ type Router struct {
 	txnBulkCtrl           *controller.TransactionBulkController
 	recurrenceCtrl        *controller.RecurrenceController
 	ruleGroupCtrl         *controller.RuleGroupController
+	cronCtrl              *controller.CronController
 }
 
 // NewRouter 创建路由器实例，注入所有控制器依赖
@@ -86,6 +87,7 @@ func NewRouter(
 	txnBulkCtrl *controller.TransactionBulkController,
 	recurrenceCtrl *controller.RecurrenceController,
 	ruleGroupCtrl *controller.RuleGroupController,
+	cronCtrl *controller.CronController,
 ) *Router {
 	return &Router{
 		engine:               engine,
@@ -119,8 +121,9 @@ func NewRouter(
 		adminCtrl:            adminCtrl,
 		adminUserCtrl:        adminUserCtrl,
 		txnBulkCtrl:         txnBulkCtrl,
-recurrenceCtrl:      recurrenceCtrl,
+		recurrenceCtrl:      recurrenceCtrl,
 		ruleGroupCtrl:       ruleGroupCtrl,
+		cronCtrl:            cronCtrl,
 	}
 }
 
@@ -464,6 +467,14 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 
 		// Health check (public within authenticated group)
 		authenticated.GET("/health", r.healthCheck)
+
+		// Cron management routes - 定时任务管理API（管理员）
+		cron := authenticated.Group("/cron")
+		cron.Use(middleware.Admin(db))
+		{
+			cron.GET("", r.cronCtrl.List)
+			cron.POST("/:id/run", r.cronCtrl.Run)
+		}
 	}
 }
 

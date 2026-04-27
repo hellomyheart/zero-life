@@ -29,7 +29,8 @@
     "exchangeRates": "汇率",
     "objectGroups": "对象分组",
     "transactionLinks": "交易关联",
-    "preferences": "偏好设置"
+    "preferences": "偏好设置",
+    "cron": "定时任务"
   },
   "report": {
     "incomeExpense": "收支概览",

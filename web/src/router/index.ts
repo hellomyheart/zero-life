@@ -225,6 +225,12 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: () => import('@/pages/transactionLinks/TransactionLinkListPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/cron',
+    name: 'CronManagement',
+    component: () => import('@/pages/cron/CronPage.vue'),
+    meta: { requiresAuth: true },
+  },
   { path: '/:pathMatch(.*)*', name: 'NotFound', redirect: '/dashboard' },
 ]
 

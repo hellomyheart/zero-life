@@ -217,6 +217,26 @@ docker compose up -d --build  # 代码更新后重新构建
 
 **历史快照**：`CronService` 每天 09:00 执行 `SnapshotHistory()`，遍历所有启用预算，为近2年内所有已结束周期生成/更新快照（UPSERT），当前周期不生成（可看实时数据）。前端 `BudgetDetailPage` 折线图展示历史趋势（X轴=`period_start`，Y轴=限额+支出双线）。
 
+### 定时任务管理
+
+**调度器**：`CronService` 使用 `robfig/cron/v3`，在 `main.go` 中启动，无需外部触发。
+
+**内置任务**：
+
+| 任务ID | 名称 | 周期 | 说明 |
+|---|---|---|---|
+| `recurrences_bills` | 循环交易与到期账单 | 每天 00:00 | 执行循环交易生成交易记录，处理到期账单 |
+| `budget_snapshot` | 预算历史快照 | 每天 09:00 | 遍历启用预算，为近2年已结束周期生成/更新快照 |
+
+**管理 API**（需 Admin 权限）：
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/cron` | GET | 列出所有任务（ID、名称、描述、周期） |
+| `/api/v1/cron/:id/run` | POST | 手动执行指定任务 |
+
+**任务注册模式**：`CronService` 维护 `[]CronTask` 注册表，新增任务只需在 `newCronService()` 中追加 `CronTask` 并注册调度函数。前端 `CronPage` 展示任务列表并支持手动触发。
+
 ### 已知问题
 
 1. **分类可重复关联多个预算**：没有校验，可能导致报表重复计算

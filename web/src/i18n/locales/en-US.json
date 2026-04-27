@@ -29,7 +29,8 @@
     "exchangeRates": "Exchange Rates",
     "objectGroups": "Object Groups",
     "transactionLinks": "Transaction Links",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "cron": "Cron Jobs"
   },
   "report": {
     "incomeExpense": "Income & Expense",

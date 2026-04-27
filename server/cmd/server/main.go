@@ -238,6 +238,7 @@ func main() {
 	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
 	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
 	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
+	cronCtrl := controller.NewCronController(cronService)
 
 	// 初始化Gin引擎，生产环境使用Release模式减少日志输出
 	if config.C.App.Env == "production" {
@@ -281,6 +282,7 @@ func main() {
 		txnBulkCtrl,
 		recurrenceCtrl,
 		ruleGroupCtrl,
+		cronCtrl,
 	)
 	r.Setup(jwtService, db)
 
