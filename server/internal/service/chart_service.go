@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 )
 
@@ -157,10 +158,38 @@ func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingD
 		return nil, err
 	}
 
-	// 计算已花费金额
-	spent, err := s.budgetRepo.GetSpentAmount(budgetID, userID)
-	if err != nil {
-		spent = decimal.Zero
+	// 计算已花费金额（含分类后代展开）
+	var spent decimal.Decimal
+	if budget.IsEnabled {
+		now := time.Now()
+		var start, end time.Time
+		if budget.Period == model.BudgetPeriodMonthly {
+			start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			end = start.AddDate(0, 1, 0).Add(-time.Second)
+		} else {
+			start = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+			end = start.AddDate(1, 0, 0).Add(-time.Second)
+		}
+
+		var allCategoryIDs []uint64
+		for _, cat := range budget.Categories {
+			allCategoryIDs = append(allCategoryIDs, cat.ID)
+		}
+		expandedIDs, err := s.categoryRepo.GetDescendantIDs(allCategoryIDs, userID)
+		if err == nil && len(expandedIDs) > 0 {
+			filter := repository.TransactionFilter{
+				Type:        string(model.TransactionTypeWithdrawal),
+				StartDate:   start.Format("2006-01-02"),
+				EndDate:     end.Format("2006-01-02"),
+				CategoryIDs: expandedIDs,
+			}
+			txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+			if err == nil {
+				for _, txn := range txns {
+					spent = spent.Add(txn.Amount)
+				}
+			}
+		}
 	}
 
 	remaining := budget.Amount.Sub(spent)

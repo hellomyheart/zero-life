@@ -19,6 +19,7 @@ type CronService struct {
 	billRepo          *repository.BillRepository
 	recurrenceRepo    *repository.RecurrenceRepository
 	txnService        *TransactionService
+	budgetService     *BudgetService
 }
 
 // NewCronService 创建定时任务服务实例
@@ -36,6 +37,7 @@ func NewCronService(
 	billRepo *repository.BillRepository,
 	recurrenceRepo *repository.RecurrenceRepository,
 	txnService *TransactionService,
+	budgetService *BudgetService,
 ) *CronService {
 	return &CronService{
 		recurrenceService: recurrenceService,
@@ -43,6 +45,7 @@ func NewCronService(
 		billRepo:          billRepo,
 		recurrenceRepo:    recurrenceRepo,
 		txnService:        txnService,
+		budgetService:     budgetService,
 	}
 }
 
@@ -52,6 +55,8 @@ type CronResult struct {
 	RecurrenceErrors    []string `json:"recurrence_errors,omitempty"`
 	BillsExecuted       int      `json:"bills_executed"`
 	BillErrors          []string `json:"bill_errors,omitempty"`
+	BudgetSnapshots     int      `json:"budget_snapshots"`
+	BudgetErrors        []string `json:"budget_errors,omitempty"`
 }
 
 // CronRun 执行所有到期的循环交易和账单
@@ -60,6 +65,7 @@ func (s *CronService) CronRun() (*CronResult, error) {
 	result := &CronResult{
 		RecurrenceErrors: make([]string, 0),
 		BillErrors:       make([]string, 0),
+		BudgetErrors:     make([]string, 0),
 	}
 
 	// 执行到期的循环交易
@@ -92,6 +98,11 @@ func (s *CronService) CronRun() (*CronResult, error) {
 			}
 		}
 	}
+
+	// 生成预算快照：为所有已启用预算写入当前周期的 BudgetHistory
+	snapshots, budgetErrs := s.budgetService.SnapshotCurrentPeriod()
+	result.BudgetSnapshots = snapshots
+	result.BudgetErrors = budgetErrs
 
 	return result, nil
 }

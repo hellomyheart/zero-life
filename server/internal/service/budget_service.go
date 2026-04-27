@@ -229,6 +229,61 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 	return items, nil
 }
 
+// SnapshotCurrentPeriod 为所有已启用的预算生成当前周期的快照
+// 遍历所有 is_enabled=true 的预算，检查当前周期是否已有快照，没有则计算支出并写入 BudgetHistory
+// 返回生成的快照数量和错误列表
+func (s *BudgetService) SnapshotCurrentPeriod() (int, []string) {
+	budgets, err := s.budgetRepo.ListAllEnabled()
+	if err != nil {
+		return 0, []string{err.Error()}
+	}
+
+	now := time.Now()
+	created := 0
+	var errs []string
+
+	for i := range budgets {
+		b := &budgets[i]
+
+		var periodStart, periodEnd time.Time
+		if b.Period == model.BudgetPeriodMonthly {
+			periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			periodEnd = periodStart.AddDate(0, 1, 0).Add(-time.Second)
+		} else {
+			periodStart = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+			periodEnd = periodStart.AddDate(1, 0, 0).Add(-time.Second)
+		}
+
+		exists, err := s.budgetRepo.HasHistory(b.ID, periodStart)
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		if exists {
+			continue
+		}
+
+		spent := s.calculateSpent(b, b.UserID)
+
+		history := &model.BudgetHistory{
+			BudgetID:    b.ID,
+			PeriodStart: periodStart,
+			PeriodEnd:   periodEnd,
+			Amount:      b.Amount,
+			Spent:       spent,
+			CreatedAt:   now,
+		}
+
+		if err := s.budgetRepo.CreateHistory(history); err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		created++
+	}
+
+	return created, errs
+}
+
 // calculateSpent 计算预算在当前周期内已花费金额
 // 业务流程：
 // 1. 根据预算周期（月度/年度）计算当前周期的起止时间
@@ -236,6 +291,10 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 // 3. 遍历预算关联的所有分类，查询每个分类下的支出交易并累加金额
 // 修复：添加交易类型过滤，只统计支出类型(withdrawal)交易，避免将收入交易计入预算支出
 func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) decimal.Decimal {
+	if !budget.IsEnabled {
+		return decimal.Zero
+	}
+
 	now := time.Now()
 	var start, end time.Time
 

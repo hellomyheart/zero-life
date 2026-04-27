@@ -185,7 +185,7 @@ func main() {
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo, billRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	recurrenceService := service.NewRecurrenceService(recurrenceRepo, txnService, accountRepo, tagRepo)
-	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService)
+	cronService := service.NewCronService(recurrenceService, billService, billRepo, recurrenceRepo, txnService, budgetService)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
