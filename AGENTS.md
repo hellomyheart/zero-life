@@ -36,7 +36,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
 - 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 查数据库校验 `user.Role == "admin"` 并注入 `role` 到上下文，挂载在 `/users/*` 路由组
 - 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
-- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行循环交易和到期账单，每月1号9:00自动生成预算快照
+- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行循环交易和到期账单，每天 09:00 生成预算历史快照
 
 **前端** (`web/`) — Vue 3 + TypeScript + Vite
 - 路径别名：`@` → `src/`
@@ -215,7 +215,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 **状态判定**：使用率 ≥100% → `overspent`，≥80% → `warning`，<80% → `normal`
 
-**历史快照**：`CronService` 每月1号9:00自动生成所有启用预算的上月快照，写入 `BudgetHistory`。前端 `BudgetDetailPage` 折线图展示历史趋势（X轴=`period_start`，Y轴=限额+支出双线）。
+**历史快照**：`CronService` 每天 09:00 执行 `SnapshotHistory()`，遍历所有启用预算，为近2年内所有已结束周期生成/更新快照（UPSERT），当前周期不生成（可看实时数据）。前端 `BudgetDetailPage` 折线图展示历史趋势（X轴=`period_start`，Y轴=限额+支出双线）。
 
 ### 已知问题
 

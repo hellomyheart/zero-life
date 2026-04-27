@@ -229,79 +229,99 @@ func (s *BudgetService) GetHistory(userID, id uint64) ([]response.BudgetHistoryR
 	return items, nil
 }
 
-// SnapshotCurrentPeriod 为所有已启用的预算生成当前周期的快照
-// 遍历所有 is_enabled=true 的预算，检查当前周期是否已有快照，没有则计算支出并写入 BudgetHistory
-// 返回生成的快照数量和错误列表
-func (s *BudgetService) SnapshotCurrentPeriod() (int, []string) {
+// SnapshotHistory 为所有已启用的预算生成近2年内已结束周期的历史快照
+// 当前周期不生成快照（未结束，可看实时数据）
+// 支持重复跑：已有快照会被更新（UPSERT）
+func (s *BudgetService) SnapshotHistory() (int, []string) {
 	budgets, err := s.budgetRepo.ListAllEnabled()
 	if err != nil {
 		return 0, []string{err.Error()}
 	}
 
 	now := time.Now()
+	twoYearsAgo := now.AddDate(-2, 0, 0)
 	created := 0
 	var errs []string
 
 	for i := range budgets {
 		b := &budgets[i]
 
-		var periodStart, periodEnd time.Time
-		periodStart, periodEnd = budgetPeriodRange(b.Period, now)
+		currentStart, _ := budgetPeriodRange(b.Period, now)
 
-		exists, err := s.budgetRepo.HasHistory(b.ID, periodStart)
-		if err != nil {
-			errs = append(errs, err.Error())
-			continue
-		}
-		if exists {
-			continue
-		}
+		cursor := now
+		for {
+			prevStart, prevEnd := budgetPeriodRange(b.Period, cursor)
 
-		spent := s.calculateSpent(b, b.UserID)
+			if prevStart.Before(twoYearsAgo) {
+				break
+			}
 
-		history := &model.BudgetHistory{
-			BudgetID:    b.ID,
-			PeriodStart: periodStart,
-			PeriodEnd:   periodEnd,
-			Amount:      b.Amount,
-			Spent:       spent,
-			CreatedAt:   now,
-		}
+			if !prevStart.Before(currentStart) {
+				cursor = budgetPeriodPrev(b.Period, cursor)
+				continue
+			}
 
-		if err := s.budgetRepo.CreateHistory(history); err != nil {
-			errs = append(errs, err.Error())
-			continue
+			spent := s.calculateSpentInRange(b, b.UserID, prevStart, prevEnd)
+
+			if err := s.budgetRepo.UpsertHistory(&model.BudgetHistory{
+				BudgetID:    b.ID,
+				PeriodStart: prevStart,
+				PeriodEnd:   prevEnd,
+				Amount:      b.Amount,
+				Spent:       spent,
+				CreatedAt:   now,
+			}); err != nil {
+				errs = append(errs, err.Error())
+			} else {
+				created++
+			}
+
+			cursor = budgetPeriodPrev(b.Period, cursor)
 		}
-		created++
 	}
 
 	return created, errs
 }
 
-func budgetPeriodRange(period model.BudgetPeriod, now time.Time) (time.Time, time.Time) {
-	loc := now.Location()
+func budgetPeriodRange(period model.BudgetPeriod, t time.Time) (time.Time, time.Time) {
+	loc := t.Location()
 	switch period {
 	case model.BudgetPeriodDaily:
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+		start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
 		return start, start.AddDate(0, 0, 1).Add(-time.Second)
 	case model.BudgetPeriodWeekly:
-		weekday := int(now.Weekday())
+		weekday := int(t.Weekday())
 		if weekday == 0 {
 			weekday = 7
 		}
-		start := time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, loc)
+		start := time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, loc)
 		return start, start.AddDate(0, 0, 7).Add(-time.Second)
 	case model.BudgetPeriodMonthly:
-		start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
+		start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, loc)
 		return start, start.AddDate(0, 1, 0).Add(-time.Second)
 	case model.BudgetPeriodQuarterly:
-		quarter := (int(now.Month())-1)/3 + 1
+		quarter := (int(t.Month())-1)/3 + 1
 		startMonth := time.Month((quarter-1)*3 + 1)
-		start := time.Date(now.Year(), startMonth, 1, 0, 0, 0, 0, loc)
+		start := time.Date(t.Year(), startMonth, 1, 0, 0, 0, 0, loc)
 		return start, start.AddDate(0, 3, 0).Add(-time.Second)
 	default:
-		start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, loc)
+		start := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, loc)
 		return start, start.AddDate(1, 0, 0).Add(-time.Second)
+	}
+}
+
+func budgetPeriodPrev(period model.BudgetPeriod, t time.Time) time.Time {
+	switch period {
+	case model.BudgetPeriodDaily:
+		return t.AddDate(0, 0, -1)
+	case model.BudgetPeriodWeekly:
+		return t.AddDate(0, 0, -7)
+	case model.BudgetPeriodMonthly:
+		return t.AddDate(0, -1, 0)
+	case model.BudgetPeriodQuarterly:
+		return t.AddDate(0, -3, 0)
+	default:
+		return t.AddDate(-1, 0, 0)
 	}
 }
 
@@ -315,14 +335,16 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 	if !budget.IsEnabled {
 		return decimal.Zero
 	}
-
 	now := time.Now()
 	start, end := budgetPeriodRange(budget.Period, now)
+	return s.calculateSpentInRange(budget, userID, start, end)
+}
 
-	// 只统计支出类型交易，预算追踪的是支出而非收入
-	withdrawalType := string(model.TransactionTypeWithdrawal)
+func (s *BudgetService) calculateSpentInRange(budget *model.Budget, userID uint64, start, end time.Time) decimal.Decimal {
+	if !budget.IsEnabled {
+		return decimal.Zero
+	}
 
-	// 收集所有关联分类ID，并展开子孙分类（选中父分类时自动包含子分类的支出）
 	var allCategoryIDs []uint64
 	for _, cat := range budget.Categories {
 		allCategoryIDs = append(allCategoryIDs, cat.ID)
@@ -333,7 +355,7 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 	}
 
 	filter := repository.TransactionFilter{
-		Type:        withdrawalType,
+		Type:        string(model.TransactionTypeWithdrawal),
 		StartDate:   start.Format("2006-01-02"),
 		EndDate:     end.Format("2006-01-02"),
 		CategoryIDs: expandedIDs,
@@ -347,7 +369,6 @@ func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) deci
 	for _, txn := range txns {
 		total = total.Add(txn.Amount)
 	}
-
 	return total
 }
 

@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"time"
-
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"gorm.io/gorm"
 )
@@ -121,14 +119,17 @@ func (r *BudgetRepository) ListAllEnabled() ([]model.Budget, error) {
 	return budgets, nil
 }
 
-func (r *BudgetRepository) HasHistory(budgetID uint64, periodStart time.Time) (bool, error) {
-	var count int64
-	if err := r.db.Model(&model.BudgetHistory{}).
-		Where("budget_id = ? AND period_start = ?", budgetID, periodStart).
-		Count(&count).Error; err != nil {
-		return false, err
+func (r *BudgetRepository) UpsertHistory(history *model.BudgetHistory) error {
+	var existing model.BudgetHistory
+	err := r.db.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
+	if err == nil {
+		return r.db.Model(&existing).Updates(map[string]interface{}{
+			"period_end": history.PeriodEnd,
+			"amount":     history.Amount,
+			"spent":      history.Spent,
+		}).Error
 	}
-	return count > 0, nil
+	return r.db.Create(history).Error
 }
 
 

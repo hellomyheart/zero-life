@@ -51,10 +51,10 @@ func (s *CronService) StartScheduler() {
 		s.logger.Error("cron: failed to register daily job", zap.Error(err))
 	}
 
-	if _, err := s.cron.AddFunc("0 0 9 1 * *", func() {
-		s.logger.Info("cron: monthly budget snapshot job started")
-		created, errs := s.budgetService.SnapshotCurrentPeriod()
-		s.logger.Info("cron: monthly budget snapshot job finished",
+	if _, err := s.cron.AddFunc("0 0 9 * * *", func() {
+		s.logger.Info("cron: budget history snapshot job started")
+		created, errs := s.budgetService.SnapshotHistory()
+		s.logger.Info("cron: budget history snapshot job finished",
 			zap.Int("created", created),
 			zap.Int("errors", len(errs)),
 		)
@@ -66,7 +66,7 @@ func (s *CronService) StartScheduler() {
 	}
 
 	s.cron.Start()
-	s.logger.Info("cron: scheduler started - daily 00:00 (recurrences+bills), monthly 1st 09:00 (budget snapshot)")
+	s.logger.Info("cron: scheduler started - daily 00:00 (recurrences+bills), daily 09:00 (budget history snapshot)")
 }
 
 func (s *CronService) StopScheduler() {
