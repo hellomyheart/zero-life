@@ -67,13 +67,20 @@ type Account struct {
 	// UserID 所属用户 ID
 	// 每个用户有自己独立的账户集合，用户间数据隔离
 	// gorm:"index" 创建索引，加速按用户查询账户
-	UserID uint64 `gorm:"not null;index" json:"user_id"`
+	UserID uint64 `gorm:"not null;index;uniqueIndex:idx_user_account_num_del" json:"user_id"`
 
 	// Name 账户名称
 	// 用户自定义的账户名称，便于识别
 	// 如："招商银行卡"、"支付宝"、"餐饮支出"
 	// gorm:"size:255" 限制最大长度为 255 个字符
 	Name string `gorm:"not null;size:255" json:"name"`
+
+	// AccountNumber 账户号
+	// 用户自定义的账户编号，如银行卡号、信用卡号等
+	// 同一用户内唯一（含软删除），创建后不可修改
+	// gorm:"not null;size:100" 限制最大长度为 100 个字符
+	// 复合唯一索引 idx_user_account_num_del: (user_id, account_number, deleted_at)
+	AccountNumber string `gorm:"not null;size:100;uniqueIndex:idx_user_account_num_del" json:"account_number"`
 
 	// Type 账户类型
 	// 取值为 AccountType 枚举：asset/expense/revenue/liability
@@ -125,7 +132,7 @@ type Account struct {
 	// GORM 软删除字段，记录删除时间而非真正删除记录
 	// gorm:"index" 创建索引，GORM 查询时自动过滤已删除记录
 	// json:"-" JSON 序列化时忽略此字段
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index;uniqueIndex:idx_user_account_num_del" json:"-"`
 
 	// Currency 关联的货币信息
 	// 通过 CurrencyID 外键关联到 currencies 表

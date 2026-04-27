@@ -52,6 +52,15 @@ func (s *AccountService) Create(userID uint64, req *request.CreateAccountReq) (*
 		}
 	}
 
+	// Check account number uniqueness within user scope
+	existing, err := s.accountRepo.FindByAccountNumber(userID, req.AccountNumber)
+	if err == nil && existing != nil {
+		return nil, errcode.ErrAccountNumberExists
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, errcode.ErrInternal
+	}
+
 	// 解析初始余额字符串为decimal类型，避免浮点精度问题
 	initialBalance, err := decimal.NewFromString(req.InitialBalance)
 	if err != nil {
@@ -62,6 +71,7 @@ func (s *AccountService) Create(userID uint64, req *request.CreateAccountReq) (*
 	account := &model.Account{
 		UserID:         userID,
 		Name:           req.Name,
+		AccountNumber:  req.AccountNumber,
 		Type:           model.AccountType(req.Type),
 		CurrencyID:     req.CurrencyID,
 		InitialBalance: initialBalance,
@@ -202,6 +212,7 @@ func (s *AccountService) toResp(a *model.Account) *response.AccountResp {
 	return &response.AccountResp{
 		ID:             a.ID,
 		Name:           a.Name,
+		AccountNumber:  a.AccountNumber,
 		Type:           string(a.Type),
 		CurrencyID:     a.CurrencyID,
 		Currency:       currencyToResp(&a.Currency),

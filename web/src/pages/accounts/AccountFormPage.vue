@@ -25,6 +25,7 @@ const isEdit = computed(() => !!route.params.id)
 // 表单数据，创建和编辑共用
 const form = reactive({
   name: '',
+  account_number: '',
   type: AccountType.Asset as string,
   currency_id: 0 as number,
   initial_balance: '0',
@@ -34,6 +35,7 @@ const form = reactive({
 
 const rules: FormRules = {
   name: [{ required: true, message: t('common.required'), trigger: 'blur' }],
+  account_number: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   type: [{ required: true, message: t('common.required'), trigger: 'change' }],
   currency_id: [{ required: true, message: t('common.required'), trigger: 'change' }],
   initial_balance: [{ required: true, message: t('common.required'), trigger: 'blur' }],
@@ -61,6 +63,7 @@ onMounted(async () => {
     try {
       const account = (await getAccount(Number(route.params.id))) as unknown as Account
       form.name = account.name
+      form.account_number = account.account_number
       form.type = account.type
       form.currency_id = account.currency_id
       form.initial_balance = account.initial_balance
@@ -90,9 +93,11 @@ async function handleSubmit() {
       // 创建模式：提交所有字段
       const req: CreateAccountReq = {
         name: form.name,
+        account_number: form.account_number,
         type: form.type as AccountType,
         currency_id: form.currency_id,
         initial_balance: form.initial_balance,
+        notes: form.notes,
         is_virtual: form.is_virtual,
       }
       await create(req)
@@ -115,6 +120,9 @@ async function handleSubmit() {
         <el-form-item :label="t('account.name')" prop="name">
           <el-input v-model="form.name" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
+        <el-form-item :label="t('account.accountNumber')" prop="account_number">
+          <el-input v-model="form.account_number" :placeholder="t('common.inputPlaceholder')" :disabled="isEdit" />
+        </el-form-item>
         <el-form-item :label="t('account.type')" prop="type">
           <el-select v-model="form.type" :placeholder="t('common.selectPlaceholder')" :disabled="isEdit">
             <el-option v-for="opt in accountTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
@@ -128,6 +136,9 @@ async function handleSubmit() {
         </el-form-item>
         <el-form-item :label="t('account.isVirtual')">
           <el-switch v-model="form.is_virtual" />
+        </el-form-item>
+        <el-form-item :label="t('account.notes')">
+          <el-input v-model="form.notes" type="textarea" :rows="3" :placeholder="t('common.inputPlaceholder')" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="handleSubmit">{{ t('common.save') }}</el-button>

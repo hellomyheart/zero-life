@@ -100,7 +100,8 @@
     "income": "Income",
     "liability": "Liability",
     "deleteConfirm": "Are you sure you want to delete this account?",
-    "notes": "Notes"
+    "notes": "Notes",
+    "accountNumber": "Account Number"
   },
   "transaction": {
     "title": "Transaction Management",

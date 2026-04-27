@@ -134,6 +134,7 @@ onMounted(fetchAccounts)
     </el-tabs>
 
     <el-table :data="filteredAccounts" v-loading="loading" stripe>
+      <el-table-column prop="account_number" :label="t('account.accountNumber')" width="150" />
       <el-table-column prop="name" :label="t('account.name')" />
       <el-table-column prop="current_balance" :label="t('account.balance')">
         <template #default="{ row }">{{ formatAmount(row.current_balance, row.currency?.code) }}</template>
@@ -141,6 +142,7 @@ onMounted(fetchAccounts)
       <el-table-column :label="t('account.currency')" width="100">
         <template #default="{ row }">{{ row.currency?.code || '' }}</template>
       </el-table-column>
+      <el-table-column prop="notes" :label="t('account.notes')" min-width="120" show-overflow-tooltip />
       <el-table-column :label="t('account.isVirtual')" width="100">
         <template #default="{ row }">
           <el-tag v-if="row.is_virtual" type="info" size="small">{{ t('account.isVirtual') }}</el-tag>

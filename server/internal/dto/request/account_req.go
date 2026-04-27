@@ -5,6 +5,7 @@ package request
 // 用于创建新的资产/支出/收入/负债账户
 type CreateAccountReq struct {
 	Name           string `json:"name" binding:"required"`                                          // 账户名称，同类型下不能重复
+	AccountNumber  string `json:"account_number" binding:"required"`                                // 账户号，同一用户内唯一，创建后不可修改
 	Type           string `json:"type" binding:"required,oneof=asset expense revenue liability"`     // 账户类型：asset(资产)/expense(支出)/revenue(收入)/liability(负债)
 	CurrencyID     uint64 `json:"currency_id" binding:"required"`                                   // 关联货币ID
 	InitialBalance string `json:"initial_balance" binding:"required"`                               // 初始余额

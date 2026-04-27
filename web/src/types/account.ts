@@ -37,6 +37,7 @@ export interface AccountCurrencyResp {
 export interface Account {
   id: number                    // 账户唯一标识（后端返回 uint64）
   name: string                  // 账户名称，如"招商银行储蓄卡"
+  account_number: string        // 账户号，如银行卡号，创建后不可修改
   type: AccountType             // 账户类型
   currency_id: number           // 货币ID（后端返回 uint64）
   currency: AccountCurrencyResp // 关联货币信息对象
@@ -55,9 +56,11 @@ export interface Account {
  */
 export interface CreateAccountReq {
   name: string                  // 账户名称（必填）
+  account_number: string        // 账户号（必填，同一用户内唯一，创建后不可修改）
   type: AccountType             // 账户类型（必填，asset/expense/revenue/liability）
   currency_id: number           // 货币ID（必填，后端要求 uint64 的货币ID，不是货币代码）
   initial_balance: string       // 初始余额（必填）
+  notes?: string                // 备注（可选）
   is_virtual?: boolean          // 是否为虚拟账户（可选，默认为false）
 }
 

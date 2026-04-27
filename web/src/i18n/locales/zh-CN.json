@@ -100,7 +100,8 @@
     "income": "收入",
     "liability": "负债",
     "deleteConfirm": "确定要删除该账户吗？",
-    "notes": "备注"
+    "notes": "备注",
+    "accountNumber": "账户号"
   },
   "transaction": {
     "title": "交易管理",

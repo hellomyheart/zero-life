@@ -51,9 +51,10 @@ var (
 	ErrOldPasswordWrong = &Error{Code: 10006, Message: "old password is incorrect"}
 
 	// 账户错误 2xxxx
-	ErrAccountNameExists = &Error{Code: 20001, Message: "account name already exists under this type"}
-	ErrAccountTypeChange = &Error{Code: 20002, Message: "account type cannot be changed"}
-	ErrAccountHasTxns    = &Error{Code: 20003, Message: "account has associated transactions"}
+	ErrAccountNameExists     = &Error{Code: 20001, Message: "account name already exists under this type"}
+	ErrAccountTypeChange     = &Error{Code: 20002, Message: "account type cannot be changed"}
+	ErrAccountHasTxns        = &Error{Code: 20003, Message: "account has associated transactions"}
+	ErrAccountNumberExists   = &Error{Code: 20004, Message: "account number already exists"}
 	ErrCurrencyInUse     = &Error{Code: 20004, Message: "currency is in use and cannot be disabled"}
 	ErrDefaultCurrency   = &Error{Code: 20005, Message: "default currency cannot be disabled"}
 

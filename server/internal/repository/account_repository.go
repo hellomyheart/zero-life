@@ -163,3 +163,16 @@ func (r *AccountRepository) CountByCurrency(currencyID uint64) (int64, error) {
 	}
 	return count, nil
 }
+
+// FindByAccountNumber 根据用户ID和账户号查找账户，用于账户号唯一性校验。
+// 执行 SQL: SELECT * FROM accounts WHERE user_id = ? AND account_number = ? LIMIT 1
+// 参数 userID: 用户ID
+// 参数 accountNumber: 账户号
+// 返回: 找到的账户对象；未找到时返回 gorm.ErrRecordNotFound 错误。
+func (r *AccountRepository) FindByAccountNumber(userID uint64, accountNumber string) (*model.Account, error) {
+	var account model.Account
+	if err := r.db.Where("user_id = ? AND account_number = ?", userID, accountNumber).First(&account).Error; err != nil {
+		return nil, err
+	}
+	return &account, nil
+}

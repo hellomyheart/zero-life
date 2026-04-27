@@ -261,6 +261,7 @@ docker compose up -d --build  # 代码更新后重新构建
 | ID | uint64 | 主键自增 |
 | UserID | uint64 | 所属用户，索引，数据隔离 |
 | Name | string (size:255) | 账户名称，同类型下唯一 |
+| AccountNumber | string (size:100) | 账户号，同一用户内唯一（含软删除），创建后不可修改 |
 | Type | string (size:20) | 账户类型：asset/expense/revenue/liability |
 | CurrencyID | uint64 | 关联货币，外键 |
 | InitialBalance | decimal(19,4) | 初始余额，创建后不可修改 |
@@ -270,12 +271,15 @@ docker compose up -d --build  # 代码更新后重新构建
 | Currency | Currency | 关联货币对象（Belongs To） |
 | DeletedAt | gorm.DeletedAt | 软删除 |
 
+**唯一索引**：`idx_user_account_num_del` — `(user_id, account_number, deleted_at)` 三字段联合唯一，确保同一用户内账户号不重复（含软删除记录）
+
 ### 业务规则
 
 1. **同类型下账户名唯一**：同一用户的同类型账户不能重名
-2. **不可变字段**：账户类型、货币、初始余额创建后不可修改（修改会破坏交易余额计算）
-3. **删除保护**：有关联交易的账户不能删除
-4. **金额精度**：Go 用 `shopspring/decimal`，TS 用 `decimal.js`，禁止浮点数
+2. **账户号用户内唯一**：同一用户的账户号不能重复（含软删除记录），创建后不可修改
+3. **不可变字段**：账户号、账户类型、货币、初始余额创建后不可修改（修改会破坏交易余额计算）
+4. **删除保护**：有关联交易的账户不能删除
+5. **金额精度**：Go 用 `shopspring/decimal`，TS 用 `decimal.js`，禁止浮点数
 
 ### API 端点
 

@@ -7,6 +7,7 @@ import "time"
 type AccountResp struct {
 	ID             uint64       `json:"id"`              // 账户ID
 	Name           string       `json:"name"`            // 账户名称
+	AccountNumber  string       `json:"account_number"`  // 账户号
 	Type           string       `json:"type"`            // 账户类型
 	CurrencyID     uint64       `json:"currency_id"`     // 货币ID
 	Currency       CurrencyResp `json:"currency"`        // 关联货币信息
