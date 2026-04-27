@@ -241,6 +241,82 @@ docker compose up -d --build  # 代码更新后重新构建
 
 1. **分类可重复关联多个预算**：没有校验，可能导致报表重复计算
 
+## 分类管理
+
+### 核心概念
+
+分类采用**两级树形结构**：父分类（一级）+ 子分类（二级），不允许三级嵌套。分类用于标记交易的支出/收入类别，也用于预算关联和报表统计。
+
+### 数据模型 (`model/category.go`)
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ID | uint64 | 主键自增 |
+| UserID | uint64 | 所属用户，索引，数据隔离 |
+| Name | string (size:100) | 分类名称，用户内全局唯一（非同父下唯一） |
+| ParentID | *uint64 (indexed) | 父分类ID，NULL = 一级分类 |
+| Icon | string (size:50) | 图标标识 |
+| Notes | text | 备注 |
+| SortOrder | int (default:0) | 排序权重，越小越靠前 |
+| Children | []Category | 虚拟字段，GORM `foreignKey:ParentID`，不持久化 |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/categories` | POST | 创建分类 |
+| `/api/v1/categories` | GET | 列表（返回树形结构） |
+| `/api/v1/categories/:id` | GET | 详情 |
+| `/api/v1/categories/:id` | PUT | 更新（仅 name/icon/notes/sort_order） |
+| `/api/v1/categories/:id` | DELETE | 删除（级联删除子分类） |
+
+### 请求/响应 DTO
+
+**CreateCategoryReq**：`name`(必填)、`parent_id`(可选，null=一级)、`icon`、`notes`
+
+**UpdateCategoryReq**：`name`、`icon`、`notes`、`sort_order`(*int，指针区分0和未设置)。**不含 `parent_id`**，不支持移动分类到其他父级。
+
+**CategoryResp**：`id`、`name`、`parent_id`、`icon`、`notes`、`sort_order`、`children`(递归，omitempty)、`created_at`、`updated_at`。不含 `user_id`。
+
+### 业务规则
+
+1. **两级深度限制**：仅创建时校验。若 `parent_id` 指向的父分类本身也有 `parent_id`（即已是二级），则拒绝（`ErrCategoryTooDeep`，40002）。更新时不校验，因为 `UpdateCategoryReq` 不含 `parent_id`，无法改变层级。
+
+2. **名称唯一性**：创建和更新时均校验。用户内全局唯一（非同父下唯一），通过加载全部分类后线性扫描检查。更新时仅在新名称与原名称不同时才校验。
+
+3. **级联删除**：在数据库事务中执行。删除父分类时 → 收集所有子分类ID → 删除所有子分类 → 置空父分类及子分类关联交易的 `category_id` → 清理 `budget_categories` 关联表 → 删除父分类本身。
+
+4. **空字符串语义**：`UpdateCategoryReq` 中 `name`/`icon`/`notes` 为空字符串表示"不修改"，无法主动清空为空字符串。`sort_order` 使用 `*int` 指针，可区分"未提供"和"设为0"。
+
+### 树构建算法 (`buildTree`)
+
+O(n) 两遍扫描：
+1. 遍历所有分类，创建 `map[uint64]*CategoryResp` 用于 O(1) 查找
+2. 遍历所有分类，将有 `parent_id` 的节点挂到父节点的 `Children` 上
+3. 收集 `parent_id == nil` 的根节点
+
+**孤儿节点处理**：如果 `parent_id` 指向不存在的分类（被删除或数据不一致），该节点既不会出现在根节点中，也不会作为子节点，会被静默丢弃。
+
+**排序**：`List` 查询使用 `ORDER BY sort_order ASC, id ASC`，树构建保持此顺序。
+
+### 后代展开 (`GetDescendantIDs`)
+
+迭代 BFS 算法：输入一组分类ID → 包含自身 → 查询 `WHERE parent_id IN (当前层)` → 收集子ID → 重复直到无更多子节点 → 返回所有ID（含输入）。
+
+**使用场景**（5处）：
+- `TransactionService.List`：按分类筛选交易时，选中父分类自动包含子分类的交易
+- `BudgetService.calculateSpent`：计算预算支出时，展开关联分类的子分类
+- `DashboardService`：仪表盘预算告警支出计算
+- `ChartService`：报表分类图表数据聚合
+
+### 前端实现
+
+- **类型** (`types/category.ts`)：`Category` 接口含递归 `children: Category[]`，与后端 `CategoryResp` 字段完全对齐
+- **Store** (`stores/category.ts`)：仅缓存分类树，`fetchCategories()` 调用 `list()` API，失败时保持空数组
+- **列表页** (`pages/categories/CategoryListPage.vue`)：使用 `el-tree` 展示树形结构，支持创建子分类（预填 `parent_id`）、编辑、删除
+- **编辑限制**：编辑对话框不包含 `parent_id` 选择器和 `sort_order` 字段，与后端 `UpdateCategoryReq` 一致
+
 ## 账户管理
 
 ### 核心概念

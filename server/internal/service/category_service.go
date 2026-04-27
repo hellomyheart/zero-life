@@ -110,6 +110,7 @@ func (s *CategoryService) Get(userID, id uint64) (*response.CategoryResp, error)
 
 // Update 更新分类信息
 // 支持更新名称、图标、备注、排序
+// 名称更新时校验用户内唯一性，避免产生同名分类
 // 参数：
 //   - userID: 用户ID
 //   - id: 分类ID
@@ -126,9 +127,20 @@ func (s *CategoryService) Update(userID, id uint64, req *request.UpdateCategoryR
 		return nil, errcode.ErrInternal
 	}
 
-	if req.Name != "" {
+	// 名称更新时校验用户内唯一性
+	if req.Name != "" && req.Name != category.Name {
+		categories, err := s.categoryRepo.List(userID)
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		for _, c := range categories {
+			if c.Name == req.Name {
+				return nil, errcode.ErrCategoryNameExists
+			}
+		}
 		category.Name = req.Name
 	}
+
 	if req.Icon != "" {
 		category.Icon = req.Icon
 	}
@@ -147,7 +159,11 @@ func (s *CategoryService) Update(userID, id uint64, req *request.UpdateCategoryR
 }
 
 // Delete 删除分类
-// 在数据库事务中执行：1)删除所有子分类 2)将关联交易的分类ID设为NULL 3)删除分类本身
+// 在数据库事务中执行以下操作，确保数据一致性：
+// 1. 删除所有子分类
+// 2. 置空父分类及所有子分类关联交易的 category_id
+// 3. 清理 budget_categories 关联表中引用被删分类的记录
+// 4. 删除分类本身
 // 参数：
 //   - userID: 用户ID
 //   - id: 分类ID
@@ -162,23 +178,42 @@ func (s *CategoryService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
-	// 在数据库事务中执行删除操作，确保数据一致性
+	// 收集所有需要删除的分类ID（父分类 + 子分类）
+	categoryIDs := []uint64{id}
 	subCategories, err := s.categoryRepo.GetSubCategories(id, userID)
 	if err != nil {
 		return errcode.ErrInternal
 	}
-
 	for _, sub := range subCategories {
-		if err := s.categoryRepo.Delete(sub.ID, userID); err != nil {
-			return errcode.ErrInternal
+		categoryIDs = append(categoryIDs, sub.ID)
+	}
+
+	// 在数据库事务中执行所有删除和清理操作
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// 1. 删除所有子分类
+		for _, sub := range subCategories {
+			if err := tx.Where("id = ? AND user_id = ?", sub.ID, userID).Delete(&model.Category{}).Error; err != nil {
+				return err
+			}
 		}
-	}
 
-	if err := s.db.Model(&model.Transaction{}).Where("category_id = ?", id).Update("category_id", nil).Error; err != nil {
-		return errcode.ErrInternal
-	}
+		// 2. 置空父分类及所有子分类关联交易的 category_id
+		if err := tx.Model(&model.Transaction{}).Where("category_id IN ?", categoryIDs).Update("category_id", nil).Error; err != nil {
+			return err
+		}
 
-	return s.categoryRepo.Delete(id, userID)
+		// 3. 清理 budget_categories 关联表中引用被删分类的记录
+		if err := tx.Where("category_id IN ?", categoryIDs).Delete(&model.BudgetCategory{}).Error; err != nil {
+			return err
+		}
+
+		// 4. 删除父分类本身
+		if err := tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Category{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 // toResp 将分类模型转换为响应对象
