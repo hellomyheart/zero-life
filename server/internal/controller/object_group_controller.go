@@ -13,7 +13,7 @@ import (
 
 // ObjectGroupController 对象分组管理控制器
 // 处理对象分组的创建、查询、更新和删除等HTTP请求
-// 对象分组用于将交易、账单、预算、存钱罐等对象进行分组管理
+// 对象分组用于将交易、循环交易、预算、存钱罐等对象进行分组管理
 type ObjectGroupController struct {
 	service *service.ObjectGroupService // 对象分组业务服务
 }

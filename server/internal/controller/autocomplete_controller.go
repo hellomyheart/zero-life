@@ -14,7 +14,7 @@ import (
 const autocompleteLimit = 20
 
 // AutocompleteController 自动补全控制器
-// 提供账户、分类、标签、货币、预算、账单等数据的自动补全功能
+// 提供账户、分类、标签、货币、预算、循环交易等数据的自动补全功能
 type AutocompleteController struct {
 	accountRepo  *repository.AccountRepository
 	categoryRepo *repository.CategoryRepository
@@ -246,12 +246,12 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 	Success(ctx, items)
 }
 
-// Bills 账单自动补全
-// 根据查询关键词返回匹配的账单列表
+// RecurringTransactions 循环交易自动补全
+// 根据查询关键词返回匹配的循环交易列表
 // 参数：
 //   - ctx: Gin上下文
-// @Summary      Autocomplete bills
-// @Description  Search bills by keyword for autocomplete
+// @Summary      Autocomplete recurring transactions
+// @Description  Search recurring transactions by keyword for autocomplete
 // @Tags         autocomplete
 // @Accept       json
 // @Produce      json
@@ -261,7 +261,7 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 // @Failure      500  {object} map[string]string
 // @Router       /api/v1/autocomplete/bills [get]
 // @Security     BearerAuth
-func (c *AutocompleteController) Bills(ctx *gin.Context) {
+func (c *AutocompleteController) RecurringTransactions(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
 

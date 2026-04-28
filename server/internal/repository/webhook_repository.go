@@ -6,7 +6,7 @@ import (
 )
 
 // WebhookRepository Webhook 仓库，负责 Webhook 配置和投递记录的数据访问。
-// Webhook 允许用户在特定事件（如交易创建、账单到期）触发时，自动向指定 URL 发送 HTTP 请求。
+// Webhook 允许用户在特定事件（如交易创建、循环交易到期）触发时，自动向指定 URL 发送 HTTP 请求。
 // 每个 Webhook 包含投递记录（WebhookDelivery），记录每次发送的结果和状态。
 type WebhookRepository struct {
 	db *gorm.DB

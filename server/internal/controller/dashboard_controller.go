@@ -8,7 +8,7 @@ import (
 )
 
 // DashboardController 仪表盘控制器
-// 处理仪表盘数据查询请求，包括月度收支、总余额、预算预警、账单提醒和最近交易
+// 处理仪表盘数据查询请求，包括月度收支、总余额、预算预警、循环交易提醒和最近交易
 type DashboardController struct {
 	dashboardService *service.DashboardService // 仪表盘业务服务
 }
@@ -23,10 +23,10 @@ func NewDashboardController(dashboardService *service.DashboardService) *Dashboa
 }
 
 // Get 获取仪表盘数据
-// 返回当前用户的仪表盘汇总数据，包括月度收支、总余额、预算预警、账单提醒和最近交易
+// 返回当前用户的仪表盘汇总数据，包括月度收支、总余额、预算预警、循环交易提醒和最近交易
 // 参数：
 //   - c: Gin上下文，包含用户身份
-// 响应：DashboardResp（含月度收支、总余额、预算预警、账单提醒、最近交易）
+// 响应：DashboardResp（含月度收支、总余额、预算预警、循环交易提醒、最近交易）
 // @Summary      Get dashboard data
 // @Description  Get dashboard summary including monthly income/expense, total balance, budget alerts, bill reminders and recent transactions
 // @Tags         dashboard

@@ -1,5 +1,5 @@
 // Package service 业务逻辑层，实现核心业务逻辑
-// DashboardService 仪表盘业务逻辑，汇总首页展示的收支、预算、账单等
+// DashboardService 仪表盘业务逻辑，汇总首页展示的收支、预算、循环交易等
 package service
 
 import (
@@ -13,7 +13,7 @@ import (
 )
 
 // DashboardService 仪表盘服务
-// 负责汇总首页展示数据，包括月度收支、总资产余额、预算预警、账单提醒和最近交易
+// 负责汇总首页展示数据，包括月度收支、总资产余额、预算预警、循环交易提醒和最近交易
 // 依赖txnRepo查询交易统计，依赖accountRepo查询资产余额，依赖budgetRepo查询预算使用率，依赖rtRepo查询到期循环交易
 type DashboardService struct {
 	txnRepo      *repository.TransactionRepository
@@ -40,7 +40,7 @@ func NewDashboardService(
 }
 
 // Get 获取仪表盘汇总数据
-// 返回内容：月度收入/支出/净收入、总资产余额、预算预警列表、7天内到期账单提醒、最近5笔交易
+// 返回内容：月度收入/支出/净收入、总资产余额、预算预警列表、7天内到期循环交易提醒、最近5笔交易
 // 参数：
 //   - userID: 用户ID
 // 返回：

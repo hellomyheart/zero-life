@@ -14,7 +14,7 @@ import (
 )
 
 // ExportService 数据导出服务
-// 负责将各类数据导出为CSV或JSON格式，支持导出交易、账户、账单、预算、分类、标签、存钱罐和规则
+// 负责将各类数据导出为CSV或JSON格式，支持导出交易、账户、循环交易、预算、分类、标签、存钱罐和规则
 // 依赖各repository获取数据，不依赖service层避免循环依赖
 type ExportService struct {
 	txnRepo       *repository.TransactionRepository
@@ -276,7 +276,7 @@ func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, st
 	return data, filename, nil
 }
 
-// ExportBills 导出账单数据
+// ExportRecurringTransactions 导出循环交易数据
 // 参数：
 //   - userID: 用户ID
 //   - format: 导出格式（csv/json）
@@ -284,7 +284,7 @@ func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, st
 //   - []byte: 导出数据
 //   - string: 文件名
 //   - error: 错误信息
-func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, string, error) {
+func (s *ExportService) ExportRecurringTransactions(userID uint64, format string) ([]byte, string, error) {
 	rts, err := s.rtRepo.List(userID, nil, 0, 10000)
 	if err != nil {
 		return nil, "", err

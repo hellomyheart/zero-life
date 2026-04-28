@@ -136,11 +136,15 @@ func (r *RecurringTransactionRepository) ListLogs(recurringTransactionID uint64)
 
 // GetUpcoming 获取指定用户未来若干天内到期的循环交易，用于仪表盘提醒。
 // 仅返回 reminder_days > 0 且 is_active = true 的记录。
+// 提前提醒逻辑：到期前 reminder_days 天就开始显示，即 next_occurrence - reminder_days 天 <= now + days。
 func (r *RecurringTransactionRepository) GetUpcoming(userID uint64, days int) ([]model.RecurringTransaction, error) {
 	var rts []model.RecurringTransaction
 	now := time.Now()
 	endDate := now.AddDate(0, 0, days)
-	if err := r.db.Where("user_id = ? AND is_active = ? AND reminder_days > 0 AND next_occurrence BETWEEN ? AND ?", userID, true, now, endDate).
+	// SQLite: date(next_occurrence, '-' || reminder_days || ' days') 计算提醒开始日期
+	if err := r.db.Where(
+		"user_id = ? AND is_active = ? AND reminder_days > 0 AND next_occurrence <= ? AND date(next_occurrence, '-' || reminder_days || ' days') <= ?",
+		userID, true, endDate, endDate.Format("2006-01-02")).
 		Order("next_occurrence ASC").Find(&rts).Error; err != nil {
 		return nil, err
 	}

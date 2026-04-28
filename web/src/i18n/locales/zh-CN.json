@@ -415,7 +415,10 @@
     "monthly": "每月",
     "yearly": "每年",
     "deleteConfirm": "确定要删除该定期交易吗？",
-    "inactive": "已停用"
+    "inactive": "已停用",
+    "notes": "备注",
+    "nextOccurrence": "下次到期日",
+    "reminderDays": "提醒天数"
   },
   "webhook": {
     "title": "Webhook 管理",

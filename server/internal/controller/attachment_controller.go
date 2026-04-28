@@ -13,7 +13,7 @@ import (
 
 // AttachmentController 附件管理控制器
 // 处理附件的上传、下载、在线预览、列表查询和删除等HTTP请求
-// 附件可以关联到交易、账单等不同类型的对象（attachable）
+// 附件可以关联到交易、循环交易等不同类型的对象（attachable）
 type AttachmentController struct {
 	service *service.AttachmentService // 附件业务服务
 }

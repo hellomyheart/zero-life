@@ -14,7 +14,7 @@ import (
 
 // WebhookController Webhook管理控制器
 // 处理Webhook的创建、查询、更新、删除和投递记录查询等HTTP请求
-// Webhook用于在特定事件（如交易创建、账单支付等）发生时向外部URL发送通知
+// Webhook用于在特定事件（如交易创建、循环交易执行等）发生时向外部URL发送通知
 type WebhookController struct {
 	service *service.WebhookService // Webhook业务服务
 }

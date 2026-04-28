@@ -233,7 +233,10 @@ func (s *RecurringTransactionService) Update(userID, id uint64, req *request.Upd
 		rt.ReminderDays = *req.ReminderDays
 	}
 
-	rt.NextOccurrence = s.calculateNextOccurrence(rt.StartDate, rt.RecurrenceType, rt.RepeatEvery)
+	// 仅在循环规则相关字段变更时才重算 NextOccurrence
+	if req.RecurrenceType != "" || req.RepeatEvery != nil || req.StartDate != "" {
+		rt.NextOccurrence = s.calculateNextOccurrence(rt.StartDate, rt.RecurrenceType, rt.RepeatEvery)
+	}
 
 	if err := s.rtRepo.Update(rt); err != nil {
 		return nil, errcode.ErrInternal
@@ -329,6 +332,7 @@ func (s *RecurringTransactionService) createTransactionFromRecurring(rt *model.R
 		DestinationID: rt.DestinationID,
 		CategoryID:    rt.CategoryID,
 		Notes:         rt.Notes,
+		RecurringID:   &rt.ID,
 	}
 
 	txnResp, err := s.txnService.Create(rt.UserID, txnReq)
