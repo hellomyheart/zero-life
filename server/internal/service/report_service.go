@@ -63,7 +63,7 @@ func (s *ReportService) IncomeExpense(userID uint64, req *request.ReportReq) (*r
 		EndDate:   endDate.Format("2006-01-02"),
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -106,7 +106,7 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 		EndDate:   endDate.Format("2006-01-02"),
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -217,7 +217,7 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 			CategoryIDs: expandedIDs,
 		}
 
-		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+		txns, err := s.txnRepo.ListAll(userID, filter)
 		if err != nil {
 			continue
 		}
@@ -310,7 +310,7 @@ func (s *ReportService) NetWorth(userID uint64, req *request.ReportReq) (*respon
 		StartDate: startDate.Format("2006-01-02"),
 		EndDate:   endDate.Format("2006-01-02"),
 	}
-	allTxns, err := s.txnRepo.List(userID, allFilter, 0, 10000)
+	allTxns, err := s.txnRepo.ListAll(userID, allFilter)
 	if err != nil {
 		allTxns = nil
 	}
@@ -401,7 +401,7 @@ func (s *ReportService) Trend(userID uint64, req *request.ReportReq) (*response.
 			EndDate:   periodEnds[i].Format("2006-01-02"),
 		}
 
-		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+		txns, err := s.txnRepo.ListAll(userID, filter)
 		if err != nil {
 			continue
 		}
@@ -446,7 +446,7 @@ func (s *ReportService) Tag(userID uint64, req *request.ReportReq) (*response.Ta
 		EndDate:   endDate.Format("2006-01-02"),
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}

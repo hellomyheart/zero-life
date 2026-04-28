@@ -236,7 +236,7 @@ func (s *RuleGroupService) ExecuteGroup(userID, id uint64, req *request.ExecuteR
 		EndDate:   endDate,
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}

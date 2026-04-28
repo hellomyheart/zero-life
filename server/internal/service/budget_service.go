@@ -360,7 +360,7 @@ func (s *BudgetService) calculateSpentInRange(budget *model.Budget, userID uint6
 		EndDate:     end.Format("2006-01-02"),
 		CategoryIDs: expandedIDs,
 	}
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return decimal.Zero
 	}

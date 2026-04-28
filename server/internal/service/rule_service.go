@@ -286,7 +286,7 @@ func (s *RuleService) Execute(userID, id uint64, req *request.ExecuteRuleReq) (*
 		EndDate:   endDate,
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}

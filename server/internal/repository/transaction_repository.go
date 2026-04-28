@@ -115,6 +115,33 @@ func (r *TransactionRepository) List(userID uint64, filter TransactionFilter, of
 	return txns, nil
 }
 
+// ListAll 查询指定用户符合过滤条件的所有交易（无条数限制）。
+// 内部循环分页查询，每次取 5000 条，直到取完所有数据。
+// 用于预算支出计算、报表统计等需要完整数据的场景。
+func (r *TransactionRepository) ListAll(userID uint64, filter TransactionFilter) ([]model.Transaction, error) {
+	var allTxns []model.Transaction
+	const batchSize = 5000
+	offset := 0
+	for {
+		var batch []model.Transaction
+		query := r.db.Where("user_id = ? AND parent_id IS NULL", userID)
+		query = r.applyFilter(query, filter)
+		if err := query.Preload("Source").Preload("Destination").Preload("Category").Preload("Tags").
+			Order("date DESC, id DESC").Offset(offset).Limit(batchSize).Find(&batch).Error; err != nil {
+			return nil, err
+		}
+		if len(batch) == 0 {
+			break
+		}
+		allTxns = append(allTxns, batch...)
+		if len(batch) < batchSize {
+			break
+		}
+		offset += batchSize
+	}
+	return allTxns, nil
+}
+
 // Count 统计指定用户符合过滤条件的交易总数，用于分页计算。
 // 执行 SQL: SELECT COUNT(*) FROM transactions WHERE user_id = ? AND parent_id IS NULL [AND 过滤条件]
 func (r *TransactionRepository) Count(userID uint64, filter TransactionFilter) (int64, error) {

@@ -64,7 +64,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		StartDate: monthStart.Format("2006-01-02"),
 		EndDate:   now.AddDate(0, 0, 1).Format("2006-01-02"),
 	}
-	monthTxns, err := s.txnRepo.List(userID, monthFilter, 0, 10000)
+	monthTxns, err := s.txnRepo.ListAll(userID, monthFilter)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
@@ -125,7 +125,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 			EndDate:     periodEnd.Format("2006-01-02"),
 			CategoryIDs: descendantIDs,
 		}
-		catTxns, err := s.txnRepo.List(userID, catFilter, 0, 10000)
+		catTxns, err := s.txnRepo.ListAll(userID, catFilter)
 		if err != nil {
 			continue
 		}

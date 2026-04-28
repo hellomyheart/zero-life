@@ -123,9 +123,10 @@ func (r *BudgetRepository) UpsertHistory(history *model.BudgetHistory) error {
 	var existing model.BudgetHistory
 	err := r.db.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
 	if err == nil {
+		// 已有记录：只更新 period_end 和 spent，不更新 amount
+		// 保留该周期首次生成时的预算金额，避免用户修改预算金额后历史数据被覆盖
 		return r.db.Model(&existing).Updates(map[string]interface{}{
 			"period_end": history.PeriodEnd,
-			"amount":     history.Amount,
 			"spent":      history.Spent,
 		}).Error
 	}

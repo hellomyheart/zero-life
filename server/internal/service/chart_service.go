@@ -176,7 +176,7 @@ func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingD
 				EndDate:     end.Format("2006-01-02"),
 				CategoryIDs: expandedIDs,
 			}
-			txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+			txns, err := s.txnRepo.ListAll(userID, filter)
 			if err == nil {
 				for _, txn := range txns {
 					spent = spent.Add(txn.Amount)

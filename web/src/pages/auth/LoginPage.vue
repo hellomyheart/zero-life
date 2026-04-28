@@ -138,6 +138,12 @@ async function handleMFAVerify() {
   right: 20px;
 }
 
+.auth-theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
 .login-card {
   width: 400px;
 }

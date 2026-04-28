@@ -295,9 +295,13 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ### 历史快照 (`SnapshotHistory`)
 
-`CronService` 每天 09:00 执行，遍历所有启用预算，为近2年内所有已结束周期生成/更新快照（UPSERT），当前周期不生成（可看实时数据）。`UpsertHistory` 按 `budget_id + period_start` 判重，存在则更新 `period_end`/`amount`/`spent`。
+`CronService` 每天 09:00 执行，遍历所有启用预算，为近2年内所有已结束周期生成/更新快照（UPSERT），当前周期不生成（可看实时数据）。`UpsertHistory` 按 `budget_id + period_start` 判重，存在则只更新 `period_end`/`spent`，不更新 `amount`。
 
-**注意**：快照中的 `Amount` 使用当前预算金额，如果用户修改了预算金额，历史快照中的限额也会被更新为当前值。
+**Amount 保留策略**：已有快照的 `Amount` 不会被覆盖，保留该周期首次生成时的预算金额。只有新建快照时才写入当前预算金额。这样用户修改预算金额后，历史快照中的限额仍反映该周期实际设定的值。
+
+### 交易查询
+
+支出计算、报表统计等场景使用 `TransactionRepository.ListAll` 方法，内部循环分页（每批 5000 条）查询直到取完所有数据，无条数限制。
 
 ### 前端实现
 

@@ -66,7 +66,7 @@ func (s *ExportService) ExportTransactions(userID uint64, startDate, endDate, fo
 		EndDate:   endDate,
 	}
 
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+	txns, err := s.txnRepo.ListAll(userID, filter)
 	if err != nil {
 		return nil, "", err
 	}
