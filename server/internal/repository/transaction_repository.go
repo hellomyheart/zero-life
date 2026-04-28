@@ -34,16 +34,20 @@ func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-// Create 创建交易及其关联的标签。使用数据库事务确保原子性。
+// Create 创建交易及其关联的标签。
+// 支持传入事务对象，确保与余额更新在同一事务中执行。
 // 先创建交易记录，再批量创建交易-标签关联记录。
-// 执行 SQL（事务内）:
-//   1. INSERT INTO transactions (...)
-//   2. INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?), (?, ?), ...
 // 参数 txn: 要创建的交易对象，创建后 GORM 会自动填充 ID。
 // 参数 tagIDs: 要关联的标签 ID 列表，可以为空。
-// 返回: 创建失败时返回错误，事务回滚。
+// 返回: 创建失败时返回错误。
 func (r *TransactionRepository) Create(txn *model.Transaction, tagIDs []uint64) error {
-	if err := r.db.Create(txn).Error; err != nil {
+	return r.CreateWithDB(r.db, txn, tagIDs)
+}
+
+// CreateWithDB 使用指定的 DB 对象创建交易及其关联的标签。
+// 用于在事务中创建交易，确保与余额更新在同一事务中执行。
+func (r *TransactionRepository) CreateWithDB(db *gorm.DB, txn *model.Transaction, tagIDs []uint64) error {
+	if err := db.Create(txn).Error; err != nil {
 		return err
 	}
 	if len(tagIDs) > 0 {
@@ -54,7 +58,7 @@ func (r *TransactionRepository) Create(txn *model.Transaction, tagIDs []uint64) 
 				TagID:         tagID,
 			})
 		}
-		if err := r.db.Create(&transactionTags).Error; err != nil {
+		if err := db.Create(&transactionTags).Error; err != nil {
 			return err
 		}
 	}
@@ -133,20 +137,22 @@ func (r *TransactionRepository) Update(txn *model.Transaction) error {
 	return r.db.Save(txn).Error
 }
 
-// UpdateWithTags 更新交易记录及其关联标签。使用数据库事务确保原子性。
+// UpdateWithTags 更新交易记录及其关联标签。
 // 策略：先更新交易本身，再删除旧的标签关联，最后插入新的标签关联（全量替换）。
-// 执行 SQL（事务内）:
-//   1. UPDATE transactions SET ... WHERE id = ?
-//   2. DELETE FROM transaction_tags WHERE transaction_id = ?
-//   3. INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (?, ?), ...
 // 参数 txn: 要更新的交易对象。
 // 参数 tagIDs: 新的标签 ID 列表，替换原有标签。
-// 返回: 更新失败时返回错误，事务回滚。
+// 返回: 更新失败时返回错误。
 func (r *TransactionRepository) UpdateWithTags(txn *model.Transaction, tagIDs []uint64) error {
-	if err := r.db.Save(txn).Error; err != nil {
+	return r.UpdateWithTagsAndDB(r.db, txn, tagIDs)
+}
+
+// UpdateWithTagsAndDB 使用指定的 DB 对象更新交易记录及其关联标签。
+// 用于在事务中更新交易，确保与余额更新在同一事务中执行。
+func (r *TransactionRepository) UpdateWithTagsAndDB(db *gorm.DB, txn *model.Transaction, tagIDs []uint64) error {
+	if err := db.Save(txn).Error; err != nil {
 		return err
 	}
-	if err := r.db.Where("transaction_id = ?", txn.ID).Delete(&model.TransactionTag{}).Error; err != nil {
+	if err := db.Where("transaction_id = ?", txn.ID).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
 	}
 	if len(tagIDs) > 0 {
@@ -157,30 +163,32 @@ func (r *TransactionRepository) UpdateWithTags(txn *model.Transaction, tagIDs []
 				TagID:         tagID,
 			})
 		}
-		if err := r.db.Create(&transactionTags).Error; err != nil {
+		if err := db.Create(&transactionTags).Error; err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// Delete 删除交易及其关联的标签和拆分子交易。使用数据库事务确保原子性。
+// Delete 删除交易及其关联的标签和拆分子交易。
 // 删除顺序：1.交易标签关联 → 2.拆分子交易 → 3.交易本身
-// 执行 SQL（事务内）:
-//   1. DELETE FROM transaction_tags WHERE transaction_id = ?
-//   2. DELETE FROM transactions WHERE parent_id = ?
-//   3. DELETE FROM transactions WHERE id = ? AND user_id = ?
 // 参数 id: 交易 ID。
 // 参数 userID: 当前登录用户 ID，确保只能删除自己的交易。
-// 返回: 删除失败时返回错误，事务回滚。
+// 返回: 删除失败时返回错误。
 func (r *TransactionRepository) Delete(id, userID uint64) error {
-	if err := r.db.Where("transaction_id = ?", id).Delete(&model.TransactionTag{}).Error; err != nil {
+	return r.DeleteWithDB(r.db, id, userID)
+}
+
+// DeleteWithDB 使用指定的 DB 对象删除交易及其关联的标签和拆分子交易。
+// 用于在事务中删除交易，确保与余额回滚在同一事务中执行。
+func (r *TransactionRepository) DeleteWithDB(db *gorm.DB, id, userID uint64) error {
+	if err := db.Where("transaction_id = ?", id).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
 	}
-	if err := r.db.Where("parent_id = ?", id).Delete(&model.Transaction{}).Error; err != nil {
+	if err := db.Where("parent_id = ?", id).Delete(&model.Transaction{}).Error; err != nil {
 		return err
 	}
-	if err := r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error; err != nil {
+	if err := db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error; err != nil {
 		return err
 	}
 	return nil
@@ -368,7 +376,7 @@ func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
 	})
 }
 
-// AttachTags 为交易添加标签
+// AttachTags 为交易添加标签（全量替换：先删除旧标签，再插入新标签）
 func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error {
 	if err := r.db.Where("transaction_id = ?", txnID).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
@@ -383,6 +391,33 @@ func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error 
 	}
 
 	return r.db.Create(&transactionTags).Error
+}
+
+// AddTags 为交易追加标签（仅添加不存在的标签，不删除已有标签）
+func (r *TransactionRepository) AddTags(txnID uint64, tagIDs []uint64) error {
+	if len(tagIDs) == 0 {
+		return nil
+	}
+	var existingIDs []uint64
+	r.db.Model(&model.TransactionTag{}).Where("transaction_id = ? AND tag_id IN ?", txnID, tagIDs).
+		Pluck("tag_id", &existingIDs)
+	existingSet := make(map[uint64]bool, len(existingIDs))
+	for _, id := range existingIDs {
+		existingSet[id] = true
+	}
+	newTags := make([]model.TransactionTag, 0, len(tagIDs))
+	for _, tagID := range tagIDs {
+		if !existingSet[tagID] {
+			newTags = append(newTags, model.TransactionTag{
+				TransactionID: txnID,
+				TagID:         tagID,
+			})
+		}
+	}
+	if len(newTags) == 0 {
+		return nil
+	}
+	return r.db.Create(&newTags).Error
 }
 
 // AdvancedSearchFilter 高级搜索过滤器

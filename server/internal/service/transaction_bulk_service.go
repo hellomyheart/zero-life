@@ -55,15 +55,26 @@ func (s *TransactionBulkService) BulkEdit(userID uint64, req *request.BulkEditRe
 			return err
 		}
 
+		updated := false
 		if req.CategoryID != nil {
 			txn.CategoryID = req.CategoryID
+			updated = true
 		}
 		if req.Notes != "" {
 			txn.Notes = req.Notes
+			updated = true
 		}
 
-		if err := s.txnRepo.UpdateWithTags(txn, req.TagIDs); err != nil {
-			return err
+		if updated {
+			if err := s.txnRepo.Update(txn); err != nil {
+				return err
+			}
+		}
+
+		if len(req.TagIDs) > 0 {
+			if err := s.txnRepo.AddTags(txn.ID, req.TagIDs); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -258,13 +269,15 @@ func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.
 }
 
 // calculateBalanceChanges 根据交易类型计算各账户的余额变更
-// deposit：源账户余额增加；withdrawal：源账户余额减少；transfer：源账户减少，目标账户增加
+// deposit：目标账户余额增加；withdrawal：源账户余额减少；transfer：源账户减少，目标账户增加
 func (s *TransactionBulkService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64) map[uint64]decimal.Decimal {
 	changes := make(map[uint64]decimal.Decimal)
 
 	switch txnType {
 	case model.TransactionTypeDeposit:
-		changes[sourceID] = amount
+		if destID != nil {
+			changes[*destID] = amount
+		}
 	case model.TransactionTypeWithdrawal:
 		changes[sourceID] = amount.Neg()
 	case model.TransactionTypeTransfer:

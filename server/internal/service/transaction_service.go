@@ -91,44 +91,59 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 	// Calculate balance changes
 	balanceChanges := s.calculateBalanceChanges(txnType, amount, req.SourceID, req.DestinationID)
 
-	// Create transaction with tags
-	if err := s.txnRepo.Create(txn, req.Tags); err != nil {
-		return nil, errcode.ErrInternal
-	}
+	// 在事务中执行：创建交易、创建拆分、更新余额，确保原子性
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.CreateWithDB(dbTx, txn, req.Tags); err != nil {
+			return err
+		}
 
-	// Create splits if any
-	if len(req.Splits) > 0 {
-		splitTotal := decimal.Zero
-		for _, splitReq := range req.Splits {
-			splitAmount, _ := decimal.NewFromString(splitReq.Amount)
-			splitTotal = splitTotal.Add(splitAmount)
-
-			split := &model.Transaction{
-				UserID:        userID,
-				Type:          txnType,
-				Date:          date,
-				Description:   req.Description,
-				Amount:        splitAmount,
-				SourceID:      req.SourceID,
-				DestinationID: req.DestinationID,
-				CategoryID:    splitReq.CategoryID,
-				Notes:         splitReq.Notes,
-				ParentID:      &txn.ID,
+		// Create splits if any (validate total before creating)
+		if len(req.Splits) > 0 {
+			splitTotal := decimal.Zero
+			for _, splitReq := range req.Splits {
+				splitAmount, err := decimal.NewFromString(splitReq.Amount)
+				if err != nil {
+					return errcode.ErrInvalidAmount
+				}
+				if splitAmount.LessThanOrEqual(decimal.Zero) {
+					return errcode.ErrInvalidAmount
+				}
+				splitTotal = splitTotal.Add(splitAmount)
 			}
-			if err := s.txnRepo.Create(split, splitReq.Tags); err != nil {
-				return nil, errcode.ErrInternal
+			if !splitTotal.Equal(amount) {
+				return errcode.ErrSplitAmountMismatch
+			}
+
+			for _, splitReq := range req.Splits {
+				splitAmount, _ := decimal.NewFromString(splitReq.Amount)
+
+				split := &model.Transaction{
+					UserID:        userID,
+					Type:          txnType,
+					Date:          date,
+					Description:   req.Description,
+					Amount:        splitAmount,
+					SourceID:      req.SourceID,
+					DestinationID: req.DestinationID,
+					CategoryID:    splitReq.CategoryID,
+					Notes:         splitReq.Notes,
+					ParentID:      &txn.ID,
+				}
+				if err := s.txnRepo.CreateWithDB(dbTx, split, splitReq.Tags); err != nil {
+					return err
+				}
 			}
 		}
-		if !splitTotal.Equal(amount) {
-			return nil, errcode.ErrSplitAmountMismatch
-		}
-	}
 
-	// Update account balances
-	for accountID, change := range balanceChanges {
-		if err := s.updateAccountBalance(s.db, accountID, change); err != nil {
-			return nil, errcode.ErrInternal
+		// Update account balances
+		for accountID, change := range balanceChanges {
+			if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
+				return err
+			}
 		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// Reload
@@ -303,13 +318,19 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 	oldTxn.CategoryID = req.CategoryID
 	oldTxn.Notes = req.Notes
 
-	if err := s.txnRepo.UpdateWithTags(oldTxn, req.Tags); err != nil {
-		return nil, errcode.ErrInternal
-	}
-	for accountID, change := range netChanges {
-		if err := s.updateAccountBalance(s.db, accountID, change); err != nil {
-			return nil, errcode.ErrInternal
+	// 在事务中执行：更新交易、更新余额，确保原子性
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.UpdateWithTagsAndDB(dbTx, oldTxn, req.Tags); err != nil {
+			return err
 		}
+		for accountID, change := range netChanges {
+			if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, errcode.ErrInternal
 	}
 
 	updated, err := s.txnRepo.GetByID(id, userID)
@@ -357,13 +378,19 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 	// Rollback balance changes
 	changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
 
-	if err := s.txnRepo.Delete(id, userID); err != nil {
-		return errcode.ErrInternal
-	}
-	for accountID, change := range changes {
-		if err := s.updateAccountBalance(s.db, accountID, change.Neg()); err != nil {
-			return errcode.ErrInternal
+	// 在事务中执行：删除交易、回滚余额，确保原子性
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.DeleteWithDB(dbTx, id, userID); err != nil {
+			return err
 		}
+		for accountID, change := range changes {
+			if err := s.updateAccountBalance(dbTx, accountID, change.Neg()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return errcode.ErrInternal
 	}
 
 	return nil
