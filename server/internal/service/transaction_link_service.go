@@ -17,15 +17,17 @@ import (
 // 所有操作均需传入用户ID，确保用户只能操作自己交易的关联数据
 type TransactionLinkService struct {
 	linkRepo *repository.TransactionLinkRepository
+	txnRepo  *repository.TransactionRepository
 }
 
 // NewTransactionLinkService 创建交易关联服务实例
 // 参数：
 //   - linkRepo: 交易关联数据访问对象
+//   - txnRepo: 交易数据访问对象，用于验证交易归属
 // 返回：
 //   - *TransactionLinkService: 交易关联服务实例
-func NewTransactionLinkService(linkRepo *repository.TransactionLinkRepository) *TransactionLinkService {
-	return &TransactionLinkService{linkRepo: linkRepo}
+func NewTransactionLinkService(linkRepo *repository.TransactionLinkRepository, txnRepo *repository.TransactionRepository) *TransactionLinkService {
+	return &TransactionLinkService{linkRepo: linkRepo, txnRepo: txnRepo}
 }
 
 // Create 创建交易关联
@@ -37,6 +39,19 @@ func NewTransactionLinkService(linkRepo *repository.TransactionLinkRepository) *
 //   - *response.TransactionLinkResp: 创建成功的交易关联信息
 //   - error: 错误信息
 func (s *TransactionLinkService) Create(userID uint64, req *request.CreateTransactionLinkReq) (*response.TransactionLinkResp, error) {
+	if _, err := s.txnRepo.GetByID(req.TransactionID, userID); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+	if _, err := s.txnRepo.GetByID(req.LinkedJournalID, userID); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrNotFound
+		}
+		return nil, errcode.ErrInternal
+	}
+
 	link := &model.TransactionJournalLink{
 		TransactionID:   req.TransactionID,
 		LinkType:        model.TransactionLinkType(req.LinkType),

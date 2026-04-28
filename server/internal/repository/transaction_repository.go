@@ -171,24 +171,22 @@ func (r *TransactionRepository) UpdateWithTagsAndDB(db *gorm.DB, txn *model.Tran
 }
 
 // Delete 删除交易及其关联的标签和拆分子交易。
-// 删除顺序：1.交易标签关联 → 2.拆分子交易 → 3.交易本身
-// 参数 id: 交易 ID。
-// 参数 userID: 当前登录用户 ID，确保只能删除自己的交易。
-// 返回: 删除失败时返回错误。
+// 使用硬删除（Unscoped），因为余额已硬回滚，软删除记录会导致恢复时余额不一致。
 func (r *TransactionRepository) Delete(id, userID uint64) error {
 	return r.DeleteWithDB(r.db, id, userID)
 }
 
 // DeleteWithDB 使用指定的 DB 对象删除交易及其关联的标签和拆分子交易。
-// 用于在事务中删除交易，确保与余额回滚在同一事务中执行。
+// 使用硬删除（Unscoped），因为余额已在同一事务中硬回滚，
+// 软删除记录留在表中会导致 Unscoped 恢复时余额不一致。
 func (r *TransactionRepository) DeleteWithDB(db *gorm.DB, id, userID uint64) error {
 	if err := db.Where("transaction_id = ?", id).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
 	}
-	if err := db.Where("parent_id = ?", id).Delete(&model.Transaction{}).Error; err != nil {
+	if err := db.Unscoped().Where("parent_id = ?", id).Delete(&model.Transaction{}).Error; err != nil {
 		return err
 	}
-	if err := db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error; err != nil {
+	if err := db.Unscoped().Where("id = ? AND user_id = ?", id, userID).Delete(&model.Transaction{}).Error; err != nil {
 		return err
 	}
 	return nil
@@ -296,10 +294,14 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 	if len(filter.CategoryIDs) > 0 {
 		query = query.Where("category_id IN ?", filter.CategoryIDs)
 	}
-	if filter.TagID != nil {
+	if filter.TagID != nil && len(filter.TagIDs) > 0 {
+		allTagIDs := make([]uint64, 0, 1+len(filter.TagIDs))
+		allTagIDs = append(allTagIDs, *filter.TagID)
+		allTagIDs = append(allTagIDs, filter.TagIDs...)
+		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id AND transaction_tags.tag_id IN ?", allTagIDs)
+	} else if filter.TagID != nil {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id AND transaction_tags.tag_id = ?", *filter.TagID)
-	}
-	if len(filter.TagIDs) > 0 {
+	} else if len(filter.TagIDs) > 0 {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id AND transaction_tags.tag_id IN ?", filter.TagIDs)
 	}
 	return query
@@ -353,26 +355,17 @@ func (r *TransactionRepository) CreateBatch(txns []model.Transaction) error {
 }
 
 // DeleteBatch 批量删除交易及其关联的标签和拆分子交易。使用数据库事务确保原子性。
-// 修复：删除交易前先删除关联的交易标签和拆分子交易，避免产生孤立数据。
-// 执行 SQL（事务内）:
-//   1. DELETE FROM transaction_tags WHERE transaction_id IN (?)
-//   2. DELETE FROM transactions WHERE parent_id IN (?)
-//   3. DELETE FROM transactions WHERE id IN (?) AND user_id = ?
-// 参数 ids: 要删除的交易 ID 列表。
-// 参数 userID: 当前登录用户 ID，确保只能删除自己的交易。
-// 返回: 删除失败时返回错误，事务回滚。
+// 使用硬删除（Unscoped），因为余额已在同一事务中硬回滚，
+// 软删除记录留在表中会导致 Unscoped 恢复时余额不一致。
 func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// 先删除关联的交易标签，避免孤立数据
 		if err := tx.Where("transaction_id IN ?", ids).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
-		// 再删除拆分子交易，避免孤立数据
-		if err := tx.Where("parent_id IN ?", ids).Delete(&model.Transaction{}).Error; err != nil {
+		if err := tx.Unscoped().Where("parent_id IN ?", ids).Delete(&model.Transaction{}).Error; err != nil {
 			return err
 		}
-		// 最后删除交易本身
-		return tx.Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error
+		return tx.Unscoped().Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error
 	})
 }
 

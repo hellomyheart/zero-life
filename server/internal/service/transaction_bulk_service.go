@@ -88,6 +88,12 @@ func (s *TransactionBulkService) BulkEdit(userID uint64, req *request.BulkEditRe
 // 返回：
 //   - error: 错误信息
 func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDeleteReq) error {
+	type txnInfo struct {
+		id      uint64
+		changes map[uint64]decimal.Decimal
+	}
+	txns := make([]txnInfo, 0, len(req.IDs))
+
 	for _, id := range req.IDs {
 		txn, err := s.txnRepo.GetByID(id, userID)
 		if err != nil {
@@ -96,20 +102,39 @@ func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDele
 			}
 			return err
 		}
-
 		changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
-		for accountID, change := range changes {
-			if err := s.db.Model(&model.Account{}).Where("id = ?", accountID).
-				Update("current_balance", gorm.Expr("current_balance - ?", change)).Error; err != nil {
-				return err
-			}
-		}
+		txns = append(txns, txnInfo{id: id, changes: changes})
+	}
 
-		if err := s.txnRepo.Delete(id, userID); err != nil {
+	if len(txns) == 0 {
+		return nil
+	}
+
+	ids := make([]uint64, len(txns))
+	for i, t := range txns {
+		ids[i] = t.id
+	}
+
+	return s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := dbTx.Where("transaction_id IN ?", ids).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
-	}
-	return nil
+		if err := dbTx.Where("parent_id IN ?", ids).Delete(&model.Transaction{}).Error; err != nil {
+			return err
+		}
+		if err := dbTx.Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error; err != nil {
+			return err
+		}
+		for _, t := range txns {
+			for accountID, change := range t.changes {
+				if err := dbTx.Model(&model.Account{}).Where("id = ?", accountID).
+					Update("current_balance", gorm.Expr("current_balance - ?", change)).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 // ConvertType 转换交易类型

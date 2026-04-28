@@ -27,17 +27,17 @@ type CreateSplitReq struct {
 
 // UpdateTransactionReq 更新交易请求
 // 用于修改已有交易的信息，字段含义与CreateTransactionReq相同
+// 注意：不支持通过 Update 修改拆分，请使用 Split/MergeSplits API
 type UpdateTransactionReq struct {
-	Type          string            `json:"type" binding:"required,oneof=deposit withdrawal transfer"`
-	Date          string            `json:"date" binding:"required"`
-	Description   string            `json:"description" binding:"required"`
-	Amount        string            `json:"amount" binding:"required"`
-	SourceID      uint64            `json:"source_id" binding:"required"`
-	DestinationID *uint64           `json:"destination_id"`
-	CategoryID    *uint64           `json:"category_id"`
-	Notes         string            `json:"notes"`
-	Tags          []uint64          `json:"tags"`
-	Splits        []CreateSplitReq  `json:"splits"`
+	Type          string   `json:"type" binding:"required,oneof=deposit withdrawal transfer"`
+	Date          string   `json:"date" binding:"required"`
+	Description   string   `json:"description" binding:"required"`
+	Amount        string   `json:"amount" binding:"required"`
+	SourceID      uint64   `json:"source_id" binding:"required"`
+	DestinationID *uint64  `json:"destination_id"`
+	CategoryID    *uint64  `json:"category_id"`
+	Notes         string   `json:"notes"`
+	Tags          []uint64 `json:"tags"`
 }
 
 // TransactionListReq 交易列表查询请求

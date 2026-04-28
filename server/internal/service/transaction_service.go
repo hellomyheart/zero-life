@@ -370,11 +370,6 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
-	// Trigger webhooks before delete (async)
-	if s.webhookNotifier != nil {
-		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionDelete), txn)
-	}
-
 	// Rollback balance changes
 	changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
 
@@ -391,6 +386,11 @@ func (s *TransactionService) Delete(userID, id uint64) error {
 		return nil
 	}); err != nil {
 		return errcode.ErrInternal
+	}
+
+	// 事务成功后再触发 Webhook 通知
+	if s.webhookNotifier != nil {
+		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionDelete), txn)
 	}
 
 	return nil

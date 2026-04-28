@@ -189,7 +189,7 @@ func main() {
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
-	txnLinkService := service.NewTransactionLinkService(txnLinkRepo)
+	txnLinkService := service.NewTransactionLinkService(txnLinkRepo, txnRepo)
 	prefService := service.NewPreferenceService(prefRepo)
 	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
 	ogService := service.NewObjectGroupService(ogRepo)
