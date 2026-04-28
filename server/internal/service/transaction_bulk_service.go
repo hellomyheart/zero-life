@@ -337,7 +337,7 @@ func (s *TransactionBulkService) toResp(t *model.Transaction) *response.Transact
 		DestinationID: t.DestinationID,
 		CategoryID:    t.CategoryID,
 		Notes:         t.Notes,
-		BillID:        t.BillID,
+		RecurringID:   t.RecurringID,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}

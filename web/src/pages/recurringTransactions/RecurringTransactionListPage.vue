@@ -242,7 +242,7 @@ onMounted(async () => {
         <el-form-item :label="t('recurringTransaction.endDate')">
           <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
         </el-form-item>
-        <el-form-item :label="t('bill.notes')">
+        <el-form-item :label="t('recurringTransaction.notes')">
           <el-input v-model="form.notes" type="textarea" />
         </el-form-item>
       </el-form>

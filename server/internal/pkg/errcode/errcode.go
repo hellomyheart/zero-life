@@ -76,8 +76,8 @@ var (
 	// 预算错误 6xxxx
 	ErrBudgetAmountInvalid = &Error{Code: 60001, Message: "budget amount must be greater than zero"}
 
-	// 账单错误 7xxxx
-	ErrBillAmountInvalid = &Error{Code: 70001, Message: "bill amount must be greater than zero"}
+	// 循环交易错误 7xxxx
+	ErrRecurringAmountInvalid = &Error{Code: 70001, Message: "recurring transaction amount must be greater than zero"}
 
 	// 规则错误 8xxxx
 	ErrRuleConditionInvalid = &Error{Code: 80001, Message: "invalid rule condition"}

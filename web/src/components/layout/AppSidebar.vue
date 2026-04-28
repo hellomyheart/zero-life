@@ -11,7 +11,6 @@ import {
   Menu,
   PriceTag,
   PieChart,
-  Bell,
   DataAnalysis,
   Upload,
   Setting,
@@ -89,12 +88,6 @@ function handleSelect(index: string) {
       <el-menu-item index="/budgets">
         <el-icon><PieChart /></el-icon>
         <template #title>{{ t('nav.budgets') }}</template>
-      </el-menu-item>
-
-      <!-- 账单提醒 -->
-      <el-menu-item index="/bills">
-        <el-icon><Bell /></el-icon>
-        <template #title>{{ t('nav.bills') }}</template>
       </el-menu-item>
 
       <!-- 存钱罐 -->

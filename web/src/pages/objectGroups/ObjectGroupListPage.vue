@@ -20,7 +20,7 @@
         <el-form-item :label="t('objectGroup.type')">
           <el-select v-model="filters.groupable_type" clearable :placeholder="t('common.all')">
             <el-option :label="t('objectGroup.typeTransaction')" value="transaction" />
-            <el-option :label="t('objectGroup.typeBill')" value="bill" />
+            <el-option :label="t('objectGroup.typeRecurringTransaction')" value="recurring_transaction" />
             <el-option :label="t('objectGroup.typeBudget')" value="budget" />
             <el-option :label="t('objectGroup.typePiggyBank')" value="piggy_bank" />
           </el-select>
@@ -68,7 +68,7 @@
         <el-form-item :label="t('objectGroup.type')" prop="groupable_type">
           <el-select v-model="form.groupable_type" :placeholder="t('common.select')" style="width: 100%">
             <el-option :label="t('objectGroup.typeTransaction')" value="transaction" />
-            <el-option :label="t('objectGroup.typeBill')" value="bill" />
+            <el-option :label="t('objectGroup.typeRecurringTransaction')" value="recurring_transaction" />
             <el-option :label="t('objectGroup.typeBudget')" value="budget" />
             <el-option :label="t('objectGroup.typePiggyBank')" value="piggy_bank" />
           </el-select>
@@ -149,7 +149,7 @@ const rules: FormRules = {
 function getTypeLabel(type: string): string {
   const typeMap: Record<string, string> = {
     transaction: t('objectGroup.typeTransaction'),
-    bill: t('objectGroup.typeBill'),
+    recurring_transaction: t('objectGroup.typeRecurringTransaction'),
     budget: t('objectGroup.typeBudget'),
     piggy_bank: t('objectGroup.typePiggyBank')
   };

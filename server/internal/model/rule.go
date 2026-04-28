@@ -189,8 +189,8 @@ const (
 	// 如：关联预算为"月度餐饮预算"
 	ConditionFieldBudget ConditionField = "budget"
 
-	// ConditionFieldBill 匹配账单
-	// 如：关联账单为"房租"
+	// ConditionFieldBill 匹配循环交易
+	// 如：关联循环交易为"房租"
 	ConditionFieldBill ConditionField = "bill"
 
 	// ConditionFieldNotes 匹配备注

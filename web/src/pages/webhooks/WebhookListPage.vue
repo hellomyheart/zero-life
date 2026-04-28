@@ -28,7 +28,7 @@ const triggerOptions = [
   { value: WebhookTrigger.TransactionCreated, label: t('webhook.transactionCreated') },
   { value: WebhookTrigger.TransactionUpdated, label: t('webhook.transactionUpdated') },
   { value: WebhookTrigger.TransactionDeleted, label: t('webhook.transactionDeleted') },
-  { value: WebhookTrigger.BillPaid, label: t('webhook.billPaid') },
+  { value: WebhookTrigger.RecurringTransactionExecuted, label: t('webhook.recurringTransactionExecuted') },
   { value: WebhookTrigger.BudgetCreated, label: t('webhook.budgetCreated') },
   { value: WebhookTrigger.BudgetUpdated, label: t('webhook.budgetUpdated') },
   { value: WebhookTrigger.BudgetDeleted, label: t('webhook.budgetDeleted') },

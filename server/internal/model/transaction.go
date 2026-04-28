@@ -55,7 +55,7 @@ const (
 // - Account: 通过 SourceID/DestinationID 关联源/目标账户
 // - Category: 通过 CategoryID 关联分类
 // - Tag: 多对多关系，通过 transaction_tags 中间表
-// - Bill: 通过 BillID 关联账单
+// - RecurringTransaction: 通过 RecurringID 关联循环交易
 // - Transaction: 自关联，通过 ParentID 实现交易拆分
 //
 // 示例：
@@ -121,10 +121,10 @@ type Transaction struct {
 	// gorm:"type:text" 支持较长文本
 	Notes string `gorm:"type:text" json:"notes"`
 
-	// BillID 关联账单 ID（可选）
-	// 关联到 bills 表，表示该交易对应哪个账单
-	// 指针类型表示可为 nil（非账单关联的交易）
-	BillID *uint64 `gorm:"index" json:"bill_id"`
+	// RecurringID 关联循环交易 ID（可选）
+	// 关联到 recurring_transactions 表，表示该交易由哪个循环交易自动生成
+	// 指针类型表示可为 nil（非循环交易生成的交易）
+	RecurringID *uint64 `gorm:"index" json:"recurring_id"`
 
 	// ParentID 父交易 ID（用于交易拆分）
 	// nil: 这是一笔独立交易（或父交易）

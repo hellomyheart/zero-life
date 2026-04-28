@@ -94,12 +94,6 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/bills',
-    name: 'BillList',
-    component: () => import('@/pages/bills/BillListPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/reports/income-expense',
     name: 'IncomeExpenseReport',
     component: () => import('@/pages/reports/IncomeExpenseReport.vue'),

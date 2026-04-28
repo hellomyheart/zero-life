@@ -17,21 +17,20 @@ import (
 // 负责将各类数据导出为CSV或JSON格式，支持导出交易、账户、账单、预算、分类、标签、存钱罐和规则
 // 依赖各repository获取数据，不依赖service层避免循环依赖
 type ExportService struct {
-	txnRepo      *repository.TransactionRepository  // 交易数据访问对象
-	accountRepo  *repository.AccountRepository      // 账户数据访问对象
-	billRepo     *repository.BillRepository         // 账单数据访问对象
-	budgetRepo   *repository.BudgetRepository       // 预算数据访问对象
-	categoryRepo *repository.CategoryRepository     // 分类数据访问对象
-	tagRepo      *repository.TagRepository          // 标签数据访问对象
-	piggyBankRepo *repository.PiggyBankRepository   // 存钱罐数据访问对象
-	ruleRepo     *repository.RuleRepository         // 规则数据访问对象
+	txnRepo       *repository.TransactionRepository
+	accountRepo   *repository.AccountRepository
+	rtRepo        *repository.RecurringTransactionRepository
+	budgetRepo    *repository.BudgetRepository
+	categoryRepo  *repository.CategoryRepository
+	tagRepo       *repository.TagRepository
+	piggyBankRepo *repository.PiggyBankRepository
+	ruleRepo      *repository.RuleRepository
 }
 
-// NewExportService 创建数据导出服务实例
 func NewExportService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
-	billRepo *repository.BillRepository,
+	rtRepo *repository.RecurringTransactionRepository,
 	budgetRepo *repository.BudgetRepository,
 	categoryRepo *repository.CategoryRepository,
 	tagRepo *repository.TagRepository,
@@ -39,14 +38,14 @@ func NewExportService(
 	ruleRepo *repository.RuleRepository,
 ) *ExportService {
 	return &ExportService{
-		txnRepo:      txnRepo,
-		accountRepo:  accountRepo,
-		billRepo:     billRepo,
-		budgetRepo:   budgetRepo,
-		categoryRepo: categoryRepo,
-		tagRepo:      tagRepo,
+		txnRepo:       txnRepo,
+		accountRepo:   accountRepo,
+		rtRepo:        rtRepo,
+		budgetRepo:    budgetRepo,
+		categoryRepo:  categoryRepo,
+		tagRepo:       tagRepo,
 		piggyBankRepo: piggyBankRepo,
-		ruleRepo:     ruleRepo,
+		ruleRepo:      ruleRepo,
 	}
 }
 
@@ -286,18 +285,18 @@ func (s *ExportService) exportAccountsJSON(accounts []model.Account) ([]byte, st
 //   - string: 文件名
 //   - error: 错误信息
 func (s *ExportService) ExportBills(userID uint64, format string) ([]byte, string, error) {
-	bills, err := s.billRepo.List(userID)
+	rts, err := s.rtRepo.List(userID, nil, 0, 10000)
 	if err != nil {
 		return nil, "", err
 	}
 
 	switch format {
 	case "csv":
-		return s.exportBillsCSV(bills)
+		return s.exportRecurringTxnsCSV(rts)
 	case "json":
-		return s.exportBillsJSON(bills)
+		return s.exportRecurringTxnsJSON(rts)
 	default:
-		return s.exportBillsCSV(bills)
+		return s.exportRecurringTxnsCSV(rts)
 	}
 }
 
@@ -422,31 +421,33 @@ func (s *ExportService) ExportRules(userID uint64, format string) ([]byte, strin
 }
 
 // Bills export helpers
-func (s *ExportService) exportBillsCSV(bills []model.Bill) ([]byte, string, error) {
+func (s *ExportService) exportRecurringTxnsCSV(rts []model.RecurringTransaction) ([]byte, string, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
-	writer.Write([]string{"name", "amount", "repeat_rule", "next_due", "notes"})
-	for _, b := range bills {
-		writer.Write([]string{b.Name, b.Amount.StringFixed(4), string(b.RepeatRule), b.NextDue.Format("2006-01-02"), b.Notes})
+	writer.Write([]string{"description", "amount", "recurrence_type", "repeat_every", "next_occurrence", "is_active", "notes"})
+	for _, rt := range rts {
+		writer.Write([]string{rt.Description, rt.Amount.StringFixed(4), string(rt.RecurrenceType), fmt.Sprintf("%d", rt.RepeatEvery), rt.NextOccurrence.Format("2006-01-02"), fmt.Sprintf("%v", rt.IsActive), rt.Notes})
 	}
 	writer.Flush()
-	return buf.Bytes(), fmt.Sprintf("bills_%s.csv", time.Now().Format("20060102")), nil
+	return buf.Bytes(), fmt.Sprintf("recurring_transactions_%s.csv", time.Now().Format("20060102")), nil
 }
 
-func (s *ExportService) exportBillsJSON(bills []model.Bill) ([]byte, string, error) {
-	type billExport struct {
-		Name       string `json:"name"`
-		Amount     string `json:"amount"`
-		RepeatRule string `json:"repeat_rule"`
-		NextDue    string `json:"next_due"`
-		Notes      string `json:"notes"`
+func (s *ExportService) exportRecurringTxnsJSON(rts []model.RecurringTransaction) ([]byte, string, error) {
+	type rtExport struct {
+		Description    string `json:"description"`
+		Amount         string `json:"amount"`
+		RecurrenceType string `json:"recurrence_type"`
+		RepeatEvery    int    `json:"repeat_every"`
+		NextOccurrence string `json:"next_occurrence"`
+		IsActive       bool   `json:"is_active"`
+		Notes          string `json:"notes"`
 	}
-	items := make([]billExport, 0, len(bills))
-	for _, b := range bills {
-		items = append(items, billExport{Name: b.Name, Amount: b.Amount.StringFixed(4), RepeatRule: string(b.RepeatRule), NextDue: b.NextDue.Format("2006-01-02"), Notes: b.Notes})
+	items := make([]rtExport, 0, len(rts))
+	for _, rt := range rts {
+		items = append(items, rtExport{Description: rt.Description, Amount: rt.Amount.StringFixed(4), RecurrenceType: string(rt.RecurrenceType), RepeatEvery: rt.RepeatEvery, NextOccurrence: rt.NextOccurrence.Format("2006-01-02"), IsActive: rt.IsActive, Notes: rt.Notes})
 	}
 	data, _ := json.MarshalIndent(items, "", "  ")
-	return data, fmt.Sprintf("bills_%s.json", time.Now().Format("20060102")), nil
+	return data, fmt.Sprintf("recurring_transactions_%s.json", time.Now().Format("20060102")), nil
 }
 
 // Budgets export helpers

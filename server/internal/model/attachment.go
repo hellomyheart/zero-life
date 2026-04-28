@@ -58,11 +58,10 @@ type Attachment struct {
 	// 可选值：
 	//   - "transaction": 关联交易
 	//   - "account": 关联账户
-	//   - "bill": 关联账单
+	//   - "recurring_transaction": 关联循环交易
 	//   - "budget": 关联预算
 	//   - "category": 关联分类
 	//   - "piggy_bank": 关联储蓄罐
-	//   - "recurrence": 关联周期性交易
 	// gorm:"size:50" 限制最大长度为 50 个字符
 	// gorm:"index" 加速按类型查询
 	AttachableType string `gorm:"not null;size:50;index" json:"attachable_type"`

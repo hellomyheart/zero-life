@@ -327,12 +327,12 @@ func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *mo
 		}
 		return false
 	case model.ConditionFieldBudget:
-		if txn.BillID != nil {
-			fieldValue = fmt.Sprintf("%d", *txn.BillID)
+		if txn.RecurringID != nil {
+			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
 		}
 	case model.ConditionFieldBill:
-		if txn.BillID != nil {
-			fieldValue = fmt.Sprintf("%d", *txn.BillID)
+		if txn.RecurringID != nil {
+			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
 		}
 	case model.ConditionFieldDateAfter:
 		txnDate := txn.Date.Format("2006-01-02")
@@ -430,7 +430,7 @@ func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.T
 			txn.CategoryID = nil
 			needsUpdate = true
 		case model.ActionTypeClearBudget:
-			txn.BillID = nil
+			txn.RecurringID = nil
 			needsUpdate = true
 		case model.ActionTypeSetCategory:
 			// 按名称查找分类并设置CategoryID

@@ -5,21 +5,22 @@ import "time"
 
 // RecurringTransactionResp 循环交易响应
 type RecurringTransactionResp struct {
-	ID             uint64     `json:"id"`                          // 循环交易ID
-	Description    string     `json:"description"`                 // 交易描述
-	Amount         string     `json:"amount"`                      // 交易金额
-	SourceID       uint64     `json:"source_id"`                   // 源账户ID
-	DestinationID  *uint64    `json:"destination_id"`              // 目标账户ID
-	CategoryID     *uint64    `json:"category_id"`                 // 分类ID
-	Notes          string     `json:"notes"`                       // 备注
-	RecurrenceType string     `json:"recurrence_type"`             // 重复类型
-	RepeatEvery    int        `json:"repeat_every"`                // 重复间隔
-	StartDate      time.Time  `json:"start_date"`                  // 开始日期
-	EndDate        *time.Time `json:"end_date,omitempty"`          // 结束日期
-	NextOccurrence time.Time  `json:"next_occurrence"`             // 下次执行日期
-	IsActive       bool       `json:"is_active"`                   // 是否启用
-	CreatedAt      time.Time  `json:"created_at"`                  // 创建时间
-	UpdatedAt      time.Time  `json:"updated_at"`                  // 更新时间
+	ID             uint64     `json:"id"`
+	Description    string     `json:"description"`
+	Amount         string     `json:"amount"`
+	SourceID       uint64     `json:"source_id"`
+	DestinationID  *uint64    `json:"destination_id"`
+	CategoryID     *uint64    `json:"category_id"`
+	Notes          string     `json:"notes"`
+	RecurrenceType string     `json:"recurrence_type"`
+	RepeatEvery    int        `json:"repeat_every"`
+	StartDate      time.Time  `json:"start_date"`
+	EndDate        *time.Time `json:"end_date,omitempty"`
+	NextOccurrence time.Time  `json:"next_occurrence"`
+	IsActive       bool       `json:"is_active"`
+	ReminderDays   int        `json:"reminder_days"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // RecurringTransactionLogResp 循环交易执行日志响应

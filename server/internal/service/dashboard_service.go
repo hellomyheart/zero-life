@@ -14,35 +14,27 @@ import (
 
 // DashboardService 仪表盘服务
 // 负责汇总首页展示数据，包括月度收支、总资产余额、预算预警、账单提醒和最近交易
-// 依赖txnRepo查询交易统计，依赖accountRepo查询资产余额，依赖budgetRepo查询预算使用率，依赖billRepo查询到期账单
+// 依赖txnRepo查询交易统计，依赖accountRepo查询资产余额，依赖budgetRepo查询预算使用率，依赖rtRepo查询到期循环交易
 type DashboardService struct {
-	txnRepo     *repository.TransactionRepository  // 交易数据访问对象
-	accountRepo *repository.AccountRepository      // 账户数据访问对象
-	budgetRepo  *repository.BudgetRepository       // 预算数据访问对象
-	billRepo    *repository.BillRepository         // 账单数据访问对象
-	categoryRepo *repository.CategoryRepository    // 分类数据访问对象（用于展开子分类）
+	txnRepo      *repository.TransactionRepository
+	accountRepo  *repository.AccountRepository
+	budgetRepo   *repository.BudgetRepository
+	rtRepo       *repository.RecurringTransactionRepository
+	categoryRepo *repository.CategoryRepository
 }
 
-// NewDashboardService 创建仪表盘服务实例
-// 参数：
-//   - txnRepo: 交易数据访问对象
-//   - accountRepo: 账户数据访问对象
-//   - budgetRepo: 预算数据访问对象
-//   - billRepo: 账单数据访问对象
-// 返回：
-//   - *DashboardService: 仪表盘服务实例
 func NewDashboardService(
 	txnRepo *repository.TransactionRepository,
 	accountRepo *repository.AccountRepository,
 	budgetRepo *repository.BudgetRepository,
-	billRepo *repository.BillRepository,
+	rtRepo *repository.RecurringTransactionRepository,
 	categoryRepo *repository.CategoryRepository,
 ) *DashboardService {
 	return &DashboardService{
-		txnRepo:     txnRepo,
-		accountRepo: accountRepo,
-		budgetRepo:  budgetRepo,
-		billRepo:    billRepo,
+		txnRepo:      txnRepo,
+		accountRepo:  accountRepo,
+		budgetRepo:   budgetRepo,
+		rtRepo:       rtRepo,
 		categoryRepo: categoryRepo,
 	}
 }
@@ -158,18 +150,18 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 	}
 
-	// 第4步：获取7天内到期的账单提醒
-	bills, err := s.billRepo.GetUpcoming(userID, 7)
+	// 第4步：获取7天内到期的循环交易提醒
+	upcomingRTs, err := s.rtRepo.GetUpcoming(userID, 7)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
-	billReminders := make([]response.BillReminderResp, 0, len(bills))
-	for _, b := range bills {
-		billReminders = append(billReminders, response.BillReminderResp{
-			BillID:   b.ID,
-			BillName: b.Name,
-			Amount:   b.Amount.StringFixed(4),
-			NextDue:  b.NextDue.Format("2006-01-02"),
+	recurringReminders := make([]response.RecurringReminderResp, 0, len(upcomingRTs))
+	for _, rt := range upcomingRTs {
+		recurringReminders = append(recurringReminders, response.RecurringReminderResp{
+			RecurringID: rt.ID,
+			Name:        rt.Description,
+			Amount:   rt.Amount.StringFixed(4),
+			NextDue:  rt.NextOccurrence.Format("2006-01-02"),
 		})
 	}
 
@@ -189,7 +181,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		NetIncome:     monthIncome.Sub(monthExpense).StringFixed(4),
 		TotalBalance:  totalBalance.StringFixed(4),
 		BudgetAlerts:  budgetAlerts,
-		BillReminders: billReminders,
+		RecurringReminders: recurringReminders,
 		RecentTxns:    recentTxnResps,
 	}, nil
 }
@@ -206,7 +198,7 @@ func transactionModelToResp(t *model.Transaction) *response.TransactionResp {
 		DestinationID: t.DestinationID,
 		CategoryID:    t.CategoryID,
 		Notes:         t.Notes,
-		BillID:        t.BillID,
+		RecurringID:   t.RecurringID,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}

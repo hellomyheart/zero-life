@@ -31,7 +31,7 @@ var allowedMimeTypes = map[string]bool{
 var allowedAttachableTypes = map[string]bool{
 	"transaction": true,
 	"account":     true,
-	"bill":        true,
+	"recurring_transaction": true,
 	"budget":      true,
 	"piggy_bank":  true,
 }

@@ -23,7 +23,6 @@ type Router struct {
 	categoryCtrl          *controller.CategoryController
 	tagCtrl               *controller.TagController
 	budgetCtrl            *controller.BudgetController
-	billCtrl              *controller.BillController
 	currencyCtrl          *controller.CurrencyController
 	ruleCtrl              *controller.RuleController
 	reportCtrl            *controller.ReportController
@@ -47,7 +46,6 @@ type Router struct {
 	adminCtrl             *controller.AdminController
 	adminUserCtrl         *controller.AdminUserController
 	txnBulkCtrl           *controller.TransactionBulkController
-	recurrenceCtrl        *controller.RecurrenceController
 	ruleGroupCtrl         *controller.RuleGroupController
 	cronCtrl              *controller.CronController
 }
@@ -61,7 +59,6 @@ func NewRouter(
 	categoryCtrl *controller.CategoryController,
 	tagCtrl *controller.TagController,
 	budgetCtrl *controller.BudgetController,
-	billCtrl *controller.BillController,
 	currencyCtrl *controller.CurrencyController,
 	ruleCtrl *controller.RuleController,
 	reportCtrl *controller.ReportController,
@@ -85,7 +82,6 @@ func NewRouter(
 	adminCtrl *controller.AdminController,
 	adminUserCtrl *controller.AdminUserController,
 	txnBulkCtrl *controller.TransactionBulkController,
-	recurrenceCtrl *controller.RecurrenceController,
 	ruleGroupCtrl *controller.RuleGroupController,
 	cronCtrl *controller.CronController,
 ) *Router {
@@ -97,7 +93,6 @@ func NewRouter(
 		categoryCtrl:         categoryCtrl,
 		tagCtrl:              tagCtrl,
 		budgetCtrl:           budgetCtrl,
-		billCtrl:             billCtrl,
 		currencyCtrl:         currencyCtrl,
 		ruleCtrl:             ruleCtrl,
 		reportCtrl:           reportCtrl,
@@ -121,7 +116,6 @@ func NewRouter(
 		adminCtrl:            adminCtrl,
 		adminUserCtrl:        adminUserCtrl,
 		txnBulkCtrl:         txnBulkCtrl,
-		recurrenceCtrl:      recurrenceCtrl,
 		ruleGroupCtrl:       ruleGroupCtrl,
 		cronCtrl:            cronCtrl,
 	}
@@ -216,16 +210,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			budgets.PUT("/:id", r.budgetCtrl.Update)
 			budgets.DELETE("/:id", r.budgetCtrl.Delete)
 			budgets.GET("/:id/history", r.budgetCtrl.GetHistory)
-		}
-
-		// 账单管理路由
-		bills := authenticated.Group("/bills")
-		{
-			bills.POST("", r.billCtrl.Create)
-			bills.GET("", r.billCtrl.List)
-			bills.GET("/:id", r.billCtrl.Get)
-			bills.PUT("/:id", r.billCtrl.Update)
-			bills.DELETE("/:id", r.billCtrl.Delete)
 		}
 
 		// 货币管理路由
@@ -335,17 +319,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			recurringTxns.PUT("/:id", r.recurringTxnCtrl.Update)
 			recurringTxns.DELETE("/:id", r.recurringTxnCtrl.Delete)
 			recurringTxns.POST("/process-due", r.recurringTxnCtrl.ProcessDue)
-		}
-
-		// 周期性交易管理路由（Recurrence模型，与RecurringTransaction不同）
-		recurrences := authenticated.Group("/recurrences")
-		{
-			recurrences.POST("", r.recurrenceCtrl.Create)
-			recurrences.GET("", r.recurrenceCtrl.List)
-			recurrences.GET("/:id", r.recurrenceCtrl.Get)
-			recurrences.PUT("/:id", r.recurrenceCtrl.Update)
-			recurrences.DELETE("/:id", r.recurrenceCtrl.Delete)
-			recurrences.POST("/:id/trigger", r.recurrenceCtrl.Trigger)
 		}
 
 		webhooks := authenticated.Group("/webhooks")

@@ -15,7 +15,6 @@
     "categories": "分类",
     "tags": "标签",
     "budgets": "预算",
-    "bills": "账单",
     "piggyBanks": "储蓄罐",
     "recurringTransactions": "定期交易",
     "reports": "报表",
@@ -188,23 +187,7 @@
     "detail": "详情",
     "remaining": "剩余"
   },
-  "bill": {
-    "title": "账单管理",
-    "create": "新建账单",
-    "edit": "编辑账单",
-    "delete": "删除账单",
-    "name": "账单名称",
-    "amount": "金额",
-    "repeatRule": "重复规则",
-    "nextDueDate": "下次到期日",
-    "overdue": "已逾期",
-    "daily": "每天",
-    "weekly": "每周",
-    "monthly": "每月",
-    "yearly": "每年",
-    "deleteConfirm": "确定要删除该账单吗？",
-    "notes": "备注"
-  },
+
   "currency": {
     "title": "货币管理",
     "code": "货币代码",
@@ -256,7 +239,7 @@
     "fieldTag": "标签",
     "fieldTransactionType": "交易类型",
     "fieldBudget": "预算",
-    "fieldBill": "账单",
+    "fieldRecurring": "循环交易",
     "fieldNotes": "备注",
     "fieldDateAfter": "日期之后",
     "fieldDateBefore": "日期之前",
@@ -304,7 +287,7 @@
     "netIncome": "净收入",
     "totalBalance": "资产总余额",
     "budgetAlerts": "预算预警",
-    "billReminders": "账单到期提醒",
+    "recurringReminders": "循环交易提醒",
     "recentTransactions": "最近交易"
   },
   "common": {
@@ -448,7 +431,7 @@
     "transactionCreated": "交易创建",
     "transactionUpdated": "交易更新",
     "transactionDeleted": "交易删除",
-    "billPaid": "账单支付",
+    "recurringTransactionExecuted": "循环交易执行",
     "budgetCreated": "预算创建",
     "budgetUpdated": "预算更新",
     "budgetDeleted": "预算删除"
@@ -537,7 +520,7 @@
     "entityIdPlaceholder": "请输入关联实体 ID",
     "deleteConfirm": "确定要删除该分组吗？",
     "typeTransaction": "交易",
-    "typeBill": "账单",
+    "typeRecurringTransaction": "循环交易",
     "typeBudget": "预算",
     "typePiggyBank": "储蓄罐"
   },

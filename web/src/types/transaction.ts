@@ -81,7 +81,7 @@ export interface Transaction {
   notes: string                       // 备注
   tags: TransactionTagResp[]          // 标签列表（对象数组，不是ID数组）
   splits: SplitResp[]                 // 拆分交易列表
-  bill_id: number | null              // 关联账单ID
+  recurring_id: number | null           // 关联循环交易ID
   created_at: string                  // 创建时间
   updated_at: string                  // 更新时间
 }

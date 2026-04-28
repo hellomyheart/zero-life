@@ -86,7 +86,7 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 		DestinationID: req.DestinationID,
 		CategoryID:    req.CategoryID,
 		Notes:         req.Notes,
-		BillID:        req.BillID,
+		RecurringID:   req.RecurringID,
 	}
 
 	// Calculate balance changes
@@ -167,7 +167,7 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 }
 
 // CreateWithDB 在外部事务中创建交易，不开启新事务，不触发规则和Webhook。
-// 供 BillService 等需要将交易创建与其他操作放在同一事务中的场景使用。
+// 供 CronService 等需要将交易创建与其他操作放在同一事务中的场景使用。
 // 调用方负责在事务成功后触发规则和Webhook。
 func (s *TransactionService) CreateWithDB(dbTx *gorm.DB, userID uint64, req *request.CreateTransactionReq) (*model.Transaction, error) {
 	amount, err := decimal.NewFromString(req.Amount)
@@ -196,7 +196,7 @@ func (s *TransactionService) CreateWithDB(dbTx *gorm.DB, userID uint64, req *req
 		DestinationID: req.DestinationID,
 		CategoryID:    req.CategoryID,
 		Notes:         req.Notes,
-		BillID:        req.BillID,
+		RecurringID:   req.RecurringID,
 	}
 
 	balanceChanges := s.calculateBalanceChanges(txnType, amount, req.SourceID, req.DestinationID)
@@ -251,7 +251,7 @@ func (s *TransactionService) CreateWithDB(dbTx *gorm.DB, userID uint64, req *req
 }
 
 // TriggerPostCreate 在事务成功提交后触发规则引擎和Webhook通知。
-// 供 BillService 等使用 CreateWithDB 的调用方在事务成功后调用。
+// 供 CronService 等使用 CreateWithDB 的调用方在事务成功后调用。
 func (s *TransactionService) TriggerPostCreate(userID uint64, txn *model.Transaction) {
 	if s.ruleTrigger != nil {
 		go s.ruleTrigger.TriggerRules(userID, txn, "on_create")
@@ -643,7 +643,7 @@ func (s *TransactionService) toResp(t *model.Transaction) *response.TransactionR
 		DestinationID: t.DestinationID,
 		CategoryID:    t.CategoryID,
 		Notes:         t.Notes,
-		BillID:        t.BillID,
+		RecurringID:   t.RecurringID,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}

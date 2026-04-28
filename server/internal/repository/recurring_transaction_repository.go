@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"gorm.io/gorm"
 )
@@ -130,4 +132,28 @@ func (r *RecurringTransactionRepository) ListLogs(recurringTransactionID uint64)
 		return nil, err
 	}
 	return logs, nil
+}
+
+// GetUpcoming 获取指定用户未来若干天内到期的循环交易，用于仪表盘提醒。
+// 仅返回 reminder_days > 0 且 is_active = true 的记录。
+func (r *RecurringTransactionRepository) GetUpcoming(userID uint64, days int) ([]model.RecurringTransaction, error) {
+	var rts []model.RecurringTransaction
+	now := time.Now()
+	endDate := now.AddDate(0, 0, days)
+	if err := r.db.Where("user_id = ? AND is_active = ? AND reminder_days > 0 AND next_occurrence BETWEEN ? AND ?", userID, true, now, endDate).
+		Order("next_occurrence ASC").Find(&rts).Error; err != nil {
+		return nil, err
+	}
+	return rts, nil
+}
+
+// GetAllDue 获取所有用户的到期循环交易（不按用户过滤），用于定时任务批量处理。
+func (r *RecurringTransactionRepository) GetAllDue() ([]model.RecurringTransaction, error) {
+	var rts []model.RecurringTransaction
+	now := time.Now()
+	if err := r.db.Where("is_active = ? AND next_occurrence <= ?", true, now).
+		Order("next_occurrence ASC").Find(&rts).Error; err != nil {
+		return nil, err
+	}
+	return rts, nil
 }

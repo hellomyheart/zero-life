@@ -363,12 +363,12 @@ func (s *RuleService) matchCondition(condition model.RuleCondition, txn *model.T
 		}
 		return false
 	case model.ConditionFieldBudget:
-		if txn.BillID != nil {
-			fieldValue = fmt.Sprintf("%d", *txn.BillID)
+		if txn.RecurringID != nil {
+			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
 		}
 	case model.ConditionFieldBill:
-		if txn.BillID != nil {
-			fieldValue = fmt.Sprintf("%d", *txn.BillID)
+		if txn.RecurringID != nil {
+			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
 		}
 	case model.ConditionFieldDateAfter:
 		txnDate := txn.Date.Format("2006-01-02")
@@ -450,7 +450,7 @@ func (s *RuleService) applyActions(userID uint64, actions []model.RuleAction, tx
 			txn.CategoryID = nil
 			needsUpdate = true
 		case model.ActionTypeClearBudget:
-			txn.BillID = nil
+			txn.RecurringID = nil
 			needsUpdate = true
 		case model.ActionTypeSetCategory:
 			// Find category by name from user's category tree

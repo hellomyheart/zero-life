@@ -13,7 +13,7 @@ export interface ObjectGroup {
   /** 分组名称 */
   name: string;
   /** 关联对象类型（多态） */
-  groupable_type: 'transaction' | 'bill' | 'budget' | 'piggy_bank';
+  groupable_type: 'transaction' | 'recurring_transaction' | 'budget' | 'piggy_bank';
   /** 关联对象 ID */
   groupable_id: number;
   /** 创建时间 */
@@ -29,7 +29,7 @@ export interface CreateObjectGroupRequest {
   /** 分组名称 */
   name: string;
   /** 关联对象类型 */
-  groupable_type: 'transaction' | 'bill' | 'budget' | 'piggy_bank';
+  groupable_type: 'transaction' | 'recurring_transaction' | 'budget' | 'piggy_bank';
   /** 关联对象 ID */
   groupable_id: number;
 }

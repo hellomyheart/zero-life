@@ -124,17 +124,17 @@ function getAmountColor(type: string) {
         </el-col>
       </el-row>
 
-      <!-- 账单提醒 + 最近交易 -->
+      <!-- 循环交易提醒 + 最近交易 -->
       <el-row :gutter="20" style="margin-top: 20px">
         <el-col :xs="24" :sm="12">
           <el-card shadow="hover">
-            <template #header>{{ t('dashboard.billReminders') }}</template>
-            <el-table :data="dashboard.bill_reminders" size="small" v-if="dashboard.bill_reminders?.length">
-              <el-table-column prop="bill_name" :label="t('bill.name')" />
-              <el-table-column prop="amount" :label="t('bill.amount')">
+            <template #header>{{ t('dashboard.recurringReminders') }}</template>
+            <el-table :data="dashboard.recurring_reminders" size="small" v-if="dashboard.recurring_reminders?.length">
+              <el-table-column prop="name" :label="t('recurringTransaction.description')" />
+              <el-table-column prop="amount" :label="t('recurringTransaction.amount')">
                 <template #default="{ row }">{{ formatAmount(row.amount) }}</template>
               </el-table-column>
-              <el-table-column prop="next_due" :label="t('bill.nextDueDate')">
+              <el-table-column prop="next_due" :label="t('recurringTransaction.nextOccurrence')">
                 <template #default="{ row }">
                   <span :class="{ 'overdue-text': dayjs(row.next_due).isBefore(dayjs(), 'day') }">
                     {{ formatDate(row.next_due) }}

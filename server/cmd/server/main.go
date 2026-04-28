@@ -94,7 +94,6 @@ func main() {
 		&model.Budget{},
 		&model.BudgetCategory{},
 		&model.BudgetHistory{},
-		&model.Bill{},
 		&model.Currency{},
 		&model.ExchangeRate{},
 		&model.RuleGroup{},
@@ -104,7 +103,6 @@ func main() {
 		&model.PiggyBank{},
 		&model.PiggyEvent{},
 		&model.Attachment{},
-		&model.Recurrence{},
 		&model.RecurringTransaction{},
 		&model.RecurringTransactionLog{},
 		&model.Webhook{},
@@ -147,13 +145,11 @@ func main() {
 	categoryRepo := repository.NewCategoryRepository(db)
 	tagRepo := repository.NewTagRepository(db)
 	budgetRepo := repository.NewBudgetRepository(db)
-	billRepo := repository.NewBillRepository(db)
 	currencyRepo := repository.NewCurrencyRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
 	ruleGroupRepo := repository.NewRuleGroupRepository(db)
 	piggyBankRepo := repository.NewPiggyBankRepository(db)
 	attachmentRepo := repository.NewAttachmentRepository(db)
-	recurrenceRepo := repository.NewRecurrenceRepository(db)
 	webhookRepo := repository.NewWebhookRepository(db)
 	reconRepo := repository.NewReconciliationRepository(db)
 	linkTypeRepo := repository.NewLinkTypeRepository(db)
@@ -175,23 +171,21 @@ func main() {
 	categoryService := service.NewCategoryService(categoryRepo, db)
 	tagService := service.NewTagService(tagRepo, db)
 	budgetService := service.NewBudgetService(budgetRepo, txnRepo, categoryRepo)
-	billService := service.NewBillService(billRepo, txnRepo, txnService, db)
 	currencyService := service.NewCurrencyService(currencyRepo, accountRepo)
 	ruleGroupService := service.NewRuleGroupService(ruleGroupRepo, ruleRepo, txnRepo, categoryRepo, tagRepo, budgetRepo)
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
-	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, billRepo, categoryRepo)
+	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, rtRepo, categoryRepo)
 	importService := service.NewImportService(txnService, accountRepo, db)
 	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
-	exportService := service.NewExportService(txnRepo, accountRepo, billRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
-	recurrenceService := service.NewRecurrenceService(recurrenceRepo, txnService, accountRepo, tagRepo)
-	cronService := service.NewCronService(recurrenceService, billService, recurrenceRepo, billRepo, budgetService, logger)
+	exportService := service.NewExportService(txnRepo, accountRepo, rtRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
+	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
+	cronService := service.NewCronService(rtRepo, rtService, budgetService, logger)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
 	txnLinkService := service.NewTransactionLinkService(txnLinkRepo, txnRepo)
 	prefService := service.NewPreferenceService(prefRepo)
-	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
 	ogService := service.NewObjectGroupService(ogRepo)
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
@@ -211,7 +205,6 @@ func main() {
 	categoryCtrl := controller.NewCategoryController(categoryService)
 	tagCtrl := controller.NewTagController(tagService)
 	budgetCtrl := controller.NewBudgetController(budgetService)
-	billCtrl := controller.NewBillController(billService)
 	currencyCtrl := controller.NewCurrencyController(currencyService)
 	ruleCtrl := controller.NewRuleController(ruleService)
 	reportCtrl := controller.NewReportController(reportService)
@@ -219,7 +212,7 @@ func main() {
 	importCtrl := controller.NewImportController(importService)
 	piggyBankCtrl := controller.NewPiggyBankController(piggyBankService)
 	attachmentCtrl := controller.NewAttachmentController(attachmentService)
-	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo, budgetRepo, billRepo)
+	autocompleteCtrl := controller.NewAutocompleteController(accountRepo, categoryRepo, tagRepo, currencyRepo, budgetRepo, rtRepo)
 	exportCtrl := controller.NewExportController(exportService)
 	webhookCtrl := controller.NewWebhookController(webhookService)
 	reconCtrl := controller.NewReconciliationController(reconService)
@@ -236,7 +229,6 @@ func main() {
 	adminCtrl := controller.NewAdminController(adminService)
 	adminUserCtrl := controller.NewAdminUserController(adminService)
 	txnBulkCtrl := controller.NewTransactionBulkController(txnBulkService)
-	recurrenceCtrl := controller.NewRecurrenceController(recurrenceService)
 	ruleGroupCtrl := controller.NewRuleGroupController(ruleGroupService)
 	cronCtrl := controller.NewCronController(cronService)
 
@@ -256,7 +248,6 @@ func main() {
 		categoryCtrl,
 		tagCtrl,
 		budgetCtrl,
-		billCtrl,
 		currencyCtrl,
 		ruleCtrl,
 		reportCtrl,
@@ -280,7 +271,6 @@ func main() {
 		adminCtrl,
 		adminUserCtrl,
 		txnBulkCtrl,
-		recurrenceCtrl,
 		ruleGroupCtrl,
 		cronCtrl,
 	)

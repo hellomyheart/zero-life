@@ -19,7 +19,7 @@ type TransactionResp struct {
 	Notes         string        `json:"notes"`                      // 备注
 	Tags          []TagResp     `json:"tags"`                       // 标签列表
 	Splits        []SplitResp   `json:"splits,omitempty"`           // 拆分项列表
-	BillID        *uint64       `json:"bill_id,omitempty"`          // 关联账单ID
+	RecurringID   *uint64       `json:"recurring_id,omitempty"`     // 关联循环交易ID
 	CreatedAt     time.Time     `json:"created_at"`                 // 创建时间
 	UpdatedAt     time.Time     `json:"updated_at"`                 // 更新时间
 }

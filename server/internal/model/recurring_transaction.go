@@ -129,6 +129,12 @@ type RecurringTransaction struct {
 	// 默认值：true
 	IsActive bool `gorm:"default:true" json:"is_active"`
 
+	// ReminderDays 到期提醒天数（可选）
+	// 非0时，在下次执行日前 N 天开始在仪表盘显示提醒
+	// 0 表示不提醒
+	// 默认值：0
+	ReminderDays int `gorm:"default:0" json:"reminder_days"`
+
 	// CreatedAt 循环交易创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`
 

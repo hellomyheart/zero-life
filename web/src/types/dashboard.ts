@@ -18,13 +18,13 @@ export interface BudgetAlert {
 }
 
 /**
- * 账单提醒接口
- * 即将到期或已逾期的账单提醒信息
+ * 循环交易提醒接口
+ * 即将到期的循环交易提醒信息
  */
-export interface BillReminder {
-  bill_id: number              // 账单ID（后端返回 uint64）
-  bill_name: string            // 账单名称
-  amount: string               // 账单金额
+export interface RecurringReminder {
+  recurring_id: number         // 循环交易ID（后端返回 uint64）
+  name: string                 // 名称
+  amount: string               // 金额
   next_due: string             // 下次到期日期（后端字段名为 next_due）
 }
 
@@ -39,7 +39,7 @@ export interface DashboardResp {
   net_income: string           // 净收入（收入 - 支出）
   total_balance: string        // 总余额（所有资产账户余额之和）
   budget_alerts: BudgetAlert[] // 预算预警列表
-  bill_reminders: BillReminder[] // 账单提醒列表
+  recurring_reminders: RecurringReminder[] // 循环交易提醒列表
   recent_txns: {               // 最近交易列表（后端字段名 recent_txns）
     id: number                 // 交易ID
     date: string               // 交易日期

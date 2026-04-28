@@ -102,6 +102,7 @@ func (s *RecurringTransactionService) Create(userID uint64, req *request.CreateR
 		EndDate:        endDate,
 		NextOccurrence: nextOccurrence,
 		IsActive:       true,
+		ReminderDays:   req.ReminderDays,
 	}
 
 	if err := s.rtRepo.Create(rt); err != nil {
@@ -227,6 +228,9 @@ func (s *RecurringTransactionService) Update(userID, id uint64, req *request.Upd
 	}
 	if req.IsActive != nil {
 		rt.IsActive = *req.IsActive
+	}
+	if req.ReminderDays != nil {
+		rt.ReminderDays = *req.ReminderDays
 	}
 
 	rt.NextOccurrence = s.calculateNextOccurrence(rt.StartDate, rt.RecurrenceType, rt.RepeatEvery)
@@ -373,6 +377,7 @@ func (s *RecurringTransactionService) toResp(rt *model.RecurringTransaction) *re
 		EndDate:        rt.EndDate,
 		NextOccurrence: rt.NextOccurrence,
 		IsActive:       rt.IsActive,
+		ReminderDays:   rt.ReminderDays,
 		CreatedAt:      rt.CreatedAt,
 		UpdatedAt:      rt.UpdatedAt,
 	}

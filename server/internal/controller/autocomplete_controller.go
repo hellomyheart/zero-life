@@ -16,31 +16,21 @@ const autocompleteLimit = 20
 // AutocompleteController 自动补全控制器
 // 提供账户、分类、标签、货币、预算、账单等数据的自动补全功能
 type AutocompleteController struct {
-	accountRepo  *repository.AccountRepository  // 账户数据访问对象
-	categoryRepo *repository.CategoryRepository // 分类数据访问对象
-	tagRepo      *repository.TagRepository      // 标签数据访问对象
-	currencyRepo *repository.CurrencyRepository // 货币数据访问对象
-	budgetRepo   *repository.BudgetRepository   // 预算数据访问对象
-	billRepo     *repository.BillRepository     // 账单数据访问对象
+	accountRepo  *repository.AccountRepository
+	categoryRepo *repository.CategoryRepository
+	tagRepo      *repository.TagRepository
+	currencyRepo *repository.CurrencyRepository
+	budgetRepo   *repository.BudgetRepository
+	rtRepo       *repository.RecurringTransactionRepository
 }
 
-// NewAutocompleteController 创建自动补全控制器实例
-// 参数：
-//   - accountRepo: 账户数据访问对象
-//   - categoryRepo: 分类数据访问对象
-//   - tagRepo: 标签数据访问对象
-//   - currencyRepo: 货币数据访问对象
-//   - budgetRepo: 预算数据访问对象
-//   - billRepo: 账单数据访问对象
-// 返回：
-//   - *AutocompleteController: 自动补全控制器实例
 func NewAutocompleteController(
 	accountRepo *repository.AccountRepository,
 	categoryRepo *repository.CategoryRepository,
 	tagRepo *repository.TagRepository,
 	currencyRepo *repository.CurrencyRepository,
 	budgetRepo *repository.BudgetRepository,
-	billRepo *repository.BillRepository,
+	rtRepo *repository.RecurringTransactionRepository,
 ) *AutocompleteController {
 	return &AutocompleteController{
 		accountRepo:  accountRepo,
@@ -48,7 +38,7 @@ func NewAutocompleteController(
 		tagRepo:      tagRepo,
 		currencyRepo: currencyRepo,
 		budgetRepo:   budgetRepo,
-		billRepo:     billRepo,
+		rtRepo:       rtRepo,
 	}
 }
 
@@ -275,20 +265,20 @@ func (c *AutocompleteController) Bills(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")
 	query := strings.ToLower(ctx.Query("q"))
 
-	bills, err := c.billRepo.List(userID)
+	rts, err := c.rtRepo.List(userID, nil, 0, 10000)
 	if err != nil {
 		handleError(ctx, err)
 		return
 	}
 
 	items := make([]response.AutocompleteItemResp, 0)
-	for _, b := range bills {
-		if query != "" && !strings.Contains(strings.ToLower(b.Name), query) {
+	for _, rt := range rts {
+		if query != "" && !strings.Contains(strings.ToLower(rt.Description), query) {
 			continue
 		}
 		items = append(items, response.AutocompleteItemResp{
-			ID:   b.ID,
-			Name: b.Name,
+			ID:   rt.ID,
+			Name: rt.Description,
 		})
 		if len(items) >= autocompleteLimit {
 			break

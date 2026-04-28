@@ -10,7 +10,7 @@ export enum WebhookTrigger {
   TransactionCreated = 'transaction.created',
   TransactionUpdated = 'transaction.updated',
   TransactionDeleted = 'transaction.deleted',
-  BillPaid = 'bill.paid',
+  RecurringTransactionExecuted = 'recurring_transaction.executed',
   BudgetCreated = 'budget.created',
   BudgetUpdated = 'budget.updated',
   BudgetDeleted = 'budget.deleted',

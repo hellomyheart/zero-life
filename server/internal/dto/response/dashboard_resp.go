@@ -9,7 +9,7 @@ type DashboardResp struct {
 	NetIncome      string             `json:"net_income"`       // 净收入
 	TotalBalance   string             `json:"total_balance"`    // 总资产余额
 	BudgetAlerts   []BudgetAlertResp  `json:"budget_alerts"`    // 预算预警列表
-	BillReminders  []BillReminderResp `json:"bill_reminders"`   // 账单提醒列表
+	RecurringReminders  []RecurringReminderResp `json:"recurring_reminders"`   // 循环交易提醒列表
 	RecentTxns     []TransactionResp  `json:"recent_txns"`      // 最近交易列表
 }
 
@@ -23,10 +23,10 @@ type BudgetAlertResp struct {
 	Status     string  `json:"status"`      // 状态
 }
 
-// BillReminderResp 账单提醒响应
-type BillReminderResp struct {
-	BillID   uint64 `json:"bill_id"`   // 账单ID
-	BillName string `json:"bill_name"` // 账单名称
-	Amount   string `json:"amount"`    // 账单金额
-	NextDue  string `json:"next_due"`  // 下次到期日
+// RecurringReminderResp 循环交易提醒响应
+type RecurringReminderResp struct {
+	RecurringID uint64 `json:"recurring_id"` // 循环交易ID
+	Name        string `json:"name"`         // 名称
+	Amount      string `json:"amount"`       // 金额
+	NextDue     string `json:"next_due"`     // 下次到期日
 }

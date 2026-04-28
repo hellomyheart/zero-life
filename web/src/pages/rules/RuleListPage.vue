@@ -44,7 +44,7 @@ const conditionFieldOptions = [
   { value: 'tag', label: t('rule.fieldTag') },
   { value: 'transaction_type', label: t('rule.fieldTransactionType') },
   { value: 'budget', label: t('rule.fieldBudget') },
-  { value: 'bill', label: t('rule.fieldBill') },
+  { value: 'bill', label: t('rule.fieldRecurring') },
   { value: 'notes', label: t('rule.fieldNotes') },
   { value: 'date_after', label: t('rule.fieldDateAfter') },
   { value: 'date_before', label: t('rule.fieldDateBefore') },

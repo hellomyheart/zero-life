@@ -36,7 +36,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
 - 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 查数据库校验 `user.Role == "admin"` 并注入 `role` 到上下文，挂载在 `/users/*` 路由组
 - 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
-- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行循环交易和到期账单，每天 09:00 生成预算历史快照
+- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行到期循环交易，每天 09:00 生成预算历史快照
 
 **前端** (`web/`) — Vue 3 + TypeScript + Vite
 - 路径别名：`@` → `src/`
@@ -48,7 +48,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ## 关键约定
 
-- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=账单, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 12xxxx=对象组, 13xxxx=交易链接, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA）
+- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=循环交易, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 12xxxx=对象组, 13xxxx=交易链接, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA）
 - **API 响应格式**：统一为 `{ "code": 0, "message": "success", "data": ... }`，通过 `controller.Success()` / `controller.Error()` 返回
 - **金额处理**：Go 用 `shopspring/decimal`，TS 用 `decimal.js` — 禁止用浮点数表示金额
 - **无测试套件**：前后端均未配置测试
@@ -61,7 +61,7 @@ docker compose up -d --build  # 代码更新后重新构建
 - 数据库文件（`*.db`、`*.db-shm`、`*.db-wal`）和 `*.exe` 已加入 gitignore
 - Docker Compose 从 `.env` 读取 `JWT_SECRET`（默认值为不安全的 `change-me-in-production`）
 - 前端 `nginx.conf` 硬编码 `proxy_pass http://api:8080` — 在 Docker Compose 外使用需修改
-- `Recurrence` 和 `RecurringTransaction` 是两个独立的模型/控制器，路由不同（`/recurrences` vs `/recurring-transactions`），不要混淆
+- `Recurrence` 和 `RecurringTransaction` 是两个独立的模型/控制器，路由不同（`/recurrences` vs `/recurring-transactions`），不要混淆 — **已合并**：删除了 `Recurrence` 和 `Bill`，统一使用 `RecurringTransaction`
 
 ## SQLite 替代 Redis 方案
 
