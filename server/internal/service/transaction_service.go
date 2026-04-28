@@ -86,6 +86,7 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 		DestinationID: req.DestinationID,
 		CategoryID:    req.CategoryID,
 		Notes:         req.Notes,
+		BillID:        req.BillID,
 	}
 
 	// Calculate balance changes
@@ -163,6 +164,101 @@ func (s *TransactionService) Create(userID uint64, req *request.CreateTransactio
 	}
 
 	return s.toResp(created), nil
+}
+
+// CreateWithDB 在外部事务中创建交易，不开启新事务，不触发规则和Webhook。
+// 供 BillService 等需要将交易创建与其他操作放在同一事务中的场景使用。
+// 调用方负责在事务成功后触发规则和Webhook。
+func (s *TransactionService) CreateWithDB(dbTx *gorm.DB, userID uint64, req *request.CreateTransactionReq) (*model.Transaction, error) {
+	amount, err := decimal.NewFromString(req.Amount)
+	if err != nil || amount.LessThanOrEqual(decimal.Zero) {
+		return nil, errcode.ErrInvalidAmount
+	}
+
+	date, err := parseDateTime(req.Date)
+	if err != nil {
+		return nil, errcode.ErrBadRequest
+	}
+
+	txnType := model.TransactionType(req.Type)
+
+	if err := s.validateTransaction(userID, txnType, req.SourceID, req.DestinationID); err != nil {
+		return nil, err
+	}
+
+	txn := &model.Transaction{
+		UserID:        userID,
+		Type:          txnType,
+		Date:          date,
+		Description:   req.Description,
+		Amount:        amount,
+		SourceID:      req.SourceID,
+		DestinationID: req.DestinationID,
+		CategoryID:    req.CategoryID,
+		Notes:         req.Notes,
+		BillID:        req.BillID,
+	}
+
+	balanceChanges := s.calculateBalanceChanges(txnType, amount, req.SourceID, req.DestinationID)
+
+	if err := s.txnRepo.CreateWithDB(dbTx, txn, req.Tags); err != nil {
+		return nil, err
+	}
+
+	if len(req.Splits) > 0 {
+		splitTotal := decimal.Zero
+		for _, splitReq := range req.Splits {
+			splitAmount, err := decimal.NewFromString(splitReq.Amount)
+			if err != nil {
+				return nil, errcode.ErrInvalidAmount
+			}
+			if splitAmount.LessThanOrEqual(decimal.Zero) {
+				return nil, errcode.ErrInvalidAmount
+			}
+			splitTotal = splitTotal.Add(splitAmount)
+		}
+		if !splitTotal.Equal(amount) {
+			return nil, errcode.ErrSplitAmountMismatch
+		}
+
+		for _, splitReq := range req.Splits {
+			splitAmount, _ := decimal.NewFromString(splitReq.Amount)
+			split := &model.Transaction{
+				UserID:        userID,
+				Type:          txnType,
+				Date:          date,
+				Description:   req.Description,
+				Amount:        splitAmount,
+				SourceID:      req.SourceID,
+				DestinationID: req.DestinationID,
+				CategoryID:    splitReq.CategoryID,
+				Notes:         splitReq.Notes,
+				ParentID:      &txn.ID,
+			}
+			if err := s.txnRepo.CreateWithDB(dbTx, split, splitReq.Tags); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	for accountID, change := range balanceChanges {
+		if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
+			return nil, err
+		}
+	}
+
+	return txn, nil
+}
+
+// TriggerPostCreate 在事务成功提交后触发规则引擎和Webhook通知。
+// 供 BillService 等使用 CreateWithDB 的调用方在事务成功后调用。
+func (s *TransactionService) TriggerPostCreate(userID uint64, txn *model.Transaction) {
+	if s.ruleTrigger != nil {
+		go s.ruleTrigger.TriggerRules(userID, txn, "on_create")
+	}
+	if s.webhookNotifier != nil {
+		s.webhookNotifier.TriggerWebhooks(userID, string(model.WebhookTriggerTransactionCreate), txn)
+	}
 }
 
 // Get 获取单个交易详情

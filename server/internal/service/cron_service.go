@@ -3,8 +3,6 @@ package service
 import (
 	"time"
 
-	"github.com/hellomyheart/zero-life/server/internal/dto/request"
-	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -27,9 +25,8 @@ type CronTaskResult struct {
 type CronService struct {
 	recurrenceService *RecurrenceService
 	billService       *BillService
-	billRepo          *repository.BillRepository
 	recurrenceRepo    *repository.RecurrenceRepository
-	txnService        *TransactionService
+	billRepo          *repository.BillRepository
 	budgetService     *BudgetService
 	cron              *cron.Cron
 	logger            *zap.Logger
@@ -39,18 +36,16 @@ type CronService struct {
 func NewCronService(
 	recurrenceService *RecurrenceService,
 	billService *BillService,
-	billRepo *repository.BillRepository,
 	recurrenceRepo *repository.RecurrenceRepository,
-	txnService *TransactionService,
+	billRepo *repository.BillRepository,
 	budgetService *BudgetService,
 	logger *zap.Logger,
 ) *CronService {
 	s := &CronService{
 		recurrenceService: recurrenceService,
 		billService:       billService,
-		billRepo:          billRepo,
 		recurrenceRepo:    recurrenceRepo,
-		txnService:        txnService,
+		billRepo:          billRepo,
 		budgetService:     budgetService,
 		cron:              cron.New(cron.WithSeconds()),
 		logger:            logger,
@@ -100,7 +95,7 @@ func (s *CronService) runRecurrencesAndBillsTask() *CronTaskResult {
 		result.Errors = append(result.Errors, err.Error())
 	} else {
 		for i := range dueBills {
-			if err := s.createTransactionFromBill(&dueBills[i]); err != nil {
+			if _, err := s.billService.CreateTransactionFromBill(dueBills[i].UserID, dueBills[i].ID); err != nil {
 				result.Errors = append(result.Errors, err.Error())
 			}
 		}
@@ -165,48 +160,5 @@ func (s *CronService) StopScheduler() {
 		ctx := s.cron.Stop()
 		<-ctx.Done()
 		s.logger.Info("cron: scheduler stopped")
-	}
-}
-
-func (s *CronService) createTransactionFromBill(bill *model.Bill) error {
-	if bill.NextDue.After(time.Now()) {
-		return nil
-	}
-
-	if bill.SourceID != nil {
-		txnReq := &request.CreateTransactionReq{
-			Type:        string(model.TransactionTypeWithdrawal),
-			Date:        bill.NextDue.Format("2006-01-02"),
-			Description: bill.Name,
-			Amount:      bill.Amount.StringFixed(4),
-			SourceID:    *bill.SourceID,
-			CategoryID:  bill.CategoryID,
-			Notes:       bill.Notes,
-		}
-
-		_, err := s.txnService.Create(bill.UserID, txnReq)
-		if err != nil {
-			return err
-		}
-	}
-
-	nextDue := s.calculateBillNextDue(bill.NextDue, bill.RepeatRule)
-	bill.NextDue = nextDue
-
-	return s.billRepo.Update(bill)
-}
-
-func (s *CronService) calculateBillNextDue(currentDue time.Time, rule model.RepeatRule) time.Time {
-	switch rule {
-	case model.RepeatRuleDaily:
-		return currentDue.AddDate(0, 0, 1)
-	case model.RepeatRuleWeekly:
-		return currentDue.AddDate(0, 0, 7)
-	case model.RepeatRuleMonthly:
-		return currentDue.AddDate(0, 1, 0)
-	case model.RepeatRuleYearly:
-		return currentDue.AddDate(1, 0, 0)
-	default:
-		return currentDue.AddDate(0, 1, 0)
 	}
 }

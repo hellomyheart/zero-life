@@ -666,3 +666,86 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 
 - **类型** (`types/transaction.ts`)：`Transaction` 接口与后端 `TransactionResp` 字段对齐，`amount` 为 string 类型避免浮点精度问题
 - **API** (`api/transaction.ts`)：`list`/`getTransaction`/`create`/`update`/`remove`/`search`
+
+## 账单管理
+
+### 核心概念
+
+账单（Bill）用于管理**周期性固定支出**，如房租、水电费、订阅服务等。与交易的关系是"计划 vs 实际"：账单是预期要付的钱，交易是实际付的钱。
+
+- 账单设定重复规则（日/周/月/年）和下次到期日
+- 系统每天 00:00 自动扫描到期账单，创建对应的支出交易并推进下次到期日
+- 交易通过 `bill_id` 字段关联到账单，实现可追溯
+- 仪表盘展示 7 天内即将到期的账单提醒
+
+### 数据模型 (`model/bill.go`)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ID | uint64 | 主键自增 |
+| UserID | uint64 | 所属用户，索引，数据隔离 |
+| Name | string (size:100) | 账单名称 |
+| Amount | decimal(19,4) | 账单金额 |
+| RepeatRule | string (size:20) | 重复规则：daily/weekly/monthly/yearly |
+| NextDue | time.Time | 下次到期日期 |
+| SourceID | *uint64 (indexed) | 支出账户ID（可选） |
+| CategoryID | *uint64 (indexed) | 分类ID（可选） |
+| Notes | text | 备注 |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/v1/bills` | POST | 创建账单 |
+| `/api/v1/bills` | GET | 列表（按到期日升序） |
+| `/api/v1/bills/:id` | GET | 详情 |
+| `/api/v1/bills/:id` | PUT | 更新 |
+| `/api/v1/bills/:id` | DELETE | 删除（同时清除关联交易的 bill_id） |
+
+### 请求/响应 DTO
+
+**CreateBillReq**：`name`(必填)、`amount`(必填，必须>0)、`repeat_rule`(必填，oneof=daily/weekly/monthly/yearly)、`next_due`(必填，YYYY-MM-DD)、`source_id`(*uint64)、`category_id`(*uint64)、`notes`
+
+**UpdateBillReq**：`name`、`amount`、`repeat_rule`(omitempty oneof)、`next_due`、`source_id`(*uint64)、`category_id`(*uint64)、`notes`、`clear_source_id`(bool)、`clear_category_id`(bool)、`clear_notes`(bool)
+
+**BillResp**：`id`、`name`、`amount`(string, StringFixed(4))、`repeat_rule`、`next_due`(time.Time)、`source_id`、`category_id`、`notes`、`created_at`、`updated_at`
+
+### 业务规则
+
+1. **金额校验**：创建和更新时金额必须大于零（`ErrBillAmountInvalid`，70001）
+2. **到期处理**：`CreateTransactionFromBill` 在单个数据库事务中完成：创建支出交易（含 `bill_id` 关联）+ 推进到期日，确保原子性
+3. **无 source_id 的账单**：到期时仅推进到期日，不创建交易（仅提醒模式）
+4. **删除级联**：删除账单时在同一事务中清除所有关联交易的 `bill_id`（设为 NULL），再软删除账单
+5. **空字符串语义**：`UpdateBillReq` 中 `name`/`amount`/`repeat_rule`/`next_due`/`notes` 为空字符串表示"不修改"
+6. **清空可选字段**：`source_id`/`category_id` 使用 `*uint64` 指针，传值表示设置，但无法区分"未传"和"清空为null"。通过 `clear_source_id`/`clear_category_id`(bool) 字段显式清空。`notes` 通过 `clear_notes`(bool) 清空
+
+### 到期处理流程 (`CreateTransactionFromBill`)
+
+1. 获取账单 → 检查是否已到期（`NextDue > now` 则跳过）
+2. 在 `db.Transaction` 中执行：
+   - 若 `SourceID != nil`：调用 `txnService.CreateWithDB` 创建 withdrawal 交易（设置 `BillID` 关联）
+   - 根据 `RepeatRule` 计算下次到期日（`calculateNextDue`）
+   - 调用 `billRepo.UpdateWithDB` 更新到期日
+3. 事务成功后：触发规则引擎和 Webhook 通知（`txnService.TriggerPostCreate`）
+
+**下次到期日计算** (`calculateNextDue`)：
+- daily：+1天
+- weekly：+7天
+- monthly：+1月
+- yearly：+1年
+- default：+1月
+
+### 定时任务
+
+`CronService` 每天 00:00 调用 `billRepo.GetAllDueBills()` 获取所有到期账单，逐条调用 `billService.CreateTransactionFromBill` 处理。不再有独立的 `createTransactionFromBill` 方法，消除代码重复。
+
+### 仪表盘集成
+
+`DashboardService` 调用 `billRepo.GetUpcoming(userID, 7)` 获取 7 天内到期的账单，返回 `BillReminderResp`（含 BillID、BillName、Amount、NextDue）。
+
+### 前端实现
+
+- **类型** (`types/bill.ts`)：`Bill` 接口与后端 `BillResp` 字段对齐，`RepeatRule` 枚举定义4种规则
+- **API** (`api/bill.ts`)：`list`/`getBill`/`create`/`update`/`remove`
+- **列表页** (`pages/bills/BillListPage.vue`)：表格展示账单列表，含逾期状态标签（前端根据 `next_due` 与当前日期比较计算）、创建/编辑对话框含账户和分类选择器

@@ -62,6 +62,11 @@ func (r *BillRepository) Update(bill *model.Bill) error {
 	return r.db.Save(bill).Error
 }
 
+// UpdateWithDB 在指定事务中更新账单记录。
+func (r *BillRepository) UpdateWithDB(db *gorm.DB, bill *model.Bill) error {
+	return db.Save(bill).Error
+}
+
 // Delete 根据 ID 和用户 ID 删除账单，同时验证用户权限。
 // 执行 SQL: DELETE FROM bills WHERE id = ? AND user_id = ?
 // 参数 id: 账单 ID。

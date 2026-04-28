@@ -14,6 +14,7 @@ type CreateTransactionReq struct {
 	Notes         string            `json:"notes"`                                                     // 备注
 	Tags          []uint64          `json:"tags"`                                                      // 标签ID列表
 	Splits        []CreateSplitReq  `json:"splits"`                                                    // 拆分项列表
+	BillID        *uint64           `json:"bill_id,omitempty"`                                         // 关联账单ID（内部使用，前端不传）
 }
 
 // CreateSplitReq 创建拆分项请求
