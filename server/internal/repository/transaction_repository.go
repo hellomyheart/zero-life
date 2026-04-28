@@ -351,7 +351,12 @@ func (r *TransactionRepository) GetSplits(parentID, userID uint64) ([]model.Tran
 
 // CreateBatch 批量创建交易
 func (r *TransactionRepository) CreateBatch(txns []model.Transaction) error {
-	return r.db.Create(&txns).Error
+	return r.CreateBatchWithDB(r.db, txns)
+}
+
+// CreateBatchWithDB 使用指定的 DB 对象批量创建交易
+func (r *TransactionRepository) CreateBatchWithDB(db *gorm.DB, txns []model.Transaction) error {
+	return db.Create(&txns).Error
 }
 
 // DeleteBatch 批量删除交易及其关联的标签和拆分子交易。使用数据库事务确保原子性。
@@ -371,7 +376,12 @@ func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
 
 // AttachTags 为交易添加标签（全量替换：先删除旧标签，再插入新标签）
 func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error {
-	if err := r.db.Where("transaction_id = ?", txnID).Delete(&model.TransactionTag{}).Error; err != nil {
+	return r.AttachTagsWithDB(r.db, txnID, tagIDs)
+}
+
+// AttachTagsWithDB 使用指定的 DB 对象为交易添加标签（全量替换）
+func (r *TransactionRepository) AttachTagsWithDB(db *gorm.DB, txnID uint64, tagIDs []uint64) error {
+	if err := db.Where("transaction_id = ?", txnID).Delete(&model.TransactionTag{}).Error; err != nil {
 		return err
 	}
 
@@ -383,16 +393,21 @@ func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error 
 		})
 	}
 
-	return r.db.Create(&transactionTags).Error
+	return db.Create(&transactionTags).Error
 }
 
 // AddTags 为交易追加标签（仅添加不存在的标签，不删除已有标签）
 func (r *TransactionRepository) AddTags(txnID uint64, tagIDs []uint64) error {
+	return r.AddTagsWithDB(r.db, txnID, tagIDs)
+}
+
+// AddTagsWithDB 使用指定的 DB 对象为交易追加标签
+func (r *TransactionRepository) AddTagsWithDB(db *gorm.DB, txnID uint64, tagIDs []uint64) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
 	var existingIDs []uint64
-	r.db.Model(&model.TransactionTag{}).Where("transaction_id = ? AND tag_id IN ?", txnID, tagIDs).
+	db.Model(&model.TransactionTag{}).Where("transaction_id = ? AND tag_id IN ?", txnID, tagIDs).
 		Pluck("tag_id", &existingIDs)
 	existingSet := make(map[uint64]bool, len(existingIDs))
 	for _, id := range existingIDs {
@@ -410,7 +425,7 @@ func (r *TransactionRepository) AddTags(txnID uint64, tagIDs []uint64) error {
 	if len(newTags) == 0 {
 		return nil
 	}
-	return r.db.Create(&newTags).Error
+	return db.Create(&newTags).Error
 }
 
 // AdvancedSearchFilter 高级搜索过滤器

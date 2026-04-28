@@ -446,3 +446,129 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 
 - **账户列表页**（`/accounts`）：四个 Tab 按类型筛选，展示名称、余额、货币、虚拟标记，支持编辑/删除
 - **账户表单页**（`/accounts/create` 和 `/accounts/:id/edit`）：创建时可设置所有字段，编辑时类型/货币/初始余额置灰不可改
+
+## 交易管理
+
+### 核心概念
+
+基于**复式记账法**，每笔交易是**单条记录**（不是拆成两条），通过 `source_id` 和 `destination_id` 同时引用两个账户：
+
+| 类型 | source_id → destination_id | 余额影响 |
+|------|---------------------------|----------|
+| withdrawal（支出） | 资产账户 → 支出账户 | 源账户余额减少 |
+| deposit（收入） | 收入账户 → 资产账户 | 目标账户余额增加 |
+| transfer（转账） | 资产A → 资产B | 源减少、目标增加 |
+
+### 数据模型 (`model/transaction.go`)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ID | uint64 PK | 主键自增 |
+| UserID | uint64 | 所属用户，与 Date 复合索引 |
+| Type | string(20) | 交易类型：deposit/withdrawal/transfer |
+| Date | time.Time | 交易日期，与 UserID 复合索引 |
+| Description | string(500) | 描述 |
+| Amount | decimal(19,4) | 金额，15位整数+4位小数 |
+| SourceID | uint64 | 源账户ID，与 UserID 复合索引 |
+| DestinationID | *uint64 | 目标账户ID（可空） |
+| CategoryID | *uint64 | 分类ID（可空） |
+| Notes | text | 备注 |
+| BillID | *uint64 | 关联账单ID |
+| ParentID | *uint64 | 父交易ID（拆分用，nil=顶级交易） |
+| IsReconciled | bool | 是否已对账 |
+| DeletedAt | gorm.DeletedAt | 软删除（仅模型定义，实际删除使用硬删除 Unscoped） |
+
+**关联关系**：Source（Belongs To Account）、Destination（Belongs To *Account）、Category（Belongs To *Category）、Tags（many2many:transaction_tags）、Splits（Has Many，foreignKey:ParentID）
+
+**`transaction_tags` 中间表**：复合主键 `(TransactionID, TagID)`
+
+**`transaction_journal_links` 表**：交易关联，字段 `TransactionID`、`LinkType`（related/reconciled/rolled_back）、`LinkedJournalID`
+
+### API 端点
+
+**基础交易**（`/api/v1/transactions`）：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/transactions` | POST | 创建交易 |
+| `/transactions` | GET | 交易列表（分页+过滤） |
+| `/transactions/search` | GET | 高级搜索 |
+| `/transactions/:id` | GET/PUT/DELETE | 详情/更新/删除 |
+| `/transactions/:id/split` | POST | 拆分交易 |
+| `/transactions/:id/splits` | GET | 获取拆分列表 |
+| `/transactions/:id/merge` | POST | 合并拆分 |
+
+**批量操作**（`/api/v1/transactions/bulk`）：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/transactions/bulk/edit` | POST | 批量编辑（分类/备注/追加标签） |
+| `/transactions/bulk/delete` | POST | 批量删除 |
+| `/transactions/bulk/:id/convert` | POST | 类型转换 |
+| `/transactions/bulk/:id/clone` | POST | 克隆交易 |
+
+**交易关联**（`/api/v1/transaction-links`）：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/transaction-links` | POST | 创建关联（验证两笔交易都属于当前用户） |
+| `/transaction-links` | GET | 关联列表 |
+| `/transaction-links/:id` | DELETE | 删除关联 |
+
+### 余额计算 (`calculateBalanceChanges`)
+
+返回 `map[uint64]decimal.Decimal`，key 为账户ID，value 为变更量（正数=增加，负数=减少）：
+
+- withdrawal：`changes[sourceID] = -amount`
+- deposit：`changes[*destID] = +amount`
+- transfer：`changes[sourceID] = -amount`，`changes[*destID] = +amount`
+
+**注意**：`TransactionService` 和 `TransactionBulkService` 各自有一份 `calculateBalanceChanges`，逻辑必须保持一致。
+
+### 余额更新
+
+使用 SQL 表达式 `current_balance + change` 原子更新，避免先读后写竞态。所有余额更新操作都在数据库事务中执行。
+
+### 事务一致性
+
+所有写操作（Create/Update/Delete/Split/MergeSplits/ConvertType/Clone/BulkDelete）都在 `db.Transaction()` 中执行，确保交易记录和余额更新的原子性。Repository 层提供 `WithDB` 后缀方法（`CreateWithDB`/`DeleteWithDB`/`UpdateWithTagsAndDB`/`CreateBatchWithDB`/`AddTagsWithDB`/`AttachTagsWithDB`）接受外部事务对象。
+
+### 删除策略
+
+使用**硬删除**（`Unscoped().Delete()`），因为余额已在同一事务中硬回滚。如果使用软删除，恢复交易时余额不会自动恢复，导致数据不一致。`DeleteWithDB`、`DeleteBatch`、`BulkDelete` 中均使用 `Unscoped()`。
+
+### 交易拆分
+
+- 父交易：`ParentID = nil`，保留原始金额，余额变更只在父交易创建时发生一次
+- 子交易：`ParentID = &parentID`，各子交易有独立金额/分类/标签，继承父交易的 Type/Date/SourceID/DestinationID
+- 子交易金额之和必须等于父交易金额
+- 列表查询通过 `parent_id IS NULL` 过滤只返回顶级交易
+- **Update 同步**：更新父交易的 Type/SourceID/DestinationID 时，同步更新所有子交易的对应字段
+
+### 标签关联
+
+- **全量替换**（`UpdateWithTags`/`AttachTags`）：先删除旧标签，再插入新标签。用于单笔交易更新。
+- **追加标签**（`AddTags`）：仅添加不存在的标签，不删除已有标签。用于批量编辑（`BulkEdit`）。
+
+### 标签过滤
+
+`applyFilter` 中 `TagID` 和 `TagIDs` 合并为互斥分支，同时指定时合并 ID 列表后单次 JOIN，避免产生两个 JOIN 导致结果不正确。
+
+### Webhook 触发时机
+
+Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出导致通知与实际状态不一致。
+
+### 请求/响应 DTO
+
+**CreateTransactionReq**：`type`(必填)、`date`(必填)、`description`(必填)、`amount`(必填)、`source_id`(必填)、`destination_id`(可选)、`category_id`、`notes`、`tags`([]uint64)、`splits`([]CreateSplitReq)
+
+**UpdateTransactionReq**：与 Create 相同但**不含 `splits`** 字段。拆分请使用 Split/MergeSplits API。
+
+**BulkEditReq**：`ids`(必填)、`category_id`、`notes`、`tag_ids`（追加标签，非替换）
+
+**TransactionResp**：`id`、`type`、`date`、`description`、`amount`(string, StringFixed(4))、`source_id`、`source`(AccountResp)、`destination_id`、`destination`(*AccountResp)、`category_id`、`category`(*CategoryResp)、`notes`、`tags`([]TagResp)、`splits`([]SplitResp)、`bill_id`、`created_at`、`updated_at`
+
+### 前端实现
+
+- **类型** (`types/transaction.ts`)：`Transaction` 接口与后端 `TransactionResp` 字段对齐，`amount` 为 string 类型避免浮点精度问题
+- **API** (`api/transaction.ts`)：`list`/`getTransaction`/`create`/`update`/`remove`/`search`

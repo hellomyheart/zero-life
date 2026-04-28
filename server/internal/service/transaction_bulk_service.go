@@ -119,10 +119,10 @@ func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDele
 		if err := dbTx.Where("transaction_id IN ?", ids).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
-		if err := dbTx.Where("parent_id IN ?", ids).Delete(&model.Transaction{}).Error; err != nil {
+		if err := dbTx.Unscoped().Where("parent_id IN ?", ids).Delete(&model.Transaction{}).Error; err != nil {
 			return err
 		}
-		if err := dbTx.Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error; err != nil {
+		if err := dbTx.Unscoped().Where("id IN ? AND user_id = ?", ids, userID).Delete(&model.Transaction{}).Error; err != nil {
 			return err
 		}
 		for _, t := range txns {
@@ -218,14 +218,19 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 		}
 	}
 
-	if err := s.txnRepo.Update(txn); err != nil {
-		return nil, errcode.ErrInternal
-	}
-	for accountID, change := range netChanges {
-		if err := s.db.Model(&model.Account{}).Where("id = ?", accountID).
-			Update("current_balance", gorm.Expr("current_balance + ?", change)).Error; err != nil {
-			return nil, errcode.ErrInternal
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.UpdateWithTagsAndDB(dbTx, txn, nil); err != nil {
+			return err
 		}
+		for accountID, change := range netChanges {
+			if err := dbTx.Model(&model.Account{}).Where("id = ?", accountID).
+				Update("current_balance", gorm.Expr("current_balance + ?", change)).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, errcode.ErrInternal
 	}
 
 	updated, err := s.txnRepo.GetByID(id, userID)
@@ -275,14 +280,19 @@ func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.
 	// Calculate balance changes
 	changes := s.calculateBalanceChanges(clone.Type, clone.Amount, clone.SourceID, clone.DestinationID)
 
-	if err := s.txnRepo.Create(clone, tagIDs); err != nil {
-		return nil, errcode.ErrInternal
-	}
-	for accountID, change := range changes {
-		if err := s.db.Model(&model.Account{}).Where("id = ?", accountID).
-			Update("current_balance", gorm.Expr("current_balance + ?", change)).Error; err != nil {
-			return nil, errcode.ErrInternal
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.CreateWithDB(dbTx, clone, tagIDs); err != nil {
+			return err
 		}
+		for accountID, change := range changes {
+			if err := dbTx.Model(&model.Account{}).Where("id = ?", accountID).
+				Update("current_balance", gorm.Expr("current_balance + ?", change)).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, errcode.ErrInternal
 	}
 
 	created, err := s.txnRepo.GetByID(clone.ID, userID)

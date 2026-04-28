@@ -318,10 +318,22 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 	oldTxn.CategoryID = req.CategoryID
 	oldTxn.Notes = req.Notes
 
-	// 在事务中执行：更新交易、更新余额，确保原子性
+	// 在事务中执行：更新交易、同步更新拆分子交易、更新余额，确保原子性
 	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
 		if err := s.txnRepo.UpdateWithTagsAndDB(dbTx, oldTxn, req.Tags); err != nil {
 			return err
+		}
+		// 同步更新拆分子交易的 Type/SourceID/DestinationID
+		splits, _ := s.txnRepo.GetSplits(id, userID)
+		if len(splits) > 0 {
+			for i := range splits {
+				splits[i].Type = newType
+				splits[i].SourceID = req.SourceID
+				splits[i].DestinationID = req.DestinationID
+				if err := dbTx.Save(&splits[i]).Error; err != nil {
+					return err
+				}
+			}
 		}
 		for accountID, change := range netChanges {
 			if err := s.updateAccountBalance(dbTx, accountID, change); err != nil {
@@ -354,8 +366,8 @@ func (s *TransactionService) Update(userID, id uint64, req *request.UpdateTransa
 // Delete 删除交易
 // 业务流程：
 // 1. 获取交易信息，计算余额变更
-// 2. 先触发Webhook通知（删除前）
-// 3. 在数据库事务中执行：删除交易记录、回滚账户余额（变更取负值）
+// 2. 在数据库事务中执行：删除交易记录、回滚账户余额（变更取负值）
+// 3. 事务成功后触发 Webhook 通知
 // 参数：
 //   - userID: 用户ID
 //   - id: 交易ID
@@ -703,18 +715,21 @@ func (s *TransactionService) Split(userID, parentID uint64, req *request.SplitTr
 		splitModels = append(splitModels, splitTxn)
 	}
 
-	// 批量保存拆分交易
-	if err := s.txnRepo.CreateBatch(splitModels); err != nil {
-		return nil, err
-	}
-
-	// 为拆分交易添加标签
-	for i, splitReq := range req.Splits {
-		if len(splitReq.Tags) > 0 {
-			if err := s.txnRepo.AttachTags(splitModels[i].ID, splitReq.Tags); err != nil {
-				// 记录错误但不回滚，标签不是关键数据
+	// 在事务中执行：创建拆分交易、添加标签
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.txnRepo.CreateBatchWithDB(dbTx, splitModels); err != nil {
+			return err
+		}
+		for i, splitReq := range req.Splits {
+			if len(splitReq.Tags) > 0 {
+				if err := s.txnRepo.AddTagsWithDB(dbTx, splitModels[i].ID, splitReq.Tags); err != nil {
+					return err
+				}
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// 重新获取父交易（包含拆分）
