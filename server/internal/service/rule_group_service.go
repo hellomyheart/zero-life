@@ -327,9 +327,7 @@ func (s *RuleGroupService) matchCondition(condition model.RuleCondition, txn *mo
 		}
 		return false
 	case model.ConditionFieldBudget:
-		if txn.RecurringID != nil {
-			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
-		}
+		return false
 	case model.ConditionFieldBill:
 		if txn.RecurringID != nil {
 			fieldValue = fmt.Sprintf("%d", *txn.RecurringID)
@@ -429,7 +427,7 @@ func (s *RuleGroupService) applyActions(actions []model.RuleAction, txn *model.T
 		case model.ActionTypeClearCategory:
 			txn.CategoryID = nil
 			needsUpdate = true
-		case model.ActionTypeClearBudget:
+		case model.ActionTypeClearRecurring:
 			txn.RecurringID = nil
 			needsUpdate = true
 		case model.ActionTypeSetCategory:

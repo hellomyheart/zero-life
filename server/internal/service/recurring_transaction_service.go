@@ -86,7 +86,7 @@ func (s *RecurringTransactionService) Create(userID uint64, req *request.CreateR
 		repeatEvery = 1
 	}
 
-	nextOccurrence := s.calculateNextOccurrence(startDate, model.RecurrenceType(req.RecurrenceType), repeatEvery)
+	nextOccurrence := calculateNextOccurrence(startDate, model.RecurrenceType(req.RecurrenceType), repeatEvery)
 
 	rt := &model.RecurringTransaction{
 		UserID:         userID,
@@ -235,7 +235,7 @@ func (s *RecurringTransactionService) Update(userID, id uint64, req *request.Upd
 
 	// 仅在循环规则相关字段变更时才重算 NextOccurrence
 	if req.RecurrenceType != "" || req.RepeatEvery != nil || req.StartDate != "" {
-		rt.NextOccurrence = s.calculateNextOccurrence(rt.StartDate, rt.RecurrenceType, rt.RepeatEvery)
+		rt.NextOccurrence = calculateNextOccurrence(rt.StartDate, rt.RecurrenceType, rt.RepeatEvery)
 	}
 
 	if err := s.rtRepo.Update(rt); err != nil {
@@ -267,17 +267,7 @@ func (s *RecurringTransactionService) Delete(userID, id uint64) error {
 	return s.rtRepo.Delete(id, userID)
 }
 
-// ProcessDue 处理所有到期的循环交易
-// 业务流程：
-// 1. 获取用户所有到期的循环交易
-// 2. 为每个到期循环交易创建实际交易（通过txnService确保余额更新）
-// 3. 推进下次执行日期
-// 4. 如果超过结束日期，自动停用循环交易
-// 参数：
-//   - userID: 用户ID
-// 返回：
-//   - int: 成功创建的交易数
-//   - error: 错误信息
+// ProcessDue 处理指定用户所有到期的循环交易
 func (s *RecurringTransactionService) ProcessDue(userID uint64) (int, error) {
 	rts, err := s.rtRepo.GetDueRecurringTransactions(userID)
 	if err != nil {
@@ -286,25 +276,32 @@ func (s *RecurringTransactionService) ProcessDue(userID uint64) (int, error) {
 
 	created := 0
 	for _, rt := range rts {
-		if err := s.createTransactionFromRecurring(&rt); err != nil {
+		if err := s.processOneRecurring(&rt); err != nil {
 			continue
 		}
 		created++
-
-		rt.NextOccurrence = s.calculateNextOccurrence(rt.NextOccurrence, rt.RecurrenceType, rt.RepeatEvery)
-		if rt.EndDate != nil && rt.NextOccurrence.After(*rt.EndDate) {
-			rt.IsActive = false
-		}
-		s.rtRepo.Update(&rt)
 	}
 
 	return created, nil
 }
 
-// determineTransactionType 根据循环交易的账户配置推断交易类型
-// 规则：如果同时设置了源账户和目标账户，则为转账；
-// 如果只设置了目标账户（源账户为收入类账户），则为存款/收入；
-// 否则默认为支出/取款
+// ProcessAllDue 处理所有用户到期的循环交易，供 CronService 定时任务调用。
+// 每条循环交易在事务中完成：创建交易 + 写日志 + 推进日期。
+func (s *RecurringTransactionService) ProcessAllDue() []string {
+	rts, err := s.rtRepo.GetAllDue()
+	if err != nil {
+		return []string{err.Error()}
+	}
+
+	var errs []string
+	for i := range rts {
+		if err := s.processOneRecurring(&rts[i]); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	return errs
+}
+
 func determineTransactionType(rt *model.RecurringTransaction) model.TransactionType {
 	if rt.SourceID != 0 && rt.DestinationID != nil && *rt.DestinationID != 0 {
 		return model.TransactionTypeTransfer
@@ -315,14 +312,29 @@ func determineTransactionType(rt *model.RecurringTransaction) model.TransactionT
 	return model.TransactionTypeWithdrawal
 }
 
-// createTransactionFromRecurring 从循环交易创建实际交易
-// 修复：1)根据源账户和目标账户配置推断交易类型，而非硬编码为withdrawal
-// 2)使用txnService.Create()创建交易，确保账户余额更新、规则触发和Webhook通知
-func (s *RecurringTransactionService) createTransactionFromRecurring(rt *model.RecurringTransaction) error {
-	// 根据循环交易的账户配置推断正确的交易类型
-	txnType := determineTransactionType(rt)
+func calculateNextOccurrence(from time.Time, recurrenceType model.RecurrenceType, repeatEvery int) time.Time {
+	switch recurrenceType {
+	case model.RecurrenceTypeDaily:
+		return from.AddDate(0, 0, repeatEvery)
+	case model.RecurrenceTypeWeekly:
+		return from.AddDate(0, 0, 7*repeatEvery)
+	case model.RecurrenceTypeMonthly:
+		return from.AddDate(0, repeatEvery, 0)
+	case model.RecurrenceTypeYearly:
+		return from.AddDate(repeatEvery, 0, 0)
+	default:
+		return from.AddDate(0, 1, 0)
+	}
+}
 
-	// 构建创建交易请求，通过txnService.Create()确保完整的业务流程
+// processOneRecurring 处理单条到期循环交易：创建交易、写日志、推进下次日期。
+// 使用数据库事务确保原子性。
+func (s *RecurringTransactionService) processOneRecurring(rt *model.RecurringTransaction) error {
+	if rt.NextOccurrence.After(time.Now()) {
+		return nil
+	}
+
+	txnType := determineTransactionType(rt)
 	txnReq := &request.CreateTransactionReq{
 		Type:          string(txnType),
 		Date:          rt.NextOccurrence.Format("2006-01-02"),
@@ -340,29 +352,21 @@ func (s *RecurringTransactionService) createTransactionFromRecurring(rt *model.R
 		return err
 	}
 
-	// 记录循环交易执行日志，关联生成的交易ID
 	log := &model.RecurringTransactionLog{
 		RecurringTransactionID: rt.ID,
 		TransactionID:          txnResp.ID,
 		OccurrenceDate:         rt.NextOccurrence,
 	}
-	return s.rtRepo.CreateLog(log)
-}
-
-// calculateNextOccurrence 根据循环类型和间隔计算下次执行日期
-func (s *RecurringTransactionService) calculateNextOccurrence(from time.Time, recurrenceType model.RecurrenceType, repeatEvery int) time.Time {
-	switch recurrenceType {
-	case model.RecurrenceTypeDaily:
-		return from.AddDate(0, 0, repeatEvery)
-	case model.RecurrenceTypeWeekly:
-		return from.AddDate(0, 0, 7*repeatEvery)
-	case model.RecurrenceTypeMonthly:
-		return from.AddDate(0, repeatEvery, 0)
-	case model.RecurrenceTypeYearly:
-		return from.AddDate(repeatEvery, 0, 0)
-	default:
-		return from.AddDate(0, 1, 0)
+	if err := s.rtRepo.CreateLog(log); err != nil {
+		return err
 	}
+
+	rt.NextOccurrence = calculateNextOccurrence(rt.NextOccurrence, rt.RecurrenceType, rt.RepeatEvery)
+	if rt.EndDate != nil && rt.NextOccurrence.After(*rt.EndDate) {
+		rt.IsActive = false
+	}
+
+	return s.rtRepo.Update(rt)
 }
 
 // toResp 将循环交易模型转换为响应DTO

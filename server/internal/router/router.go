@@ -299,7 +299,7 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			autocomplete.GET("/tags", r.autocompleteCtrl.Tags)
 			autocomplete.GET("/currencies", r.autocompleteCtrl.Currencies)
 			autocomplete.GET("/budgets", r.autocompleteCtrl.Budgets)
-			autocomplete.GET("/bills", r.autocompleteCtrl.RecurringTransactions)
+			autocomplete.GET("/recurring-transactions", r.autocompleteCtrl.RecurringTransactions)
 		}
 
 		exports := authenticated.Group("/exports")

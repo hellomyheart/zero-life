@@ -259,7 +259,7 @@ func (c *AutocompleteController) Budgets(ctx *gin.Context) {
 // @Success      200  {object} map[string]interface{}
 // @Failure      401  {object} map[string]string
 // @Failure      500  {object} map[string]string
-// @Router       /api/v1/autocomplete/bills [get]
+// @Router       /api/v1/autocomplete/recurring-transactions [get]
 // @Security     BearerAuth
 func (c *AutocompleteController) RecurringTransactions(ctx *gin.Context) {
 	userID := ctx.GetUint64("user_id")

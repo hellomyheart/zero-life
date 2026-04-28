@@ -1,11 +1,6 @@
 package service
 
 import (
-	"time"
-
-	"github.com/hellomyheart/zero-life/server/internal/dto/request"
-	"github.com/hellomyheart/zero-life/server/internal/model"
-	"github.com/hellomyheart/zero-life/server/internal/repository"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
@@ -25,7 +20,6 @@ type CronTaskResult struct {
 }
 
 type CronService struct {
-	rtRepo        *repository.RecurringTransactionRepository
 	rtService     *RecurringTransactionService
 	budgetService *BudgetService
 	cron          *cron.Cron
@@ -34,13 +28,11 @@ type CronService struct {
 }
 
 func NewCronService(
-	rtRepo *repository.RecurringTransactionRepository,
 	rtService *RecurringTransactionService,
 	budgetService *BudgetService,
 	logger *zap.Logger,
 ) *CronService {
 	s := &CronService{
-		rtRepo:        rtRepo,
 		rtService:     rtService,
 		budgetService: budgetService,
 		cron:          cron.New(cron.WithSeconds()),
@@ -74,79 +66,15 @@ func (s *CronService) runRecurringTransactionsTask() *CronTaskResult {
 		Errors: make([]string, 0),
 	}
 
-	dueRTs, err := s.rtRepo.GetAllDue()
-	if err != nil {
-		result.Errors = append(result.Errors, err.Error())
-	} else {
-		for i := range dueRTs {
-			if err := s.createTransactionFromRecurring(&dueRTs[i]); err != nil {
-				result.Errors = append(result.Errors, err.Error())
-			}
-		}
-	}
-
-	result.Success = len(result.Errors) == 0
+	errs := s.rtService.ProcessAllDue()
+	result.Errors = errs
+	result.Success = len(errs) == 0
 	if result.Success {
 		result.Message = "执行成功"
 	} else {
 		result.Message = "执行完成，部分错误"
 	}
 	return result
-}
-
-func (s *CronService) createTransactionFromRecurring(rt *model.RecurringTransaction) error {
-	if rt.NextOccurrence.After(time.Now()) {
-		return nil
-	}
-
-	txnType := determineTransactionType(rt)
-	txnReq := &request.CreateTransactionReq{
-		Type:          string(txnType),
-		Date:          rt.NextOccurrence.Format("2006-01-02"),
-		Description:   rt.Description,
-		Amount:        rt.Amount.StringFixed(4),
-		SourceID:      rt.SourceID,
-		DestinationID: rt.DestinationID,
-		CategoryID:    rt.CategoryID,
-		Notes:         rt.Notes,
-		RecurringID:   &rt.ID,
-	}
-
-	txnResp, err := s.rtService.txnService.Create(rt.UserID, txnReq)
-	if err != nil {
-		return err
-	}
-
-	log := &model.RecurringTransactionLog{
-		RecurringTransactionID: rt.ID,
-		TransactionID:          txnResp.ID,
-		OccurrenceDate:         rt.NextOccurrence,
-	}
-	if err := s.rtRepo.CreateLog(log); err != nil {
-		return err
-	}
-
-	rt.NextOccurrence = s.calculateNextOccurrence(rt.NextOccurrence, rt.RecurrenceType, rt.RepeatEvery)
-	if rt.EndDate != nil && rt.NextOccurrence.After(*rt.EndDate) {
-		rt.IsActive = false
-	}
-
-	return s.rtRepo.Update(rt)
-}
-
-func (s *CronService) calculateNextOccurrence(from time.Time, recurrenceType model.RecurrenceType, repeatEvery int) time.Time {
-	switch recurrenceType {
-	case model.RecurrenceTypeDaily:
-		return from.AddDate(0, 0, repeatEvery)
-	case model.RecurrenceTypeWeekly:
-		return from.AddDate(0, 0, 7*repeatEvery)
-	case model.RecurrenceTypeMonthly:
-		return from.AddDate(0, repeatEvery, 0)
-	case model.RecurrenceTypeYearly:
-		return from.AddDate(repeatEvery, 0, 0)
-	default:
-		return from.AddDate(0, 1, 0)
-	}
 }
 
 func (s *CronService) runBudgetSnapshotTask() *CronTaskResult {

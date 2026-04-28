@@ -180,7 +180,7 @@ func main() {
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo, rtRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
-	cronService := service.NewCronService(rtRepo, rtService, budgetService, logger)
+	cronService := service.NewCronService(rtService, budgetService, logger)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)

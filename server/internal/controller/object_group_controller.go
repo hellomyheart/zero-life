@@ -33,7 +33,7 @@ func NewObjectGroupController(service *service.ObjectGroupService) *ObjectGroupC
 // 请求体：CreateObjectGroupReq（包含名称、对象类型、对象ID）
 // 响应：创建成功的分组信息
 // @Summary      Create object group
-// @Description  Create a new object group for organizing transactions, bills, budgets, etc.
+// @Description  Create a new object group for organizing transactions, recurring transactions, budgets, etc.
 // @Tags         object-groups
 // @Accept       json
 // @Produce      json

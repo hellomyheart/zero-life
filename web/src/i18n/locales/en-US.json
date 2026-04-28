@@ -260,7 +260,7 @@
     "actionRemoveTag": "Remove Tag",
     "actionSetDescription": "Set Description",
     "actionClearCategory": "Clear Category",
-    "actionClearBudget": "Clear Budget",
+    "actionClearRecurring": "Clear Recurring Link",
     "actionClearNotes": "Clear Notes",
     "actionAppendNotes": "Append Notes",
     "actionPrependNotes": "Prepend Notes"

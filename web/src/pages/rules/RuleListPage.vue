@@ -73,7 +73,7 @@ const actionTypeOptions = [
   { value: 'remove_tag', label: t('rule.actionRemoveTag') },
   { value: 'set_description', label: t('rule.actionSetDescription') },
   { value: 'clear_category', label: t('rule.actionClearCategory') },
-  { value: 'clear_budget', label: t('rule.actionClearBudget') },
+  { value: 'clear_recurring', label: t('rule.actionClearRecurring') },
   { value: 'clear_notes', label: t('rule.actionClearNotes') },
   { value: 'append_notes', label: t('rule.actionAppendNotes') },
   { value: 'prepend_notes', label: t('rule.actionPrependNotes') },

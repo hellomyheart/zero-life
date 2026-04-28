@@ -185,8 +185,7 @@ const (
 	// 如：交易类型为"支出"
 	ConditionFieldTransactionType ConditionField = "transaction_type"
 
-	// ConditionFieldBudget 匹配预算
-	// 如：关联预算为"月度餐饮预算"
+	// ConditionFieldBudget 匹配预算（暂未实现，交易无预算关联字段）
 	ConditionFieldBudget ConditionField = "budget"
 
 	// ConditionFieldBill 匹配循环交易
@@ -333,10 +332,10 @@ const (
 	// Value: 无需值
 	ActionTypeClearCategory ActionType = "clear_category"
 
-	// ActionTypeClearBudget 清除预算
-	// 移除交易的预算关联
+	// ActionTypeClearRecurring 清除循环交易关联
+	// 移除交易的循环交易关联
 	// Value: 无需值
-	ActionTypeClearBudget ActionType = "clear_budget"
+	ActionTypeClearRecurring ActionType = "clear_recurring"
 
 	// ActionTypeClearNotes 清除备注
 	// 清空交易的备注

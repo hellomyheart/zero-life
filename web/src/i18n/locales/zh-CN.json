@@ -260,7 +260,7 @@
     "actionRemoveTag": "移除标签",
     "actionSetDescription": "设置描述",
     "actionClearCategory": "清除分类",
-    "actionClearBudget": "清除预算",
+    "actionClearRecurring": "清除循环交易关联",
     "actionClearNotes": "清除备注",
     "actionAppendNotes": "追加备注",
     "actionPrependNotes": "前置备注"
