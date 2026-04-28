@@ -86,15 +86,19 @@ func (r *RecurringTransactionRepository) UpdateWithDB(dbTx *gorm.DB, rt *model.R
 	return dbTx.Save(rt).Error
 }
 
-// Delete 删除定期交易及其关联的所有执行日志。使用数据库事务确保原子性。
+// Delete 删除定期交易及其关联的所有执行日志，并清除关联交易的 recurring_id。使用数据库事务确保原子性。
 // 执行 SQL（事务内）:
-//   1. DELETE FROM recurring_transaction_logs WHERE recurring_transaction_id = ?
-//   2. DELETE FROM recurring_transactions WHERE id = ? AND user_id = ?
+//   1. UPDATE transactions SET recurring_id = NULL WHERE recurring_id = ? AND user_id = ?
+//   2. DELETE FROM recurring_transaction_logs WHERE recurring_transaction_id = ?
+//   3. DELETE FROM recurring_transactions WHERE id = ? AND user_id = ?
 // 参数 id: 定期交易 ID。
 // 参数 userID: 当前登录用户 ID。
 // 返回: 删除失败时返回错误，事务回滚。
 func (r *RecurringTransactionRepository) Delete(id, userID uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.Transaction{}).Where("recurring_id = ? AND user_id = ?", id, userID).Update("recurring_id", nil).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("recurring_transaction_id = ?", id).Delete(&model.RecurringTransactionLog{}).Error; err != nil {
 			return err
 		}
