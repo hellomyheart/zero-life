@@ -316,6 +316,82 @@ O(n) 两遍扫描，`Children` 使用 `[]*CategoryResp` 指针切片避免值副
 - **列表页** (`pages/categories/CategoryListPage.vue`)：使用 `el-tree` 展示树形结构，支持创建子分类（预填 `parent_id`）、编辑、删除
 - **编辑限制**：编辑对话框不包含 `parent_id` 选择器和 `sort_order` 字段，与后端 `UpdateCategoryReq` 一致
 
+## 标签管理
+
+### 核心概念
+
+标签采用**最多5级树形结构**：通过 `parent_id` 形成层级关系，最多5层深度。标签用于对交易进行灵活标记和分组，与分类互补。
+
+**与分类的区别**：
+- 分类是树形结构（最多5级），标签也是树形结构（最多5级）
+- 一个交易只能有一个分类，但可以有多个标签
+- 分类用于预算控制，标签用于灵活标记
+
+### 数据模型 (`model/tag.go`)
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ID | uint64 | 主键自增 |
+| UserID | uint64 | 所属用户，索引，数据隔离 |
+| Name | string (size:100) | 标签名称，用户内全局唯一 |
+| Color | string (size:7, default:#409EFF) | 标签颜色，十六进制格式 |
+| ParentID | *uint64 (indexed) | 父标签ID，NULL = 顶级标签 |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+**TransactionTag** (`model/tag.go`)：多对多关联表，复合主键 `(TransactionID, TagID)`，纯关联表无额外字段。
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/v1/tags` | POST | 创建标签 |
+| `/api/v1/tags` | GET | 列表（返回树形结构） |
+| `/api/v1/tags/:id` | GET | 详情 |
+| `/api/v1/tags/:id` | PUT | 更新（名称、颜色、父标签ID） |
+| `/api/v1/tags/:id` | DELETE | 删除（级联删除子标签） |
+
+### 请求/响应 DTO
+
+**CreateTagReq**：`name`(必填)、`color`(可选，默认 `#409EFF`)、`parent_id`(可选，null=顶级)
+
+**UpdateTagReq**：`name`(可选)、`color`(可选)、`parent_id`(*uint64，可选)。**支持修改 `parent_id`**，可移动标签到其他父级。
+
+**TagResp**：`id`、`name`、`color`、`parent_id`、`transaction_count`（关联交易数）、`children`(递归，omitempty)、`created_at`、`updated_at`。不含 `user_id`。
+
+### 业务规则
+
+1. **最多5级深度限制**：创建和更新时均校验。创建时沿 parent 链向上计算深度，若新标签将超过5级则拒绝（`ErrTagTooDeep`，50003）。更新时若指定了 `parent_id`，需满足三个条件：(a) 不能将自己设为自己的子标签；(b) 新父标签不能本身也是子标签（否则会形成三级）；(c) 若当前标签已有子标签，则不能将其变为子标签（否则会形成三级）。
+
+2. **名称唯一性**：创建时校验。用户内全局唯一，通过加载全部标签后线性扫描检查。
+
+3. **级联删除**：删除父标签时，先删除所有子标签（及子标签的 `transaction_tags` 关联），再删除父标签自身及其关联。不使用事务包裹整个级联删除（每个子标签单独调用 `tagRepo.Delete`，该方法内部有事务）。
+
+4. **空字符串语义**：`UpdateTagReq` 中 `name`/`color` 为空字符串表示"不修改"，无法主动清空为空字符串。`parent_id` 使用 `*uint64` 指针，可区分"未提供"和"设为null（顶级）"。
+
+### 树构建算法 (`buildTree`)
+
+O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本导致深层子节点丢失：
+1. 预计算每个标签的关联交易数（`CountTransactions`）
+2. 遍历所有标签，创建 `map[uint64]*TagResp` 用于 O(1) 查找
+3. 遍历所有标签，将有 `parent_id` 的节点**指针**挂到父节点的 `Children` 上
+4. 收集 `parent_id == nil` 的根节点
+
+**值语义陷阱**：如果 `Children` 使用 `[]TagResp`（值切片），`append` 时子节点是值副本。当三级节点被挂到二级节点时，一级节点中已持有的二级节点副本的 `Children` 不会更新，导致三级及更深层节点丢失。改用 `[]*TagResp` 指针切片后，所有引用指向同一份数据，深层子节点正确显示。
+
+**孤儿节点处理**：如果 `parent_id` 指向不存在的标签（被删除或数据不一致），该节点既不会出现在根节点中，也不会作为子节点，会被静默丢弃。
+
+### 后代展开 (`GetDescendantIDs`)
+
+迭代 BFS 算法：输入一组标签ID → 包含自身 → 查询 `WHERE parent_id IN (当前层)` → 收集子ID → 重复直到无更多子节点 → 返回所有ID（含输入）。
+
+### 前端实现
+
+- **类型** (`types/tag.ts`)：`Tag` 接口含递归 `children?: Tag[]`，与后端 `TagResp` 字段完全对齐
+- **Store** (`stores/tag.ts`)：缓存标签树，`fetchTags()` 调用 `list()` API，失败时保持空数组
+- **列表页** (`pages/tags/TagListPage.vue`)：使用 `el-table` + `tree-props` 展示树形结构，支持创建子标签（预填 `parent_id`）、编辑、删除
+- **颜色选择**：使用自定义 `ColorPicker` 组件，支持预设调色板 + 自定义颜色
+- **父标签选择器**：编辑时可选择父标签（所有顶级标签可选），编辑自身时禁选自身
+
 ## 账户管理
 
 ### 核心概念

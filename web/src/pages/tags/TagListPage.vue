@@ -2,7 +2,7 @@
 /**
  * 标签列表页面
  * 功能：
- * - 展示标签树形列表（支持两级结构）
+ * - 展示标签树形列表（支持最多5级结构）
  * - 显示标签名称、颜色和关联交易数量
  * - 支持创建、编辑、删除标签
  * - 颜色选择器支持预设调色板 + 自定义颜色
@@ -37,10 +37,10 @@ const form = ref<CreateTagReq & { parent_id: number | null }>({
 
 /**
  * 将树形标签数据扁平化，用于父标签选择器
- * 只取顶级标签作为可选父标签（两级限制）
+ * 所有标签都可作为父标签（5级限制由后端校验）
  */
-const topLevelTags = computed(() => {
-  return flattenTree(tags.value).filter(t => t.parent_id === null)
+const allFlatTags = computed(() => {
+  return flattenTree(tags.value)
 })
 
 /**
@@ -74,6 +74,45 @@ async function fetchTags() {
   }
 }
 
+/**
+ * 获取指定标签的所有后代ID（含自身）
+ * 用于编辑时禁用自身及后代作为父标签选项
+ */
+function getDescendantIds(tagId: number): Set<number> {
+  const ids = new Set<number>()
+  const queue: number[] = [tagId]
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    ids.add(current)
+    const tag = findTagInTree(tags.value, current)
+    if (tag?.children) {
+      for (const child of tag.children) {
+        queue.push(child.id)
+      }
+    }
+  }
+  return ids
+}
+
+/**
+ * 在树中查找指定ID的标签
+ */
+function findTagInTree(tree: Tag[], id: number): Tag | undefined {
+  for (const item of tree) {
+    if (item.id === id) return item
+    if (item.children) {
+      const found = findTagInTree(item.children, id)
+      if (found) return found
+    }
+  }
+  return undefined
+}
+
+/** 编辑时需要禁用的父标签选项（自身及后代） */
+const disabledParentIds = computed(() => {
+  if (editingId.value === null) return new Set<number>()
+  return getDescendantIds(editingId.value)
+})
 /** 打开创建标签对话框 */
 function handleCreate(parentId: number | null = null) {
   dialogTitle.value = t('tag.create')
@@ -188,11 +227,11 @@ onMounted(fetchTags)
           >
             <el-option :label="t('tag.topLevel')" :value="null" />
             <el-option
-              v-for="tag in topLevelTags"
+              v-for="tag in allFlatTags"
               :key="tag.id"
               :label="tag.name"
               :value="tag.id"
-              :disabled="tag.id === editingId"
+              :disabled="disabledParentIds.has(tag.id)"
             />
           </el-select>
         </el-form-item>

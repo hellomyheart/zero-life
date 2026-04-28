@@ -13,7 +13,7 @@ import (
 
 // TagService 标签服务
 // 负责处理标签的增删改查，标签用于对交易进行分类标记
-// 支持两级树形结构（父标签 → 子标签），与分类类似
+// 支持最多5级树形结构（通过 parent_id 形成层级关系），与分类类似
 // 依赖tagRepo进行标签数据访问，依赖db执行删除事务
 type TagService struct {
 	tagRepo *repository.TagRepository // 标签数据访问对象
@@ -26,7 +26,7 @@ func NewTagService(tagRepo *repository.TagRepository, db *gorm.DB) *TagService {
 }
 
 // Create 创建标签
-// 检查名称唯一性和两级深度限制，如果未指定颜色则默认使用 #409EFF
+// 检查名称唯一性和5级深度限制，如果未指定颜色则默认使用 #409EFF
 // 参数：
 //   - userID: 用户ID
 //   - req: 创建请求参数（名称、颜色、父标签ID）
@@ -45,13 +45,22 @@ func (s *TagService) Create(userID uint64, req *request.CreateTagReq) (*response
 		}
 	}
 
-	// 检查两级深度限制：如果指定了父标签，父标签不能本身也是子标签
+	// 检查5级深度限制：沿 parent 链向上计算深度
 	if req.ParentID != nil {
-		parent, err := s.tagRepo.GetByID(*req.ParentID, userID)
-		if err != nil {
-			return nil, errcode.ErrNotFound
+		depth := 1
+		pid := *req.ParentID
+		for pid != 0 {
+			parent, err := s.tagRepo.GetByID(pid, userID)
+			if err != nil {
+				return nil, errcode.ErrNotFound
+			}
+			if parent.ParentID == nil {
+				break
+			}
+			depth++
+			pid = *parent.ParentID
 		}
-		if parent.ParentID != nil {
+		if depth >= 5 {
 			return nil, errcode.ErrTagTooDeep
 		}
 	}
@@ -134,23 +143,37 @@ func (s *TagService) Update(userID, id uint64, req *request.UpdateTagReq) (*resp
 	if req.Color != "" {
 		tag.Color = req.Color
 	}
-	// 更新父标签ID时需要检查深度限制
+	// 更新父标签ID时需要检查5级深度限制
 	if req.ParentID != nil {
 		// 不能将自己设为自己的子标签
 		if *req.ParentID == id {
 			return nil, errcode.ErrTagTooDeep
 		}
-		// 父标签不能本身也是子标签（两级限制）
-		parent, err := s.tagRepo.GetByID(*req.ParentID, userID)
-		if err != nil {
-			return nil, errcode.ErrNotFound
+		// 检查是否会形成循环：新父标签不能是当前标签的后代
+		descendantIDs, _ := s.tagRepo.GetDescendantIDs([]uint64{id}, userID)
+		for _, did := range descendantIDs {
+			if did == *req.ParentID {
+				return nil, errcode.ErrTagTooDeep
+			}
 		}
-		if parent.ParentID != nil {
-			return nil, errcode.ErrTagTooDeep
+		// 计算新父标签的深度
+		newParentDepth := 0
+		pid := *req.ParentID
+		for pid != 0 {
+			parent, err := s.tagRepo.GetByID(pid, userID)
+			if err != nil {
+				return nil, errcode.ErrNotFound
+			}
+			newParentDepth++
+			if parent.ParentID == nil {
+				break
+			}
+			pid = *parent.ParentID
 		}
-		// 如果当前标签已有子标签，则不能将其变为子标签（否则会形成三级）
-		subTags, _ := s.tagRepo.GetSubTags(id, userID)
-		if len(subTags) > 0 {
+		// 当前标签作为子树的最大深度
+		subtreeDepth := s.getSubtreeDepth(id, userID)
+		// 新父标签深度 + 子树深度 不能超过5
+		if newParentDepth+subtreeDepth > 5 {
 			return nil, errcode.ErrTagTooDeep
 		}
 		tag.ParentID = req.ParentID
@@ -165,7 +188,7 @@ func (s *TagService) Update(userID, id uint64, req *request.UpdateTagReq) (*resp
 }
 
 // Delete 删除标签
-// 同时删除所有子标签，以及关联的 transaction_tags 记录
+// 级联删除所有子孙标签，以及关联的 transaction_tags 记录
 // 参数：
 //   - userID: 用户ID
 //   - id: 标签ID
@@ -180,18 +203,21 @@ func (s *TagService) Delete(userID, id uint64) error {
 		return errcode.ErrInternal
 	}
 
-	// 先删除所有子标签
-	subTags, err := s.tagRepo.GetSubTags(id, userID)
+	// 获取所有后代标签ID（包含自身）
+	descendantIDs, err := s.tagRepo.GetDescendantIDs([]uint64{id}, userID)
 	if err != nil {
 		return errcode.ErrInternal
 	}
-	for _, sub := range subTags {
-		if err := s.tagRepo.Delete(sub.ID, userID); err != nil {
+
+	// 按从深到浅的顺序删除：先删后代，再删自身
+	// GetDescendantIDs 返回顺序为 BFS（自身→子→孙），反序删除即可
+	for i := len(descendantIDs) - 1; i >= 0; i-- {
+		if err := s.tagRepo.Delete(descendantIDs[i], userID); err != nil {
 			return errcode.ErrInternal
 		}
 	}
 
-	return s.tagRepo.Delete(id, userID)
+	return nil
 }
 
 // toResp 将标签模型转换为响应对象
@@ -209,7 +235,7 @@ func (s *TagService) toResp(t *model.Tag, transactionCount int64) *response.TagR
 
 // buildTree 将扁平的标签列表构建为树形结构
 // 使用map快速查找，将子标签挂载到父标签的Children字段
-// 注意：必须先挂载子节点到父节点，再收集根节点（Go值语义）
+// 使用指针切片避免值语义导致深层子节点丢失
 func (s *TagService) buildTree(tags []model.Tag) []response.TagResp {
 	// 预计算每个标签的关联交易数
 	countMap := make(map[uint64]int64, len(tags))
@@ -218,7 +244,7 @@ func (s *TagService) buildTree(tags []model.Tag) []response.TagResp {
 		countMap[t.ID] = count
 	}
 
-	// 创建节点映射
+	// 创建节点映射（使用指针）
 	nodeMap := make(map[uint64]*response.TagResp, len(tags))
 	for _, t := range tags {
 		nodeMap[t.ID] = &response.TagResp{
@@ -232,11 +258,11 @@ func (s *TagService) buildTree(tags []model.Tag) []response.TagResp {
 		}
 	}
 
-	// 将子标签挂载到父标签的Children字段
+	// 将子标签指针挂载到父标签的Children字段
 	for _, t := range tags {
 		if t.ParentID != nil {
 			if parent, ok := nodeMap[*t.ParentID]; ok {
-				parent.Children = append(parent.Children, *nodeMap[t.ID])
+				parent.Children = append(parent.Children, nodeMap[t.ID])
 			}
 		}
 	}
@@ -250,4 +276,30 @@ func (s *TagService) buildTree(tags []model.Tag) []response.TagResp {
 	}
 
 	return roots
+}
+
+// getSubtreeDepth 计算以指定标签为根的子树深度（含自身）
+// 用于更新父标签时检查5级深度限制
+func (s *TagService) getSubtreeDepth(id uint64, userID uint64) int {
+	maxDepth := 1
+	var currentLevel []uint64
+	currentLevel = append(currentLevel, id)
+
+	for len(currentLevel) > 0 {
+		var nextLevel []uint64
+		for _, pid := range currentLevel {
+			subTags, _ := s.tagRepo.GetSubTags(pid, userID)
+			for _, sub := range subTags {
+				nextLevel = append(nextLevel, sub.ID)
+			}
+		}
+		if len(nextLevel) > 0 {
+			maxDepth++
+			currentLevel = nextLevel
+		} else {
+			break
+		}
+	}
+
+	return maxDepth
 }
