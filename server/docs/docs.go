@@ -1342,6 +1342,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/mfa-verify": {
+            "post": {
+                "description": "Verify MFA code during login to get access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "MFA login verify",
+                "parameters": [
+                    {
+                        "description": "mfa verify request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.MFALoginVerifyReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/password": {
             "put": {
                 "security": [
@@ -1748,61 +1810,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/autocomplete/bills": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search bills by keyword for autocomplete",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "autocomplete"
-                ],
-                "summary": "Autocomplete bills",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search keyword",
-                        "name": "q",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/autocomplete/budgets": {
             "get": {
                 "security": [
@@ -1968,14 +1975,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/autocomplete/tags": {
+        "/api/v1/autocomplete/recurring-transactions": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search tags by keyword for autocomplete",
+                "description": "Search recurring transactions by keyword for autocomplete",
                 "consumes": [
                     "application/json"
                 ],
@@ -1985,7 +1992,7 @@ const docTemplate = `{
                 "tags": [
                     "autocomplete"
                 ],
-                "summary": "Autocomplete tags",
+                "summary": "Autocomplete recurring transactions",
                 "parameters": [
                     {
                         "type": "string",
@@ -2023,14 +2030,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/bills": {
+        "/api/v1/autocomplete/tags": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all bills for the current user",
+                "description": "Search tags by keyword for autocomplete",
                 "consumes": [
                     "application/json"
                 ],
@@ -2038,9 +2045,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "bills"
+                    "autocomplete"
                 ],
-                "summary": "List bills",
+                "summary": "Autocomplete tags",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2051,303 +2066,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new bill for the current user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bills"
-                ],
-                "summary": "Create bill",
-                "parameters": [
-                    {
-                        "description": "create bill request",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.CreateBillReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/bills/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get bill details by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bills"
-                ],
-                "summary": "Get bill",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Bill ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update bill by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bills"
-                ],
-                "summary": "Update bill",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Bill ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "update bill request",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.UpdateBillReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete bill by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "bills"
-                ],
-                "summary": "Delete bill",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Bill ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3435,57 +3153,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cron/{token}": {
-            "get": {
-                "description": "Execute scheduled tasks via token authentication",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cron"
-                ],
-                "summary": "Run cron job",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Cron token",
-                        "name": "token",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4887,6 +4554,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/mfa/backup-codes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Regenerate MFA backup codes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Regenerate backup codes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/mfa/disable": {
             "post": {
                 "security": [
@@ -5242,7 +4956,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new object group for organizing transactions, bills, budgets, etc.",
+                "description": "Create a new object group for organizing transactions, recurring transactions, budgets, etc.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6633,383 +6347,6 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "Reconciliation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/recurrences": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get paginated list of recurrences",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "List recurrences",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new recurring transaction schedule",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "Create recurrence",
-                "parameters": [
-                    {
-                        "description": "request body",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.CreateRecurrenceReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/recurrences/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get recurrence details by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "Get recurrence",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Recurrence ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update recurrence by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "Update recurrence",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Recurrence ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "request body",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.UpdateRecurrenceReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Delete recurrence by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "Delete recurrence",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Recurrence ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/recurrences/{id}/trigger": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Manually trigger a recurrence to create a transaction record",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "recurrences"
-                ],
-                "summary": "Trigger recurrence",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Recurrence ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -11410,12 +10747,17 @@ const docTemplate = `{
         "request.CreateAccountReq": {
             "type": "object",
             "required": [
+                "account_number",
                 "currency_id",
                 "initial_balance",
                 "name",
                 "type"
             ],
             "properties": {
+                "account_number": {
+                    "description": "账户号，同一用户内唯一，创建后不可修改",
+                    "type": "string"
+                },
                 "currency_id": {
                     "description": "关联货币ID",
                     "type": "integer"
@@ -11448,51 +10790,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.CreateBillReq": {
-            "type": "object",
-            "required": [
-                "amount",
-                "name",
-                "next_due",
-                "repeat_rule"
-            ],
-            "properties": {
-                "amount": {
-                    "description": "账单金额，必须大于0",
-                    "type": "string"
-                },
-                "category_id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "账单名称",
-                    "type": "string"
-                },
-                "next_due": {
-                    "description": "下次到期日期",
-                    "type": "string"
-                },
-                "notes": {
-                    "description": "备注",
-                    "type": "string"
-                },
-                "repeat_rule": {
-                    "description": "重复规则：daily/weekly/monthly/yearly",
-                    "type": "string",
-                    "enum": [
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly"
-                    ]
-                },
-                "source_id": {
-                    "description": "支出账户ID",
-                    "type": "integer"
-                }
-            }
-        },
         "request.CreateBudgetReq": {
             "type": "object",
             "required": [
@@ -11519,10 +10816,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "period": {
-                    "description": "预算周期：monthly(月度)/yearly(年度)",
+                    "description": "预算周期",
                     "type": "string",
                     "enum": [
+                        "daily",
+                        "weekly",
                         "monthly",
+                        "quarterly",
                         "yearly"
                     ]
                 }
@@ -11668,88 +10968,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.CreateRecurrenceReq": {
-            "type": "object",
-            "required": [
-                "amount",
-                "next_date",
-                "repeat_freq",
-                "repeat_interval",
-                "source_id",
-                "title",
-                "type"
-            ],
-            "properties": {
-                "amount": {
-                    "description": "交易金额",
-                    "type": "string"
-                },
-                "category_id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
-                "description": {
-                    "description": "交易描述",
-                    "type": "string"
-                },
-                "destination_id": {
-                    "description": "目标账户ID（转账时使用）",
-                    "type": "integer"
-                },
-                "end_date": {
-                    "description": "结束日期（可选）",
-                    "type": "string"
-                },
-                "max_repetitions": {
-                    "description": "最大重复次数（可选）",
-                    "type": "integer"
-                },
-                "next_date": {
-                    "description": "下次执行日期",
-                    "type": "string"
-                },
-                "notes": {
-                    "description": "备注",
-                    "type": "string"
-                },
-                "repeat_freq": {
-                    "description": "重复频率",
-                    "type": "string",
-                    "enum": [
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly"
-                    ]
-                },
-                "repeat_interval": {
-                    "description": "重复间隔（如每2周执行一次）",
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "source_id": {
-                    "description": "源账户ID",
-                    "type": "integer"
-                },
-                "tag_names": {
-                    "description": "标签名称（逗号分隔）",
-                    "type": "string"
-                },
-                "title": {
-                    "description": "周期性交易名称",
-                    "type": "string"
-                },
-                "type": {
-                    "description": "交易类型",
-                    "type": "string",
-                    "enum": [
-                        "deposit",
-                        "withdrawal",
-                        "transfer"
-                    ]
-                }
-            }
-        },
         "request.CreateRecurringTransactionReq": {
             "type": "object",
             "required": [
@@ -11761,31 +10979,24 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "description": "交易金额",
                     "type": "string"
                 },
                 "category_id": {
-                    "description": "分类ID",
                     "type": "integer"
                 },
                 "description": {
-                    "description": "交易描述",
                     "type": "string"
                 },
                 "destination_id": {
-                    "description": "目标账户ID",
                     "type": "integer"
                 },
                 "end_date": {
-                    "description": "结束日期（可选）",
                     "type": "string"
                 },
                 "notes": {
-                    "description": "备注",
                     "type": "string"
                 },
                 "recurrence_type": {
-                    "description": "重复类型",
                     "type": "string",
                     "enum": [
                         "daily",
@@ -11794,16 +11005,16 @@ const docTemplate = `{
                         "yearly"
                     ]
                 },
+                "reminder_days": {
+                    "type": "integer"
+                },
                 "repeat_every": {
-                    "description": "重复间隔",
                     "type": "integer"
                 },
                 "source_id": {
-                    "description": "源账户ID",
                     "type": "integer"
                 },
                 "start_date": {
-                    "description": "开始日期",
                     "type": "string"
                 }
             }
@@ -11996,6 +11207,10 @@ const docTemplate = `{
                     "description": "备注",
                     "type": "string"
                 },
+                "recurring_id": {
+                    "description": "关联循环交易ID（内部使用，前端不传）",
+                    "type": "integer"
+                },
                 "source_id": {
                     "description": "源账户ID（取款=资产账户，存款=收入账户，转账=源资产账户）",
                     "type": "integer"
@@ -12044,7 +11259,7 @@ const docTemplate = `{
                         "transaction.created",
                         "transaction.updated",
                         "transaction.deleted",
-                        "bill.paid",
+                        "recurring_transaction.executed",
                         "budget.created",
                         "budget.updated",
                         "budget.deleted"
@@ -12151,6 +11366,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.MFALoginVerifyReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "mfa_token"
+            ],
+            "properties": {
+                "code": {
+                    "description": "TOTP 6位验证码或备用码",
+                    "type": "string"
+                },
+                "mfa_token": {
+                    "description": "登录时返回的临时MFA验证令牌",
+                    "type": "string"
+                }
+            }
+        },
         "request.MFAVerifyReq": {
             "type": "object",
             "required": [
@@ -12249,7 +11481,7 @@ const docTemplate = `{
                         "remove_tag",
                         "set_description",
                         "clear_category",
-                        "clear_budget",
+                        "clear_recurring",
                         "clear_notes",
                         "append_notes",
                         "prepend_notes"
@@ -12389,45 +11621,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.UpdateBillReq": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "description": "账单金额",
-                    "type": "string"
-                },
-                "category_id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "账单名称",
-                    "type": "string"
-                },
-                "next_due": {
-                    "description": "下次到期日期",
-                    "type": "string"
-                },
-                "notes": {
-                    "description": "备注",
-                    "type": "string"
-                },
-                "repeat_rule": {
-                    "description": "重复规则",
-                    "type": "string",
-                    "enum": [
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly"
-                    ]
-                },
-                "source_id": {
-                    "description": "支出账户ID",
-                    "type": "integer"
-                }
-            }
-        },
         "request.UpdateBudgetReq": {
             "type": "object",
             "properties": {
@@ -12454,7 +11647,10 @@ const docTemplate = `{
                     "description": "预算周期",
                     "type": "string",
                     "enum": [
+                        "daily",
+                        "weekly",
                         "monthly",
+                        "quarterly",
                         "yearly"
                     ]
                 }
@@ -12570,68 +11766,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.UpdateRecurrenceReq": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "string"
-                },
-                "category_id": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "destination_id": {
-                    "type": "integer"
-                },
-                "end_date": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "description": "是否启用",
-                    "type": "boolean"
-                },
-                "max_repetitions": {
-                    "type": "integer"
-                },
-                "next_date": {
-                    "type": "string"
-                },
-                "notes": {
-                    "type": "string"
-                },
-                "repeat_freq": {
-                    "type": "string",
-                    "enum": [
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly"
-                    ]
-                },
-                "repeat_interval": {
-                    "type": "integer"
-                },
-                "source_id": {
-                    "type": "integer"
-                },
-                "tag_names": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "deposit",
-                        "withdrawal",
-                        "transfer"
-                    ]
-                }
-            }
-        },
         "request.UpdateRecurringTransactionReq": {
             "type": "object",
             "properties": {
@@ -12651,7 +11785,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_active": {
-                    "description": "是否启用",
                     "type": "boolean"
                 },
                 "notes": {
@@ -12665,6 +11798,9 @@ const docTemplate = `{
                         "monthly",
                         "yearly"
                     ]
+                },
+                "reminder_days": {
+                    "type": "integer"
                 },
                 "repeat_every": {
                     "type": "integer"
@@ -12782,12 +11918,6 @@ const docTemplate = `{
                 "source_id": {
                     "type": "integer"
                 },
-                "splits": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/request.CreateSplitReq"
-                    }
-                },
                 "tags": {
                     "type": "array",
                     "items": {
@@ -12836,7 +11966,7 @@ const docTemplate = `{
                         "transaction.created",
                         "transaction.updated",
                         "transaction.deleted",
-                        "bill.paid",
+                        "recurring_transaction.executed",
                         "budget.created",
                         "budget.updated",
                         "budget.deleted"

@@ -35,7 +35,7 @@ type RuleConditionReq struct {
 // RuleActionReq 规则动作请求
 // 定义规则匹配后执行的操作
 type RuleActionReq struct {
-	Type  string `json:"type" binding:"required,oneof=set_category add_tag set_notes set_budget remove_tag set_description clear_category clear_budget clear_notes append_notes prepend_notes"` // 动作类型
+	Type  string `json:"type" binding:"required,oneof=set_category add_tag set_notes set_budget remove_tag set_description clear_category clear_recurring clear_notes append_notes prepend_notes"` // 动作类型
 	Value string `json:"value"` // 动作值
 }
 
