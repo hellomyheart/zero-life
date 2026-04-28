@@ -30,6 +30,7 @@ export interface RecurringTransaction {
   end_date: string | null
   next_occurrence: string
   is_active: boolean
+  reminder_days: number
   created_at: string
   updated_at: string
 }
@@ -48,6 +49,7 @@ export interface CreateRecurringTransactionReq {
   repeat_every?: number
   start_date: string
   end_date?: string | null
+  reminder_days?: number
 }
 
 /**
@@ -65,6 +67,7 @@ export interface UpdateRecurringTransactionReq {
   start_date?: string
   end_date?: string | null
   is_active?: boolean | null
+  reminder_days?: number | null
 }
 
 /**

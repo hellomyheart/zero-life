@@ -89,9 +89,7 @@ var (
 	ErrImportFileInvalid = &Error{Code: 90001, Message: "invalid import file"}
 	ErrImportParseFail   = &Error{Code: 90002, Message: "failed to parse import file"}
 
-	// 定期交易/Recurrence错误 10xxxx
-	ErrRecurrenceAmountInvalid = &Error{Code: 100001, Message: "recurrence amount must be greater than zero"}
-	ErrRecurrenceInactive      = &Error{Code: 100002, Message: "recurrence is inactive"}
+	// 循环交易错误 10xxxx
 	ErrRecurringTransactionInvalid = &Error{Code: 100003, Message: "invalid recurring transaction"}
 	ErrRecurringTransactionExpired = &Error{Code: 100004, Message: "recurring transaction has expired"}
 

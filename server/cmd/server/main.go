@@ -1,6 +1,6 @@
 // @title           Zero-Life API
 // @version         1.0
-// @description     Zero-Life 财务管理系统后端API，提供账户、交易、分类、标签、预算、账单、货币、规则、报表等功能
+// @description     Zero-Life 财务管理系统后端API，提供账户、交易、分类、标签、预算、循环交易、货币、规则、报表等功能
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name   Zero-Life

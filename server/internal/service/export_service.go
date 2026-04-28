@@ -420,7 +420,7 @@ func (s *ExportService) ExportRules(userID uint64, format string) ([]byte, strin
 	}
 }
 
-// Bills export helpers
+// Recurring transactions export helpers
 func (s *ExportService) exportRecurringTxnsCSV(rts []model.RecurringTransaction) ([]byte, string, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)

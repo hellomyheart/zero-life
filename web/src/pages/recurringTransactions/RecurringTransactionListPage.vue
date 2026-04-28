@@ -87,6 +87,7 @@ function handleCreate() {
     recurrence_type: RecurrenceType.Monthly,
     repeat_every: 1,
     start_date: '',
+    reminder_days: 0,
   }
   dialogVisible.value = true
 }
@@ -105,6 +106,7 @@ function handleEdit(row: RecurringTransaction) {
     repeat_every: row.repeat_every,
     start_date: row.start_date ? row.start_date.substring(0, 10) : '',
     end_date: row.end_date ? row.end_date.substring(0, 10) : undefined,
+    reminder_days: row.reminder_days ?? 0,
   }
   dialogVisible.value = true
 }
@@ -241,6 +243,9 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item :label="t('recurringTransaction.endDate')">
           <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+        </el-form-item>
+        <el-form-item :label="t('recurringTransaction.reminderDays')">
+          <el-input-number v-model="form.reminder_days" :min="0" :max="365" />
         </el-form-item>
         <el-form-item :label="t('recurringTransaction.notes')">
           <el-input v-model="form.notes" type="textarea" />

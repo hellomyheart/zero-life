@@ -5,7 +5,7 @@ package request
 // 将交易、循环交易、预算或存钱罐添加到分组中
 type CreateObjectGroupReq struct {
 	Name           string `json:"name" binding:"required"`                                        // 分组名称
-	GroupableType  string `json:"groupable_type" binding:"required,oneof=transaction bill budget piggy_bank"` // 对象类型
+	GroupableType  string `json:"groupable_type" binding:"required,oneof=transaction recurring_transaction budget piggy_bank"` // 对象类型
 	GroupableID    uint64 `json:"groupable_id" binding:"required"`                                // 对象ID
 }
 

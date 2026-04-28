@@ -347,26 +347,34 @@ func (s *RecurringTransactionService) processOneRecurring(rt *model.RecurringTra
 		RecurringID:   &rt.ID,
 	}
 
-	txnResp, err := s.txnService.Create(rt.UserID, txnReq)
-	if err != nil {
+	var txn *model.Transaction
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		var err error
+		txn, err = s.txnService.CreateWithDB(dbTx, rt.UserID, txnReq)
+		if err != nil {
+			return err
+		}
+
+		log := &model.RecurringTransactionLog{
+			RecurringTransactionID: rt.ID,
+			TransactionID:          txn.ID,
+			OccurrenceDate:         rt.NextOccurrence,
+		}
+		if err := s.rtRepo.CreateLogWithDB(dbTx, log); err != nil {
+			return err
+		}
+
+		rt.NextOccurrence = calculateNextOccurrence(rt.NextOccurrence, rt.RecurrenceType, rt.RepeatEvery)
+		if rt.EndDate != nil && rt.NextOccurrence.After(*rt.EndDate) {
+			rt.IsActive = false
+		}
+		return s.rtRepo.UpdateWithDB(dbTx, rt)
+	}); err != nil {
 		return err
 	}
 
-	log := &model.RecurringTransactionLog{
-		RecurringTransactionID: rt.ID,
-		TransactionID:          txnResp.ID,
-		OccurrenceDate:         rt.NextOccurrence,
-	}
-	if err := s.rtRepo.CreateLog(log); err != nil {
-		return err
-	}
-
-	rt.NextOccurrence = calculateNextOccurrence(rt.NextOccurrence, rt.RecurrenceType, rt.RepeatEvery)
-	if rt.EndDate != nil && rt.NextOccurrence.After(*rt.EndDate) {
-		rt.IsActive = false
-	}
-
-	return s.rtRepo.Update(rt)
+	s.txnService.TriggerPostCreate(rt.UserID, txn)
+	return nil
 }
 
 // toResp 将循环交易模型转换为响应DTO

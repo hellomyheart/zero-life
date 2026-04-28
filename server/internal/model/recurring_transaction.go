@@ -10,8 +10,7 @@ import (
 )
 
 // RecurrenceType 循环类型枚举
-// 定义循环交易的重复周期，与 Recurrence 模型的 RepeatFreq 类似
-// 注意：此模型与 Recurrence 模型功能重叠，后续可能合并
+// 定义循环交易的重复周期
 type RecurrenceType string
 
 const (

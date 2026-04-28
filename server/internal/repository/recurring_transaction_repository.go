@@ -82,6 +82,10 @@ func (r *RecurringTransactionRepository) Update(rt *model.RecurringTransaction) 
 	return r.db.Save(rt).Error
 }
 
+func (r *RecurringTransactionRepository) UpdateWithDB(dbTx *gorm.DB, rt *model.RecurringTransaction) error {
+	return dbTx.Save(rt).Error
+}
+
 // Delete 删除定期交易及其关联的所有执行日志。使用数据库事务确保原子性。
 // 执行 SQL（事务内）:
 //   1. DELETE FROM recurring_transaction_logs WHERE recurring_transaction_id = ?
@@ -119,6 +123,10 @@ func (r *RecurringTransactionRepository) GetDueRecurringTransactions(userID uint
 // 返回: 创建失败时返回错误。
 func (r *RecurringTransactionRepository) CreateLog(log *model.RecurringTransactionLog) error {
 	return r.db.Create(log).Error
+}
+
+func (r *RecurringTransactionRepository) CreateLogWithDB(dbTx *gorm.DB, log *model.RecurringTransactionLog) error {
+	return dbTx.Create(log).Error
 }
 
 // ListLogs 获取指定定期交易的所有执行日志，按执行日期倒序排列（最新的在前）。
