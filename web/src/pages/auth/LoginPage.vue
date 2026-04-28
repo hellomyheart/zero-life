@@ -7,6 +7,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { LoginReq } from '@/types/auth'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -75,6 +76,7 @@ async function handleMFAVerify() {
 
 <template>
   <div class="login-page">
+    <ThemeToggle class="auth-theme-toggle" />
     <el-card class="login-card">
       <template #header>
         <h2>{{ t('auth.login') }}</h2>
@@ -127,6 +129,13 @@ async function handleMFAVerify() {
   min-height: 100vh;
   background: var(--app-bg);
   padding: 20px;
+  position: relative;
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .login-card {

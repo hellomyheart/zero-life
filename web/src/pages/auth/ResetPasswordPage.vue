@@ -2,14 +2,11 @@
 <script setup lang="ts">
 // 导入 Vue 响应式 API
 import { ref, reactive } from 'vue'
-// 导入国际化钩子函数
 import { useI18n } from 'vue-i18n'
-// 导入认证相关 API（忘记密码、重置密码）
 import { forgotPassword, resetPassword } from '@/api/auth'
-// 导入 Element Plus 消息提示组件
 import { ElMessage } from 'element-plus'
-// 导入表单类型定义
 import type { FormInstance, FormRules } from 'element-plus'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 // 国际化翻译函数
 const { t } = useI18n()
@@ -97,6 +94,7 @@ async function handleReset() {
 <template>
   <!-- 重置密码页面容器，垂直水平居中 -->
   <div class="reset-page">
+    <ThemeToggle class="auth-theme-toggle" />
     <el-card class="reset-card">
       <!-- 卡片标题 -->
       <template #header>
@@ -159,7 +157,15 @@ async function handleReset() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: var(--app-bg); padding: 20px;
+  background: var(--app-bg);
+  padding: 20px;
+  position: relative;
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .reset-card {
