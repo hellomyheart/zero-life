@@ -176,58 +176,60 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 }
 
 // Budget 生成预算报表
-// 统计每个启用预算的已花费金额、剩余金额和使用率
+// 统计每个启用预算的当前周期内已花费金额、剩余金额和使用率
+// 使用预算自身的周期计算时间范围，展开分类后代确保子分类支出被计入
 // 参数：
 //   - userID: 用户ID
-//   - req: 报表请求参数（含日期范围）
+//   - req: 报表请求参数（含日期范围，用于筛选预算周期内的交易）
 // 返回：
 //   - *response.BudgetReportResp: 预算报表数据
 //   - error: 错误信息
 func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response.BudgetReportResp, error) {
-	startDate, endDate, err := s.parseDateRange(req)
-	if err != nil {
-		return nil, err
-	}
-
 	budgets, err := s.budgetRepo.List(userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
 
-	filter := repository.TransactionFilter{
-		StartDate: startDate.Format("2006-01-02"),
-		EndDate:   endDate.Format("2006-01-02"),
-	}
-
-	txns, err := s.txnRepo.List(userID, filter, 0, 10000)
-	if err != nil {
-		return nil, errcode.ErrInternal
-	}
-
+	now := time.Now()
 	items := make([]response.BudgetReportItemResp, 0, len(budgets))
 	for _, b := range budgets {
 		if !b.IsEnabled {
 			continue
 		}
 
-		// Calculate actual spent for this budget's categories
-		spent := decimal.Zero
-		categoryIDs := make(map[uint64]bool)
+		// 根据预算周期计算当前周期范围
+		periodStart, periodEnd := budgetPeriodRange(b.Period, now)
+
+		// 展开分类后代：选择父分类时自动包含所有子分类的交易
+		catIDs := make([]uint64, 0, len(b.Categories))
 		for _, cat := range b.Categories {
-			categoryIDs[cat.ID] = true
+			catIDs = append(catIDs, cat.ID)
+		}
+		expandedIDs, err := s.categoryRepo.GetDescendantIDs(catIDs, userID)
+		if err != nil {
+			continue
 		}
 
+		filter := repository.TransactionFilter{
+			Type:        string(model.TransactionTypeWithdrawal),
+			StartDate:   periodStart.Format("2006-01-02"),
+			EndDate:     periodEnd.Format("2006-01-02"),
+			CategoryIDs: expandedIDs,
+		}
+
+		txns, err := s.txnRepo.List(userID, filter, 0, 10000)
+		if err != nil {
+			continue
+		}
+
+		spent := decimal.Zero
 		for _, txn := range txns {
-			if txn.Type == model.TransactionTypeWithdrawal && txn.CategoryID != nil {
-				if categoryIDs[*txn.CategoryID] {
-					spent = spent.Add(txn.Amount)
-				}
-			}
+			spent = spent.Add(txn.Amount)
 		}
 
 		remaining := b.Amount.Sub(spent)
 		var usageRate float64
-		if b.Amount.IsPositive() {
+		if !b.Amount.IsZero() {
 			usageRate, _ = spent.Div(b.Amount).Float64()
 		}
 

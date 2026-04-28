@@ -98,21 +98,15 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	}
 	// 第3步：计算预算预警（使用率>=80%为warning，>=100%为overspent）
 	// 使用 GetDescendantIDs 展开子分类，选择父分类时自动包含所有子分类的交易
-	// 根据预算周期（monthly/yearly）确定统计的时间范围
+	// 根据预算周期确定统计的时间范围
 	budgetAlerts := make([]response.BudgetAlertResp, 0)
 	for _, b := range budgets {
 		if !b.IsEnabled {
 			continue
 		}
 
-		// 根据预算周期确定统计的起始日期
-		var periodStart time.Time
-		switch b.Period {
-		case model.BudgetPeriodYearly:
-			periodStart = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
-		default: // monthly
-			periodStart = monthStart
-		}
+		// 根据预算周期确定统计的起止日期
+		periodStart, periodEnd := budgetPeriodRange(b.Period, now)
 
 		// 收集预算关联的所有分类ID（含子分类）
 		catIDs := make([]uint64, 0, len(b.Categories))
@@ -126,9 +120,10 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 
 		catFilter := repository.TransactionFilter{
-			StartDate:    periodStart.Format("2006-01-02"),
-			EndDate:      now.AddDate(0, 0, 1).Format("2006-01-02"),
-			CategoryIDs:  descendantIDs,
+			Type:        string(model.TransactionTypeWithdrawal),
+			StartDate:   periodStart.Format("2006-01-02"),
+			EndDate:     periodEnd.Format("2006-01-02"),
+			CategoryIDs: descendantIDs,
 		}
 		catTxns, err := s.txnRepo.List(userID, catFilter, 0, 10000)
 		if err != nil {
@@ -137,12 +132,13 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 
 		spent := decimal.Zero
 		for _, txn := range catTxns {
-			if txn.Type == model.TransactionTypeWithdrawal {
-				spent = spent.Add(txn.Amount)
-			}
+			spent = spent.Add(txn.Amount)
 		}
 
-		usageRate, _ := spent.Div(b.Amount).Float64()
+		var usageRate float64
+		if !b.Amount.IsZero() {
+			usageRate, _ = spent.Div(b.Amount).Float64()
+		}
 		status := "normal"
 		if usageRate >= 1.0 {
 			status = "overspent"

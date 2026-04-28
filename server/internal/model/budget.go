@@ -25,7 +25,7 @@ const (
 //
 // 功能说明：
 // - 设定分类支出上限，跟踪预算使用情况
-// - 支持月度和年度两种预算周期
+// - 支持日度、周度、月度、季度、年度五种预算周期
 // - 一个预算可以关联多个分类（多对多关系）
 // - 通过预算历史记录跟踪每个周期的执行情况
 //
@@ -73,7 +73,7 @@ type Budget struct {
 	Amount decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"amount"`
 
 	// Period 预算周期
-	// 取值为 BudgetPeriod 枚举：monthly/yearly
+	// 取值为 BudgetPeriod 枚举：daily/weekly/monthly/quarterly/yearly
 	// 决定预算的重置频率
 	// gorm:"size:20" 限制最大长度为 20 个字符
 	Period BudgetPeriod `gorm:"not null;size:20" json:"period"`
