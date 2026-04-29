@@ -91,10 +91,11 @@ func main() {
 	readSQLDB.SetMaxIdleConns(config.C.DB.ReadMaxIdleConns)
 	readSQLDB.SetMaxOpenConns(config.C.DB.ReadMaxOpenConns)
 
-	// SQLite优化设置：WAL模式提升并发读写性能，开启外键约束
+	// SQLite优化设置：WAL模式提升并发读写性能，开启外键约束，写冲突等待5秒
 	db.Exec("PRAGMA journal_mode=WAL")
 	db.Exec("PRAGMA foreign_keys=ON")
 	db.Exec("PRAGMA busy_timeout=5000")
+	readDB.Exec("PRAGMA busy_timeout=5000")
 
 	// 自动迁移：根据模型定义自动创建/更新数据库表结构
 	if err := db.AutoMigrate(
