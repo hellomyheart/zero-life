@@ -798,3 +798,84 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 - **类型** (`types/bill.ts`)：`Bill` 接口与后端 `BillResp` 字段对齐，`RepeatRule` 枚举定义4种规则
 - **API** (`api/bill.ts`)：`list`/`getBill`/`create`/`update`/`remove`
 - **列表页** (`pages/bills/BillListPage.vue`)：表格展示账单列表，含逾期状态标签（前端根据 `next_due` 与当前日期比较计算）、创建/编辑对话框含账户和分类选择器
+
+## 储蓄罐管理
+
+### 核心概念
+
+储蓄罐用于设定储蓄目标并跟踪进度。每个储蓄罐关联一个资产账户，记录目标金额、当前已存金额和可选的目标日期。
+
+**重要：储蓄罐是虚拟记账，不关联真实资金流动。** 存取操作仅修改储蓄罐自身的 `current_amount`，不会扣减或增加关联资产账户的余额，也不会创建交易记录。存入一个亿就是一个亿，不检查关联账户余额是否足够。
+
+### 数据模型 (`model/piggy_bank.go`)
+
+**PiggyBank**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ID | uint64 | 主键自增 |
+| UserID | uint64 | 所属用户，索引，数据隔离 |
+| Name | string (size:100) | 储蓄罐名称 |
+| TargetAmount | decimal(19,4) | 目标金额，必须为正数 |
+| CurrentAmount | decimal(19,4) | 当前已存金额，默认0 |
+| AccountID | uint64 | 关联资产账户ID（仅展示用途，存取不扣减账户余额） |
+| Order | int (default:0) | 排序权重 |
+| TargetDate | *time.Time (indexed) | 目标完成日期（可选） |
+| Notes | text | 备注 |
+| Account | Account | 关联账户（Belongs To） |
+| Events | []PiggyEvent | 存取事件记录（Has Many） |
+| DeletedAt | gorm.DeletedAt | 软删除 |
+
+**PiggyEvent**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ID | uint64 | 主键自增 |
+| PiggyBankID | uint64 | 关联储蓄罐ID，索引 |
+| Amount | decimal(19,4) | 正数=存入，负数=取出 |
+| TransactionID | *uint64 | 关联交易ID（可选，当前未使用） |
+| Note | string (text) | 操作备注 |
+| CreatedAt | time.Time | 创建时间 |
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/v1/piggy-banks` | POST | 创建储蓄罐 |
+| `/api/v1/piggy-banks` | GET | 列表 |
+| `/api/v1/piggy-banks/:id` | GET | 详情 |
+| `/api/v1/piggy-banks/:id` | PUT | 更新（名称/目标金额/目标日期/备注） |
+| `/api/v1/piggy-banks/:id` | DELETE | 删除（软删除） |
+| `/api/v1/piggy-banks/:id/add` | POST | 存入金额 |
+| `/api/v1/piggy-banks/:id/remove` | POST | 取出金额 |
+| `/api/v1/piggy-banks/:id/events` | GET | 事件记录列表 |
+| `/api/v1/piggy-banks/reorder` | PUT | 批量排序 |
+| `/api/v1/piggy-banks/:id/reset` | POST | 重置历史（清空事件+金额归零） |
+
+### 业务规则
+
+1. **创建**：目标金额必须为正数；关联账户必填
+2. **存入**：金额必须为正数；存入后当前金额不能超过目标金额（`CurrentAmount + amount > TargetAmount` 则拒绝）
+3. **取出**：金额必须为正数；取出金额不能超过当前已存金额（`amount > CurrentAmount` 则拒绝）
+4. **存取不关联真实资金**：存取仅修改 `current_amount`，不扣减/增加关联账户余额，不创建交易记录
+5. **完成百分比**：`CurrentAmount / TargetAmount * 100`，上限100%
+6. **重置**：清空所有事件记录，当前金额归零
+
+### 请求/响应 DTO
+
+**CreatePiggyBankReq**：`name`(必填)、`target_amount`(必填，正数)、`account_id`(必填)、`target_date`(可选)、`notes`(可选)
+
+**UpdatePiggyBankReq**：`name`(可选)、`target_amount`(*string，可选，正数)、`target_date`(*string，可选)、`notes`(可选)
+
+**AddAmountReq**：`amount`(必填，正数字符串)、`note`(可选)
+
+**RemoveAmountReq**：`amount`(必填，正数字符串)、`note`(可选)
+
+**PiggyBankResp**：`id`、`name`、`target_amount`(string)、`current_amount`(string)、`account_id`、`target_date`、`notes`、`percentage`(float64)、`created_at`、`updated_at`
+
+### 前端实现
+
+- **类型** (`types/piggyBank.ts`)：`PiggyBank`、`PiggyEvent`、`CreatePiggyBankReq`、`UpdatePiggyBankReq`、`AddAmountReq`、`RemoveAmountReq`
+- **API** (`api/piggyBank.ts`)：`list`/`getPiggyBank`/`create`/`update`/`remove`/`addAmount`/`removeAmount`/`getEvents`
+- **无独立 Store**：页面直接调用 API
+- **列表页** (`pages/piggyBanks/PiggyBankListPage.vue`)：表格展示储蓄罐列表，含进度条和百分比；存入/取出对话框使用 `el-input`（非 AmountInput），无前端校验
