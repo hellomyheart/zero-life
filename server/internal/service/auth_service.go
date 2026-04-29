@@ -17,7 +17,7 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/jwt"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
-	"github.com/pquerna/otp/totp"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/totp"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -443,7 +443,7 @@ func (s *AuthService) MFALoginVerify(req *request.MFALoginVerifyReq) (*response.
 		return nil, errcode.ErrMFANotEnabled
 	}
 
-	if !totp.Validate(req.Code, user.MFASecret) {
+	if !totp.ValidateCode(req.Code, user.MFASecret) {
 		// TOTP验证失败，尝试备用码
 		if !s.mfaService.VerifyBackupCode(userID, req.Code) {
 			return nil, errcode.ErrMFAInvalidCode

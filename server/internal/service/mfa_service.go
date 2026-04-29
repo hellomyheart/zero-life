@@ -5,7 +5,6 @@ package service
 import (
 	"crypto/rand"
 	"encoding/base32"
-	"fmt"
 	"strings"
 	"time"
 
@@ -13,8 +12,8 @@ import (
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/errcode"
 	"github.com/hellomyheart/zero-life/server/internal/pkg/hash"
+	"github.com/hellomyheart/zero-life/server/internal/pkg/totp"
 	"github.com/hellomyheart/zero-life/server/internal/repository"
-	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
@@ -64,16 +63,10 @@ func (s *MFAService) Setup(userID uint64) (*response.MFASetupResp, error) {
 	}
 
 	// 生成随机密钥
-	secret, err := generateMFASecret()
-	if err != nil {
-		return nil, errcode.ErrInternal
-	}
+	secret := totp.GenerateSecret()
 
 	// 生成二维码URL
-	issuer := "ZeroLife"
-	accountName := user.Email
-	otpURL := fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s",
-		issuer, accountName, secret, issuer)
+	otpURL := totp.GenerateQRCodeURL(user.Email, "ZeroLife", secret)
 
 	// 临时保存密钥到数据库（未启用状态）
 	now := time.Now()
@@ -118,7 +111,7 @@ func (s *MFAService) Enable(userID uint64, code string) (*response.BackupCodesRe
 	}
 
 	// 验证MFA代码
-	if !totp.Validate(code, user.MFASecret) {
+	if !totp.ValidateCode(code, user.MFASecret) {
 		return nil, errcode.ErrMFAInvalidCode
 	}
 
@@ -166,7 +159,7 @@ func (s *MFAService) Disable(userID uint64, code string) error {
 	}
 
 	// 验证MFA代码：先尝试TOTP，失败后尝试备用码
-	if !totp.Validate(code, user.MFASecret) {
+	if !totp.ValidateCode(code, user.MFASecret) {
 		if !s.VerifyBackupCode(userID, code) {
 			return errcode.ErrMFAInvalidCode
 		}
@@ -210,7 +203,7 @@ func (s *MFAService) Verify(userID uint64, code string) (*response.MFAVerifyResp
 	}
 
 	// 验证MFA代码
-	if !totp.Validate(code, user.MFASecret) {
+	if !totp.ValidateCode(code, user.MFASecret) {
 		return nil, errcode.ErrMFAInvalidCode
 	}
 
@@ -332,19 +325,4 @@ func generateOneBackupCode() (string, string, error) {
 		return "", "", err
 	}
 	return code, hashed, nil
-}
-
-// generateMFASecret 生成MFA密钥
-func generateMFASecret() (string, error) {
-	// 生成20字节的随机数
-	bytes := make([]byte, 20)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-
-	// Base32编码并移除padding
-	secret := base32.StdEncoding.EncodeToString(bytes)
-	secret = strings.TrimRight(secret, "=")
-
-	return secret, nil
 }
