@@ -6,15 +6,16 @@ import (
 )
 
 type BudgetRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
-func NewBudgetRepository(db *gorm.DB) *BudgetRepository {
-	return &BudgetRepository{db: db}
+func NewBudgetRepository(readDB, writeDB *gorm.DB) *BudgetRepository {
+	return &BudgetRepository{readDB: readDB, writeDB: writeDB}
 }
 
 func (r *BudgetRepository) Create(budget *model.Budget, categoryIDs []uint64) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(budget).Error; err != nil {
 			return err
 		}
@@ -36,7 +37,7 @@ func (r *BudgetRepository) Create(budget *model.Budget, categoryIDs []uint64) er
 
 func (r *BudgetRepository) GetByID(id, userID uint64) (*model.Budget, error) {
 	var budget model.Budget
-	if err := r.db.Where("id = ? AND user_id = ?", id, userID).
+	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).
 		Preload("Categories").
 		First(&budget).Error; err != nil {
 		return nil, err
@@ -46,7 +47,7 @@ func (r *BudgetRepository) GetByID(id, userID uint64) (*model.Budget, error) {
 
 func (r *BudgetRepository) List(userID uint64) ([]model.Budget, error) {
 	var budgets []model.Budget
-	if err := r.db.Where("user_id = ?", userID).
+	if err := r.readDB.Where("user_id = ?", userID).
 		Preload("Categories").
 		Order("id ASC").Find(&budgets).Error; err != nil {
 		return nil, err
@@ -55,11 +56,10 @@ func (r *BudgetRepository) List(userID uint64) ([]model.Budget, error) {
 }
 
 func (r *BudgetRepository) Update(budget *model.Budget, categoryIDs []uint64) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(budget).Error; err != nil {
 			return err
 		}
-		// Replace categories: delete old, insert new
 		if err := tx.Where("budget_id = ?", budget.ID).Delete(&model.BudgetCategory{}).Error; err != nil {
 			return err
 		}
@@ -80,16 +80,13 @@ func (r *BudgetRepository) Update(budget *model.Budget, categoryIDs []uint64) er
 }
 
 func (r *BudgetRepository) Delete(id, userID uint64) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Delete budget categories
+	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("budget_id = ?", id).Delete(&model.BudgetCategory{}).Error; err != nil {
 			return err
 		}
-		// Delete budget history
 		if err := tx.Where("budget_id = ?", id).Delete(&model.BudgetHistory{}).Error; err != nil {
 			return err
 		}
-		// Delete the budget
 		if err := tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Budget{}).Error; err != nil {
 			return err
 		}
@@ -99,19 +96,19 @@ func (r *BudgetRepository) Delete(id, userID uint64) error {
 
 func (r *BudgetRepository) GetHistory(budgetID uint64) ([]model.BudgetHistory, error) {
 	var history []model.BudgetHistory
-	if err := r.db.Where("budget_id = ?", budgetID).Order("period_start DESC").Find(&history).Error; err != nil {
+	if err := r.readDB.Where("budget_id = ?", budgetID).Order("period_start DESC").Find(&history).Error; err != nil {
 		return nil, err
 	}
 	return history, nil
 }
 
 func (r *BudgetRepository) CreateHistory(history *model.BudgetHistory) error {
-	return r.db.Create(history).Error
+	return r.writeDB.Create(history).Error
 }
 
 func (r *BudgetRepository) ListAllEnabled() ([]model.Budget, error) {
 	var budgets []model.Budget
-	if err := r.db.Where("is_enabled = ?", true).
+	if err := r.readDB.Where("is_enabled = ?", true).
 		Preload("Categories").
 		Find(&budgets).Error; err != nil {
 		return nil, err
@@ -121,16 +118,12 @@ func (r *BudgetRepository) ListAllEnabled() ([]model.Budget, error) {
 
 func (r *BudgetRepository) UpsertHistory(history *model.BudgetHistory) error {
 	var existing model.BudgetHistory
-	err := r.db.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
+	err := r.writeDB.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
 	if err == nil {
-		// 已有记录：只更新 period_end 和 spent，不更新 amount
-		// 保留该周期首次生成时的预算金额，避免用户修改预算金额后历史数据被覆盖
-		return r.db.Model(&existing).Updates(map[string]interface{}{
+		return r.writeDB.Model(&existing).Updates(map[string]interface{}{
 			"period_end": history.PeriodEnd,
 			"spent":      history.Spent,
 		}).Error
 	}
-	return r.db.Create(history).Error
+	return r.writeDB.Create(history).Error
 }
-
-

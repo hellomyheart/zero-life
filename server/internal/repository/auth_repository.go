@@ -13,13 +13,15 @@ import (
 // 不需要 userID 参数进行数据隔离，因为认证时用户尚未登录或正在验证身份。
 // 注意：用户管理相关的操作（列表、删除等）使用 UserRepository。
 type AuthRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
 // NewAuthRepository 创建认证仓库实例。
-// 参数 db: GORM 数据库连接实例。
-func NewAuthRepository(db *gorm.DB) *AuthRepository {
-	return &AuthRepository{db: db}
+// 参数 readDB: 读库（只读连接池，并发安全）
+// 参数 writeDB: 写库（单连接，串行保证安全）
+func NewAuthRepository(readDB, writeDB *gorm.DB) *AuthRepository {
+	return &AuthRepository{readDB: readDB, writeDB: writeDB}
 }
 
 // Create 创建新用户记录，用于用户注册。
@@ -27,7 +29,7 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 // 参数 user: 要创建的用户对象，GORM 会自动填充 ID、CreatedAt 等字段。
 // 返回: 创建失败时返回错误（如邮箱唯一约束冲突）。
 func (r *AuthRepository) Create(user *model.User) error {
-	return r.db.Create(user).Error
+	return r.writeDB.Create(user).Error
 }
 
 // FindByEmail 根据邮箱查找用户，用于登录认证。
@@ -37,7 +39,7 @@ func (r *AuthRepository) Create(user *model.User) error {
 // 返回: 找到的用户对象；未找到时返回 gorm.ErrRecordNotFound 错误。
 func (r *AuthRepository) FindByEmail(email string) (*model.User, error) {
 	var user model.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.readDB.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -49,7 +51,7 @@ func (r *AuthRepository) FindByEmail(email string) (*model.User, error) {
 // 参数 user: 要更新的用户对象（必须包含 ID 字段）。
 // 返回: 更新失败时返回错误。
 func (r *AuthRepository) Update(user *model.User) error {
-	return r.db.Save(user).Error
+	return r.writeDB.Save(user).Error
 }
 
 // Count 统计用户总数，用于判断是否为首个注册用户。
@@ -57,7 +59,7 @@ func (r *AuthRepository) Update(user *model.User) error {
 // 返回: 用户总数和错误信息。
 func (r *AuthRepository) Count() (int64, error) {
 	var count int64
-	if err := r.db.Model(&model.User{}).Count(&count).Error; err != nil {
+	if err := r.readDB.Model(&model.User{}).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -70,7 +72,7 @@ func (r *AuthRepository) Count() (int64, error) {
 // 返回: 找到的用户对象；未找到时返回 gorm.ErrRecordNotFound 错误。
 func (r *AuthRepository) GetByID(id uint64) (*model.User, error) {
 	var user model.User
-	if err := r.db.First(&user, id).Error; err != nil {
+	if err := r.readDB.First(&user, id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

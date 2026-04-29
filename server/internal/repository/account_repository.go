@@ -13,13 +13,15 @@ import (
 // 每个账户关联一种货币（Currency），并记录当前余额（current_balance）。
 // 所有方法都通过 user_id 参数进行数据隔离，确保用户只能访问自己的账户。
 type AccountRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
 // NewAccountRepository 创建账户仓库实例。
-// 参数 db: GORM 数据库连接实例。
-func NewAccountRepository(db *gorm.DB) *AccountRepository {
-	return &AccountRepository{db: db}
+// 参数 readDB: 读库（只读连接池，并发安全）
+// 参数 writeDB: 写库（单连接，串行保证安全）
+func NewAccountRepository(readDB, writeDB *gorm.DB) *AccountRepository {
+	return &AccountRepository{readDB: readDB, writeDB: writeDB}
 }
 
 // Create 创建一条新的账户记录。
@@ -27,7 +29,7 @@ func NewAccountRepository(db *gorm.DB) *AccountRepository {
 // 参数 account: 要创建的账户对象，GORM 会自动填充 ID、CreatedAt 等字段。
 // 返回: 创建失败时返回错误。
 func (r *AccountRepository) Create(account *model.Account) error {
-	return r.db.Create(account).Error
+	return r.writeDB.Create(account).Error
 }
 
 // GetByID 根据 ID 和用户 ID 获取单条账户，并预加载关联的货币信息。
@@ -40,7 +42,7 @@ func (r *AccountRepository) Create(account *model.Account) error {
 // 返回: 包含货币信息的账户对象；未找到时返回 gorm.ErrRecordNotFound 错误。
 func (r *AccountRepository) GetByID(id, userID uint64) (*model.Account, error) {
 	var account model.Account
-	if err := r.db.Where("id = ? AND user_id = ?", id, userID).Preload("Currency").First(&account).Error; err != nil {
+	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).Preload("Currency").First(&account).Error; err != nil {
 		return nil, err
 	}
 	return &account, nil
@@ -59,7 +61,7 @@ func (r *AccountRepository) GetByID(id, userID uint64) (*model.Account, error) {
 func (r *AccountRepository) List(userID uint64, accountType, search, sort string, offset, limit int) ([]model.Account, error) {
 	var accounts []model.Account
 	// 基于 user_id 过滤，确保数据隔离：用户只能查看自己的账户
-	query := r.db.Where("user_id = ?", userID)
+	query := r.readDB.Where("user_id = ?", userID)
 
 	// 按账户类型过滤（如资产账户、负债账户等）
 	if accountType != "" {
@@ -101,7 +103,7 @@ func (r *AccountRepository) List(userID uint64, accountType, search, sort string
 // 返回: 符合条件的账户总数。
 func (r *AccountRepository) Count(userID uint64, accountType, search string) (int64, error) {
 	var count int64
-	query := r.db.Model(&model.Account{}).Where("user_id = ?", userID)
+	query := r.readDB.Model(&model.Account{}).Where("user_id = ?", userID)
 
 	if accountType != "" {
 		query = query.Where("type = ?", accountType)
@@ -121,7 +123,7 @@ func (r *AccountRepository) Count(userID uint64, accountType, search string) (in
 // 参数 account: 要更新的账户对象（必须包含 ID 字段）。
 // 返回: 更新失败时返回错误。
 func (r *AccountRepository) Update(account *model.Account) error {
-	return r.db.Save(account).Error
+	return r.writeDB.Save(account).Error
 }
 
 // Delete 根据 ID 和用户 ID 删除账户，同时验证用户权限。
@@ -130,7 +132,7 @@ func (r *AccountRepository) Update(account *model.Account) error {
 // 参数 userID: 当前登录用户 ID，确保只能删除自己的账户。
 // 返回: 删除失败时返回错误。
 func (r *AccountRepository) Delete(id, userID uint64) error {
-	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Account{}).Error
+	return r.writeDB.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Account{}).Error
 }
 
 // HasTransactions 检查指定账户是否有关联的交易记录。
@@ -143,7 +145,7 @@ func (r *AccountRepository) Delete(id, userID uint64) error {
 func (r *AccountRepository) HasTransactions(accountID, userID uint64) (bool, error) {
 	var count int64
 	// 查询该账户作为源账户或目标账户的交易数量
-	if err := r.db.Model(&model.Transaction{}).
+	if err := r.readDB.Model(&model.Transaction{}).
 		Where("user_id = ? AND (source_id = ? OR destination_id = ?)", userID, accountID, accountID).
 		Count(&count).Error; err != nil {
 		return false, err
@@ -158,7 +160,7 @@ func (r *AccountRepository) HasTransactions(accountID, userID uint64) (bool, err
 // 返回: 使用该货币的账户数量，查询失败时返回错误
 func (r *AccountRepository) CountByCurrency(currencyID uint64) (int64, error) {
 	var count int64
-	if err := r.db.Model(&model.Account{}).Where("currency_id = ?", currencyID).Count(&count).Error; err != nil {
+	if err := r.readDB.Model(&model.Account{}).Where("currency_id = ?", currencyID).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -171,7 +173,7 @@ func (r *AccountRepository) CountByCurrency(currencyID uint64) (int64, error) {
 // 返回: 找到的账户对象；未找到时返回 gorm.ErrRecordNotFound 错误。
 func (r *AccountRepository) FindByAccountNumber(userID uint64, accountNumber string) (*model.Account, error) {
 	var account model.Account
-	if err := r.db.Where("user_id = ? AND account_number = ?", userID, accountNumber).First(&account).Error; err != nil {
+	if err := r.readDB.Where("user_id = ? AND account_number = ?", userID, accountNumber).First(&account).Error; err != nil {
 		return nil, err
 	}
 	return &account, nil

@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type CronTask struct {
@@ -22,6 +23,7 @@ type CronTaskResult struct {
 type CronService struct {
 	rtService     *RecurringTransactionService
 	budgetService *BudgetService
+	writeDB       *gorm.DB
 	cron          *cron.Cron
 	logger        *zap.Logger
 	tasks         []CronTask
@@ -30,17 +32,20 @@ type CronService struct {
 func NewCronService(
 	rtService *RecurringTransactionService,
 	budgetService *BudgetService,
+	writeDB *gorm.DB,
 	logger *zap.Logger,
 ) *CronService {
 	s := &CronService{
 		rtService:     rtService,
 		budgetService: budgetService,
+		writeDB:       writeDB,
 		cron:          cron.New(cron.WithSeconds()),
 		logger:        logger,
 	}
 	s.tasks = []CronTask{
 		{ID: "recurring_transactions", Name: "到期循环交易", Description: "执行到期的循环交易，创建对应交易记录", Schedule: "每天 00:00"},
 		{ID: "budget_snapshot", Name: "预算历史快照", Description: "为所有启用预算生成近2年内已结束周期的历史快照（支持重复跑）", Schedule: "每天 09:00"},
+		{ID: "wal_checkpoint", Name: "WAL检查点", Description: "执行 SQLite WAL 检查点，将 WAL 文件合并回主数据库，控制文件大小", Schedule: "每6小时"},
 	}
 	return s
 }
@@ -55,6 +60,8 @@ func (s *CronService) RunTask(taskID string) (*CronTaskResult, error) {
 		return s.runRecurringTransactionsTask(), nil
 	case "budget_snapshot":
 		return s.runBudgetSnapshotTask(), nil
+	case "wal_checkpoint":
+		return s.runWALCheckpointTask(), nil
 	default:
 		return nil, ErrCronTaskNotFound
 	}
@@ -95,6 +102,23 @@ func (s *CronService) runBudgetSnapshotTask() *CronTaskResult {
 	return result
 }
 
+func (s *CronService) runWALCheckpointTask() *CronTaskResult {
+	result := &CronTaskResult{
+		TaskID: "wal_checkpoint",
+		Errors: make([]string, 0),
+	}
+
+	if err := s.writeDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)").Error; err != nil {
+		result.Success = false
+		result.Message = "WAL检查点执行失败"
+		result.Errors = append(result.Errors, err.Error())
+	} else {
+		result.Success = true
+		result.Message = "WAL检查点执行成功"
+	}
+	return result
+}
+
 var ErrCronTaskNotFound = &cronTaskNotFoundError{}
 
 type cronTaskNotFoundError struct{}
@@ -118,8 +142,17 @@ func (s *CronService) StartScheduler() {
 		s.logger.Error("cron: failed to register budget snapshot job", zap.Error(err))
 	}
 
+	// 每6小时执行一次 WAL 检查点，将 WAL 文件合并回主数据库
+	if _, err := s.cron.AddFunc("0 0 */6 * * *", func() {
+		s.logger.Info("cron: WAL checkpoint job started")
+		s.runWALCheckpointTask()
+		s.logger.Info("cron: WAL checkpoint job finished")
+	}); err != nil {
+		s.logger.Error("cron: failed to register WAL checkpoint job", zap.Error(err))
+	}
+
 	s.cron.Start()
-	s.logger.Info("cron: scheduler started - daily 00:00 (recurring transactions), daily 09:00 (budget history snapshot)")
+	s.logger.Info("cron: scheduler started - daily 00:00 (recurring transactions), daily 09:00 (budget history snapshot), every 6h (WAL checkpoint)")
 }
 
 func (s *CronService) StopScheduler() {

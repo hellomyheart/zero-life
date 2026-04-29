@@ -25,13 +25,15 @@ type TransactionFilter struct {
 // 交易（Transaction）是系统的核心实体，记录每一笔收入、支出和转账。
 // 交易可以关联标签（多对多）、拆分为子交易（parent_id）、预加载关联数据。
 type TransactionRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
 // NewTransactionRepository 创建交易仓库实例。
-// 参数 db: GORM 数据库连接实例。
-func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
-	return &TransactionRepository{db: db}
+// 参数 readDB: 读库（只读连接池，并发安全）
+// 参数 writeDB: 写库（单连接，串行保证安全）
+func NewTransactionRepository(readDB, writeDB *gorm.DB) *TransactionRepository {
+	return &TransactionRepository{readDB: readDB, writeDB: writeDB}
 }
 
 // Create 创建交易及其关联的标签。
@@ -41,7 +43,7 @@ func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
 // 参数 tagIDs: 要关联的标签 ID 列表，可以为空。
 // 返回: 创建失败时返回错误。
 func (r *TransactionRepository) Create(txn *model.Transaction, tagIDs []uint64) error {
-	return r.CreateWithDB(r.db, txn, tagIDs)
+	return r.CreateWithDB(r.writeDB, txn, tagIDs)
 }
 
 // CreateWithDB 使用指定的 DB 对象创建交易及其关联的标签。
@@ -80,7 +82,7 @@ func (r *TransactionRepository) CreateWithDB(db *gorm.DB, txn *model.Transaction
 // 返回: 包含完整关联数据的交易对象。
 func (r *TransactionRepository) GetByID(id, userID uint64) (*model.Transaction, error) {
 	var txn model.Transaction
-	if err := r.db.Where("id = ? AND user_id = ?", id, userID).
+	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).
 		Preload("Source").
 		Preload("Destination").
 		Preload("Category").
@@ -104,7 +106,7 @@ func (r *TransactionRepository) GetByID(id, userID uint64) (*model.Transaction, 
 // 返回: 交易列表（含预加载的源账户、目标账户、分类、标签）。
 func (r *TransactionRepository) List(userID uint64, filter TransactionFilter, offset, limit int) ([]model.Transaction, error) {
 	var txns []model.Transaction
-	query := r.db.Where("user_id = ? AND parent_id IS NULL", userID)
+	query := r.readDB.Where("user_id = ? AND parent_id IS NULL", userID)
 
 	query = r.applyFilter(query, filter)
 
@@ -124,7 +126,7 @@ func (r *TransactionRepository) ListAll(userID uint64, filter TransactionFilter)
 	offset := 0
 	for {
 		var batch []model.Transaction
-		query := r.db.Where("user_id = ? AND parent_id IS NULL", userID)
+		query := r.readDB.Where("user_id = ? AND parent_id IS NULL", userID)
 		query = r.applyFilter(query, filter)
 		if err := query.Preload("Source").Preload("Destination").Preload("Category").Preload("Tags").
 			Order("date DESC, id DESC").Offset(offset).Limit(batchSize).Find(&batch).Error; err != nil {
@@ -146,7 +148,7 @@ func (r *TransactionRepository) ListAll(userID uint64, filter TransactionFilter)
 // 执行 SQL: SELECT COUNT(*) FROM transactions WHERE user_id = ? AND parent_id IS NULL [AND 过滤条件]
 func (r *TransactionRepository) Count(userID uint64, filter TransactionFilter) (int64, error) {
 	var count int64
-	query := r.db.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
+	query := r.readDB.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
 
 	query = r.applyFilter(query, filter)
 
@@ -161,7 +163,7 @@ func (r *TransactionRepository) Count(userID uint64, filter TransactionFilter) (
 // 参数 txn: 要更新的交易对象（必须包含 ID 字段）。
 // 返回: 更新失败时返回错误。
 func (r *TransactionRepository) Update(txn *model.Transaction) error {
-	return r.db.Save(txn).Error
+	return r.writeDB.Save(txn).Error
 }
 
 // UpdateWithTags 更新交易记录及其关联标签。
@@ -170,7 +172,7 @@ func (r *TransactionRepository) Update(txn *model.Transaction) error {
 // 参数 tagIDs: 新的标签 ID 列表，替换原有标签。
 // 返回: 更新失败时返回错误。
 func (r *TransactionRepository) UpdateWithTags(txn *model.Transaction, tagIDs []uint64) error {
-	return r.UpdateWithTagsAndDB(r.db, txn, tagIDs)
+	return r.UpdateWithTagsAndDB(r.writeDB, txn, tagIDs)
 }
 
 // UpdateWithTagsAndDB 使用指定的 DB 对象更新交易记录及其关联标签。
@@ -200,7 +202,7 @@ func (r *TransactionRepository) UpdateWithTagsAndDB(db *gorm.DB, txn *model.Tran
 // Delete 删除交易及其关联的标签和拆分子交易。
 // 使用硬删除（Unscoped），因为余额已硬回滚，软删除记录会导致恢复时余额不一致。
 func (r *TransactionRepository) Delete(id, userID uint64) error {
-	return r.DeleteWithDB(r.db, id, userID)
+	return r.DeleteWithDB(r.writeDB, id, userID)
 }
 
 // DeleteWithDB 使用指定的 DB 对象删除交易及其关联的标签和拆分子交易。
@@ -230,7 +232,7 @@ func (r *TransactionRepository) DeleteWithDB(db *gorm.DB, id, userID uint64) err
 func (r *TransactionRepository) Search(userID uint64, keyword string, offset, limit int) ([]model.Transaction, error) {
 	var txns []model.Transaction
 	like := "%" + keyword + "%"
-	if err := r.db.Where("user_id = ? AND parent_id IS NULL", userID).
+	if err := r.readDB.Where("user_id = ? AND parent_id IS NULL", userID).
 		Where("description LIKE ? OR notes LIKE ?", like, like).
 		Preload("Source").Preload("Destination").Preload("Category").Preload("Tags").
 		Order("date DESC, id DESC").Offset(offset).Limit(limit).Find(&txns).Error; err != nil {
@@ -244,7 +246,7 @@ func (r *TransactionRepository) Search(userID uint64, keyword string, offset, li
 func (r *TransactionRepository) SearchCount(userID uint64, keyword string) (int64, error) {
 	var count int64
 	like := "%" + keyword + "%"
-	if err := r.db.Model(&model.Transaction{}).
+	if err := r.readDB.Model(&model.Transaction{}).
 		Where("user_id = ? AND parent_id IS NULL", userID).
 		Where("description LIKE ? OR notes LIKE ?", like, like).
 		Count(&count).Error; err != nil {
@@ -265,7 +267,7 @@ func (r *TransactionRepository) SearchCount(userID uint64, keyword string) (int6
 // 返回: 符合条件的交易列表（含预加载的关联数据）。
 func (r *TransactionRepository) GetForAudit(userID, accountID uint64, startDate, endDate string, reconciled *bool) ([]model.Transaction, error) {
 	var txns []model.Transaction
-	query := r.db.Where("user_id = ? AND (source_id = ? OR destination_id = ?)", userID, accountID, accountID)
+	query := r.readDB.Where("user_id = ? AND (source_id = ? OR destination_id = ?)", userID, accountID, accountID)
 
 	if startDate != "" {
 		if t, err := time.Parse("2006-01-02", startDate); err == nil {
@@ -337,7 +339,7 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 // GetByAccountAndDateRange 获取指定账户在时间范围内的交易
 func (r *TransactionRepository) GetByAccountAndDateRange(userID, accountID uint64, startDate, endDate time.Time) ([]model.Transaction, error) {
 	var txns []model.Transaction
-	err := r.db.Where("user_id = ? AND (source_id = ? OR destination_id = ?) AND date >= ? AND date <= ?",
+	err := r.readDB.Where("user_id = ? AND (source_id = ? OR destination_id = ?) AND date >= ? AND date <= ?",
 		userID, accountID, accountID, startDate, endDate).
 		Order("date asc").
 		Find(&txns).Error
@@ -347,7 +349,7 @@ func (r *TransactionRepository) GetByAccountAndDateRange(userID, accountID uint6
 // GetByDateRange 获取指定时间范围内的所有交易
 func (r *TransactionRepository) GetByDateRange(userID uint64, startDate, endDate time.Time) ([]model.Transaction, error) {
 	var txns []model.Transaction
-	err := r.db.Where("user_id = ? AND date >= ? AND date <= ?", userID, startDate, endDate).
+	err := r.readDB.Where("user_id = ? AND date >= ? AND date <= ?", userID, startDate, endDate).
 		Preload("Tags").
 		Order("date asc").
 		Find(&txns).Error
@@ -357,7 +359,7 @@ func (r *TransactionRepository) GetByDateRange(userID uint64, startDate, endDate
 // GetByTypeAndDateRange 获取指定类型和时间范围内的交易
 func (r *TransactionRepository) GetByTypeAndDateRange(userID uint64, txnType string, startDate, endDate time.Time) ([]model.Transaction, error) {
 	var txns []model.Transaction
-	err := r.db.Where("user_id = ? AND type = ? AND date >= ? AND date <= ?",
+	err := r.readDB.Where("user_id = ? AND type = ? AND date >= ? AND date <= ?",
 		userID, txnType, startDate, endDate).
 		Preload("Tags").
 		Order("date asc").
@@ -368,7 +370,7 @@ func (r *TransactionRepository) GetByTypeAndDateRange(userID uint64, txnType str
 // GetSplits 获取拆分交易列表
 func (r *TransactionRepository) GetSplits(parentID, userID uint64) ([]model.Transaction, error) {
 	var splits []model.Transaction
-	err := r.db.Where("parent_id = ? AND user_id = ?", parentID, userID).
+	err := r.readDB.Where("parent_id = ? AND user_id = ?", parentID, userID).
 		Preload("Category").
 		Preload("Tags").
 		Order("id asc").
@@ -378,7 +380,7 @@ func (r *TransactionRepository) GetSplits(parentID, userID uint64) ([]model.Tran
 
 // CreateBatch 批量创建交易
 func (r *TransactionRepository) CreateBatch(txns []model.Transaction) error {
-	return r.CreateBatchWithDB(r.db, txns)
+	return r.CreateBatchWithDB(r.writeDB, txns)
 }
 
 // CreateBatchWithDB 使用指定的 DB 对象批量创建交易
@@ -390,7 +392,7 @@ func (r *TransactionRepository) CreateBatchWithDB(db *gorm.DB, txns []model.Tran
 // 使用硬删除（Unscoped），因为余额已在同一事务中硬回滚，
 // 软删除记录留在表中会导致 Unscoped 恢复时余额不一致。
 func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("transaction_id IN ?", ids).Delete(&model.TransactionTag{}).Error; err != nil {
 			return err
 		}
@@ -403,7 +405,7 @@ func (r *TransactionRepository) DeleteBatch(ids []uint64, userID uint64) error {
 
 // AttachTags 为交易添加标签（全量替换：先删除旧标签，再插入新标签）
 func (r *TransactionRepository) AttachTags(txnID uint64, tagIDs []uint64) error {
-	return r.AttachTagsWithDB(r.db, txnID, tagIDs)
+	return r.AttachTagsWithDB(r.writeDB, txnID, tagIDs)
 }
 
 // AttachTagsWithDB 使用指定的 DB 对象为交易添加标签（全量替换）
@@ -425,7 +427,7 @@ func (r *TransactionRepository) AttachTagsWithDB(db *gorm.DB, txnID uint64, tagI
 
 // AddTags 为交易追加标签（仅添加不存在的标签，不删除已有标签）
 func (r *TransactionRepository) AddTags(txnID uint64, tagIDs []uint64) error {
-	return r.AddTagsWithDB(r.db, txnID, tagIDs)
+	return r.AddTagsWithDB(r.writeDB, txnID, tagIDs)
 }
 
 // AddTagsWithDB 使用指定的 DB 对象为交易追加标签
@@ -472,7 +474,7 @@ type AdvancedSearchFilter struct {
 // AdvancedSearch 高级搜索交易
 // 修复：添加 parent_id IS NULL 过滤条件，避免返回拆分子交易（与 List 方法保持一致）。
 func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSearchFilter, offset, limit int) ([]model.Transaction, error) {
-	query := r.db.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
+	query := r.readDB.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
 
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"
@@ -544,7 +546,7 @@ func (r *TransactionRepository) AdvancedSearch(userID uint64, filter AdvancedSea
 // AdvancedSearchCount 高级搜索计数
 // 修复：添加 parent_id IS NULL 过滤条件，与 AdvancedSearch 保持一致。
 func (r *TransactionRepository) AdvancedSearchCount(userID uint64, filter AdvancedSearchFilter) (int64, error) {
-	query := r.db.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
+	query := r.readDB.Model(&model.Transaction{}).Where("user_id = ? AND parent_id IS NULL", userID)
 
 	if filter.Keyword != "" {
 		keyword := "%" + filter.Keyword + "%"

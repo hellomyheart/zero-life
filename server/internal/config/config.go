@@ -23,10 +23,12 @@ type AppConfig struct {
 }
 
 type DBConfig struct {
-	Path         string        `mapstructure:"path"`
-	MaxIdleConns int           `mapstructure:"max_idle_conns"`
-	MaxOpenConns int           `mapstructure:"max_open_conns"`
-	MaxLifetime  time.Duration `mapstructure:"max_lifetime"`
+	Path            string        `mapstructure:"path"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	MaxLifetime     time.Duration `mapstructure:"max_lifetime"`
+	ReadMaxIdleConns int          `mapstructure:"read_max_idle_conns"`
+	ReadMaxOpenConns int          `mapstructure:"read_max_open_conns"`
 }
 
 type JWTConfig struct {

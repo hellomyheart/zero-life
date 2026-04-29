@@ -70,18 +70,31 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	// 设置数据库连接池参数
+	// 写库：1个连接，所有写操作串行执行，保证 SQLite 单写安全
 	sqlDB, err := db.DB()
 	if err != nil {
 		logger.Fatal("Failed to get database instance", zap.Error(err))
 	}
-	sqlDB.SetMaxIdleConns(config.C.DB.MaxIdleConns) // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(config.C.DB.MaxOpenConns) // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(config.C.DB.MaxLifetime) // 连接最大存活时间
+	sqlDB.SetMaxIdleConns(config.C.DB.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(config.C.DB.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(config.C.DB.MaxLifetime)
+
+	// 读库：100个只读连接，利用 WAL 模式实现多读者并发
+	readDB, err := gorm.Open(sqlite.Open(dbPath+"?mode=ro"), &gorm.Config{})
+	if err != nil {
+		logger.Fatal("Failed to connect to read database", zap.Error(err))
+	}
+	readSQLDB, err := readDB.DB()
+	if err != nil {
+		logger.Fatal("Failed to get read database instance", zap.Error(err))
+	}
+	readSQLDB.SetMaxIdleConns(config.C.DB.ReadMaxIdleConns)
+	readSQLDB.SetMaxOpenConns(config.C.DB.ReadMaxOpenConns)
 
 	// SQLite优化设置：WAL模式提升并发读写性能，开启外键约束
 	db.Exec("PRAGMA journal_mode=WAL")
 	db.Exec("PRAGMA foreign_keys=ON")
+	db.Exec("PRAGMA busy_timeout=5000")
 
 	// 自动迁移：根据模型定义自动创建/更新数据库表结构
 	if err := db.AutoMigrate(
@@ -132,32 +145,34 @@ func main() {
 	}
 
 	// 初始化键值存储仓库（替代 Redis，用于登录限制、密码重置令牌、请求限流）
-	kvRepo := repository.NewKVRepository(db)
+	// KVRepository 的 Get/Exists 有写副作用（惰性清理过期key），必须走 writeDB
+	kvRepo := repository.NewKVRepository(db, db)
 
 	// 初始化JWT服务，用于生成和验证访问令牌
 	jwtService := jwt.NewService()
 
 	// 初始化数据访问层（Repository），每个Repository对应一个数据库表的操作
-	authRepo := repository.NewAuthRepository(db)
-	userRepo := repository.NewUserRepository(db)
-	accountRepo := repository.NewAccountRepository(db)
-	txnRepo := repository.NewTransactionRepository(db)
-	categoryRepo := repository.NewCategoryRepository(db)
-	tagRepo := repository.NewTagRepository(db)
-	budgetRepo := repository.NewBudgetRepository(db)
-	currencyRepo := repository.NewCurrencyRepository(db)
-	ruleRepo := repository.NewRuleRepository(db)
-	ruleGroupRepo := repository.NewRuleGroupRepository(db)
-	piggyBankRepo := repository.NewPiggyBankRepository(db)
-	attachmentRepo := repository.NewAttachmentRepository(db)
-	webhookRepo := repository.NewWebhookRepository(db)
-	reconRepo := repository.NewReconciliationRepository(db)
-	linkTypeRepo := repository.NewLinkTypeRepository(db)
-	txnLinkRepo := repository.NewTransactionLinkRepository(db)
-	prefRepo := repository.NewPreferenceRepository(db)
-	rtRepo := repository.NewRecurringTransactionRepository(db)
-	ogRepo := repository.NewObjectGroupRepository(db)
-	configRepo := repository.NewConfigurationRepository(db)
+	// readDB 用于读操作（并发安全），writeDB(db) 用于写操作（串行保证安全）
+	authRepo := repository.NewAuthRepository(readDB, db)
+	userRepo := repository.NewUserRepository(readDB, db)
+	accountRepo := repository.NewAccountRepository(readDB, db)
+	txnRepo := repository.NewTransactionRepository(readDB, db)
+	categoryRepo := repository.NewCategoryRepository(readDB, db)
+	tagRepo := repository.NewTagRepository(readDB, db)
+	budgetRepo := repository.NewBudgetRepository(readDB, db)
+	currencyRepo := repository.NewCurrencyRepository(readDB, db)
+	ruleRepo := repository.NewRuleRepository(readDB, db)
+	ruleGroupRepo := repository.NewRuleGroupRepository(readDB, db)
+	piggyBankRepo := repository.NewPiggyBankRepository(readDB, db)
+	attachmentRepo := repository.NewAttachmentRepository(readDB, db)
+	webhookRepo := repository.NewWebhookRepository(readDB, db)
+	reconRepo := repository.NewReconciliationRepository(readDB, db)
+	linkTypeRepo := repository.NewLinkTypeRepository(readDB, db)
+	txnLinkRepo := repository.NewTransactionLinkRepository(readDB, db)
+	prefRepo := repository.NewPreferenceRepository(readDB, db)
+	rtRepo := repository.NewRecurringTransactionRepository(readDB, db)
+	ogRepo := repository.NewObjectGroupRepository(readDB, db)
+	configRepo := repository.NewConfigurationRepository(readDB, db)
 
 	// 新增MFA服务（需在authService之前初始化，因为authService依赖mfaService）
 	mfaService := service.NewMFAService(userRepo, db)
@@ -180,7 +195,7 @@ func main() {
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo, rtRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)
-	cronService := service.NewCronService(rtService, budgetService, logger)
+	cronService := service.NewCronService(rtService, budgetService, db, logger)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)

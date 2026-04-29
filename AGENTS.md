@@ -33,10 +33,10 @@ docker compose up -d --build  # 代码更新后重新构建
 - DTO 拆分为 `dto/request/` 和 `dto/response/`
 - 共享包在 `internal/pkg/`：`errcode`、`jwt`、`pagination`、`totp`、`validator`、`webhook`、`email`、`hash`
 - 配置：Viper 读取 `config.yaml`，支持环境变量覆盖（`viper.AutomaticEnv()`）
-- 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）
+- 数据库：SQLite + WAL 模式，启动时自动迁移（`migrations/` 目录为空，无手动迁移文件）。读写分离：写库 1 连接（串行保证安全），读库 100 连接（`?mode=ro` 只读，利用 WAL 并发读）
 - 认证：JWT Bearer Token；`middleware.Auth` 将 `user_id`/`email` 注入 Gin 上下文；`middleware.Admin` 查数据库校验 `user.Role == "admin"` 并注入 `role` 到上下文，挂载在 `/users/*` 路由组
 - 限流：使用 `kv_store` 表（非 Redis），详见下方「SQLite 替代 Redis 方案」
-- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行到期循环交易，每天 09:00 生成预算历史快照
+- 定时任务：内置 `robfig/cron` 调度器，每天 00:00 执行到期循环交易，每天 09:00 生成预算历史快照，每 6 小时执行 WAL 检查点
 
 **前端** (`web/`) — Vue 3 + TypeScript + Vite
 - 路径别名：`@` → `src/`
@@ -56,7 +56,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ## 注意事项
 
-- SQLite `max_idle_conns` 和 `max_open_conns` 默认为 1 — 这是 SQLite 单写模式的刻意设计，不要修改
+- SQLite 写库 `max_idle_conns` 和 `max_open_conns` 默认为 1 — 这是 SQLite 单写模式的刻意设计，不要修改。读库使用 `?mode=ro` 只读连接，`max_open_conns=100`，利用 WAL 并发读
 - `server/cmd/server/config.yaml` 和 `server/config.yaml` 同时存在 — 运行时从 CWD 读取配置，所以必须在 `server/` 目录下启动
 - 数据库文件（`*.db`、`*.db-shm`、`*.db-wal`）和 `*.exe` 已加入 gitignore
 - Docker Compose 从 `.env` 读取 `JWT_SECRET`（默认值为不安全的 `change-me-in-production`）
@@ -319,8 +319,9 @@ docker compose up -d --build  # 代码更新后重新构建
 
 | 任务ID | 名称 | 周期 | 说明 |
 |---|---|---|---|
-| `recurrences_bills` | 循环交易与到期账单 | 每天 00:00 | 执行循环交易生成交易记录，处理到期账单 |
+| `recurring_transactions` | 到期循环交易 | 每天 00:00 | 执行循环交易生成交易记录 |
 | `budget_snapshot` | 预算历史快照 | 每天 09:00 | 遍历启用预算，为近2年已结束周期生成/更新快照 |
+| `wal_checkpoint` | WAL检查点 | 每6小时 | 执行 `PRAGMA wal_checkpoint(TRUNCATE)`，将 WAL 文件合并回主数据库 |
 
 **管理 API**（需 Admin 权限）：
 
@@ -329,7 +330,7 @@ docker compose up -d --build  # 代码更新后重新构建
 | `/api/v1/cron` | GET | 列出所有任务（ID、名称、描述、周期） |
 | `/api/v1/cron/:id/run` | POST | 手动执行指定任务 |
 
-**任务注册模式**：`CronService` 维护 `[]CronTask` 注册表，新增任务只需在 `newCronService()` 中追加 `CronTask` 并注册调度函数。前端 `CronPage` 展示任务列表并支持手动触发。
+**任务注册模式**：`CronService` 维护 `[]CronTask` 注册表，新增任务只需在 `NewCronService()` 中追加 `CronTask` 并注册调度函数。前端 `CronPage` 展示任务列表并支持手动触发。
 
 
 ## 分类管理

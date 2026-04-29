@@ -7,6 +7,8 @@ db:
   max_idle_conns: 1
   max_open_conns: 1
   max_lifetime: 0s
+  read_max_idle_conns: 10
+  read_max_open_conns: 100
 
 jwt:
   secret: "change-me-in-production"

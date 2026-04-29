@@ -22,20 +22,23 @@ import (
 //	Redis: rdb.Exists(ctx, key).Result()     → kvRepo.Exists(key)
 //	Redis: rdb.Expire(ctx, key, ttl)         → kvRepo.Expire(key, ttl)
 type KVRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
 // NewKVRepository 创建键值存储仓库实例
-// 参数 db: GORM 数据库连接实例
-func NewKVRepository(db *gorm.DB) *KVRepository {
-	return &KVRepository{db: db}
+// 参数 readDB: 读库（只读连接池，并发安全）
+// 参数 writeDB: 写库（单连接，串行保证安全）
+// 注意：KVRepository 所有方法都使用 writeDB，因为 Get/Exists 有写副作用（cleanExpired 惰性清理）
+func NewKVRepository(readDB, writeDB *gorm.DB) *KVRepository {
+	return &KVRepository{readDB: readDB, writeDB: writeDB}
 }
 
 // cleanExpired 清理所有过期的键值记录
 // 在每次操作前调用，模拟 Redis 的自动过期行为
 // 执行 SQL: DELETE FROM kv_store WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
 func (r *KVRepository) cleanExpired() {
-	r.db.Where("expires_at IS NOT NULL AND expires_at < ?", time.Now()).Delete(&model.KVStore{})
+	r.writeDB.Where("expires_at IS NOT NULL AND expires_at < ?", time.Now()).Delete(&model.KVStore{})
 }
 
 // Set 设置键值对，支持可选的 TTL 过期时间
@@ -55,7 +58,7 @@ func (r *KVRepository) Set(key, value string, ttl time.Duration) error {
 	}
 
 	// 使用 GORM 的 Clauses 实现 UPSERT（INSERT ... ON CONFLICT DO UPDATE）
-	return r.db.Save(&model.KVStore{
+	return r.writeDB.Save(&model.KVStore{
 		Key:       key,
 		Value:     value,
 		ExpiresAt: expiresAt,
@@ -74,7 +77,7 @@ func (r *KVRepository) Get(key string) (string, error) {
 	r.cleanExpired()
 
 	var kv model.KVStore
-	if err := r.db.Where("key = ?", key).First(&kv).Error; err != nil {
+	if err := r.writeDB.Where("key = ?", key).First(&kv).Error; err != nil {
 		return "", err
 	}
 	return kv.Value, nil
@@ -88,7 +91,7 @@ func (r *KVRepository) Del(keys ...string) error {
 	if len(keys) == 0 {
 		return nil
 	}
-	return r.db.Where("key IN ?", keys).Delete(&model.KVStore{}).Error
+	return r.writeDB.Where("key IN ?", keys).Delete(&model.KVStore{}).Error
 }
 
 // Incr 原子递增键的值，并返回递增后的结果
@@ -105,7 +108,7 @@ func (r *KVRepository) Incr(key string) (int64, error) {
 	r.cleanExpired()
 
 	var count int64
-	err := r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.writeDB.Transaction(func(tx *gorm.DB) error {
 		var kv model.KVStore
 		if err := tx.Where("key = ?", key).First(&kv).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -149,7 +152,7 @@ func (r *KVRepository) Exists(key string) (bool, error) {
 	r.cleanExpired()
 
 	var count int64
-	if err := r.db.Model(&model.KVStore{}).Where("key = ?", key).Count(&count).Error; err != nil {
+	if err := r.writeDB.Model(&model.KVStore{}).Where("key = ?", key).Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
@@ -164,7 +167,7 @@ func (r *KVRepository) Exists(key string) (bool, error) {
 //   - error: 键不存在或操作失败时返回错误
 func (r *KVRepository) Expire(key string, ttl time.Duration) error {
 	expiresAt := time.Now().Add(ttl)
-	result := r.db.Model(&model.KVStore{}).Where("key = ?", key).Update("expires_at", expiresAt)
+	result := r.writeDB.Model(&model.KVStore{}).Where("key = ?", key).Update("expires_at", expiresAt)
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}

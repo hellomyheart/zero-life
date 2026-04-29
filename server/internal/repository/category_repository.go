@@ -10,13 +10,15 @@ import (
 // 分类支持最多5级层次结构：通过 parent_id 关联形成树形结构。
 // 例如："日常开销"（1级）→ "餐饮"（2级）→ "外卖"（3级）→ ...
 type CategoryRepository struct {
-	db *gorm.DB
+	readDB  *gorm.DB
+	writeDB *gorm.DB
 }
 
 // NewCategoryRepository 创建分类仓库实例。
-// 参数 db: GORM 数据库连接实例。
-func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
-	return &CategoryRepository{db: db}
+// 参数 readDB: 读库（只读连接池，并发安全）
+// 参数 writeDB: 写库（单连接，串行保证安全）
+func NewCategoryRepository(readDB, writeDB *gorm.DB) *CategoryRepository {
+	return &CategoryRepository{readDB: readDB, writeDB: writeDB}
 }
 
 // Create 创建一条新的分类记录。
@@ -24,7 +26,7 @@ func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
 // 参数 category: 要创建的分类对象。
 // 返回: 创建失败时返回错误。
 func (r *CategoryRepository) Create(category *model.Category) error {
-	return r.db.Create(category).Error
+	return r.writeDB.Create(category).Error
 }
 
 // GetByID 根据 ID 和用户 ID 获取单条分类。
@@ -34,7 +36,7 @@ func (r *CategoryRepository) Create(category *model.Category) error {
 // 返回: 找到的分类对象；未找到时返回 gorm.ErrRecordNotFound 错误。
 func (r *CategoryRepository) GetByID(id, userID uint64) (*model.Category, error) {
 	var category model.Category
-	if err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&category).Error; err != nil {
+	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).First(&category).Error; err != nil {
 		return nil, err
 	}
 	return &category, nil
@@ -47,7 +49,7 @@ func (r *CategoryRepository) GetByID(id, userID uint64) (*model.Category, error)
 // 返回: 分类列表。
 func (r *CategoryRepository) List(userID uint64) ([]model.Category, error) {
 	var categories []model.Category
-	if err := r.db.Where("user_id = ?", userID).Order("sort_order ASC, id ASC").Find(&categories).Error; err != nil {
+	if err := r.readDB.Where("user_id = ?", userID).Order("sort_order ASC, id ASC").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
@@ -58,7 +60,7 @@ func (r *CategoryRepository) List(userID uint64) ([]model.Category, error) {
 // 参数 category: 要更新的分类对象（必须包含 ID 字段）。
 // 返回: 更新失败时返回错误。
 func (r *CategoryRepository) Update(category *model.Category) error {
-	return r.db.Save(category).Error
+	return r.writeDB.Save(category).Error
 }
 
 // Delete 根据 ID 和用户 ID 删除分类。
@@ -68,7 +70,7 @@ func (r *CategoryRepository) Update(category *model.Category) error {
 // 参数 userID: 当前登录用户 ID。
 // 返回: 删除失败时返回错误。
 func (r *CategoryRepository) Delete(id, userID uint64) error {
-	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Category{}).Error
+	return r.writeDB.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Category{}).Error
 }
 
 // GetSubCategories 获取指定父分类下的所有子分类。
@@ -78,7 +80,7 @@ func (r *CategoryRepository) Delete(id, userID uint64) error {
 // 返回: 子分类列表。
 func (r *CategoryRepository) GetSubCategories(parentID, userID uint64) ([]model.Category, error) {
 	var categories []model.Category
-	if err := r.db.Where("parent_id = ? AND user_id = ?", parentID, userID).Find(&categories).Error; err != nil {
+	if err := r.readDB.Where("parent_id = ? AND user_id = ?", parentID, userID).Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
@@ -100,7 +102,7 @@ func (r *CategoryRepository) GetDescendantIDs(ids []uint64, userID uint64) ([]ui
 	currentLevel := ids
 	for len(currentLevel) > 0 {
 		var children []model.Category
-		if err := r.db.Where("parent_id IN ? AND user_id = ?", currentLevel, userID).Find(&children).Error; err != nil {
+		if err := r.readDB.Where("parent_id IN ? AND user_id = ?", currentLevel, userID).Find(&children).Error; err != nil {
 			return nil, err
 		}
 		if len(children) == 0 {
