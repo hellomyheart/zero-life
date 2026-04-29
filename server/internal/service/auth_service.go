@@ -443,7 +443,7 @@ func (s *AuthService) MFALoginVerify(req *request.MFALoginVerifyReq) (*response.
 		return nil, errcode.ErrMFANotEnabled
 	}
 
-	if !totp.ValidateCode(req.Code, user.MFASecret) {
+	if !totp.ValidateCode(user.MFASecret, req.Code) {
 		// TOTP验证失败，尝试备用码
 		if !s.mfaService.VerifyBackupCode(userID, req.Code) {
 			return nil, errcode.ErrMFAInvalidCode

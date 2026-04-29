@@ -29,11 +29,14 @@ func GenerateQRCodeURL(account, issuer, secret string) string {
 	u := url.URL{
 		Scheme: "otpauth",
 		Host:   "totp",
-		Path:   fmt.Sprintf("%s:%s", issuer, account),
+		Path:   "/" + issuer + ":" + account,
 	}
 	q := u.Query()
 	q.Set("secret", secret)
 	q.Set("issuer", issuer)
+	q.Set("period", "30")
+	q.Set("algorithm", "SHA1")
+	q.Set("digits", "6")
 	u.RawQuery = q.Encode()
 	return u.String()
 }

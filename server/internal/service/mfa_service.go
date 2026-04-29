@@ -111,7 +111,7 @@ func (s *MFAService) Enable(userID uint64, code string) (*response.BackupCodesRe
 	}
 
 	// 验证MFA代码
-	if !totp.ValidateCode(code, user.MFASecret) {
+	if !totp.ValidateCode(user.MFASecret, code) {
 		return nil, errcode.ErrMFAInvalidCode
 	}
 
@@ -159,7 +159,7 @@ func (s *MFAService) Disable(userID uint64, code string) error {
 	}
 
 	// 验证MFA代码：先尝试TOTP，失败后尝试备用码
-	if !totp.ValidateCode(code, user.MFASecret) {
+	if !totp.ValidateCode(user.MFASecret, code) {
 		if !s.VerifyBackupCode(userID, code) {
 			return errcode.ErrMFAInvalidCode
 		}
@@ -203,7 +203,7 @@ func (s *MFAService) Verify(userID uint64, code string) (*response.MFAVerifyResp
 	}
 
 	// 验证MFA代码
-	if !totp.ValidateCode(code, user.MFASecret) {
+	if !totp.ValidateCode(user.MFASecret, code) {
 		return nil, errcode.ErrMFAInvalidCode
 	}
 
