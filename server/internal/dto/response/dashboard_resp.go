@@ -4,13 +4,15 @@ package response
 // DashboardResp 仪表盘响应
 // 包含首页仪表盘的所有汇总数据
 type DashboardResp struct {
-	MonthIncome    string             `json:"month_income"`     // 本月收入
-	MonthExpense   string             `json:"month_expense"`    // 本月支出
-	NetIncome      string             `json:"net_income"`       // 净收入
-	TotalBalance   string             `json:"total_balance"`    // 总资产余额
-	BudgetAlerts   []BudgetAlertResp  `json:"budget_alerts"`    // 预算预警列表
+	MonthIncome      string             `json:"month_income"`       // 本月收入
+	MonthExpense     string             `json:"month_expense"`      // 本月支出
+	NetIncome        string             `json:"net_income"`         // 净收入
+	TotalBalance     string             `json:"total_balance"`      // 净资产（总资产 - 总负债）
+	TotalAssets      string             `json:"total_assets"`       // 总资产（所有资产账户余额之和）
+	TotalLiabilities string             `json:"total_liabilities"`  // 总负债（所有负债账户余额之和）
+	BudgetAlerts     []BudgetAlertResp  `json:"budget_alerts"`      // 预算预警列表
 	RecurringReminders  []RecurringReminderResp `json:"recurring_reminders"`   // 循环交易提醒列表
-	RecentTxns     []TransactionResp  `json:"recent_txns"`      // 最近交易列表
+	RecentTxns       []TransactionResp  `json:"recent_txns"`        // 最近交易列表
 }
 
 // BudgetAlertResp 预算预警响应

@@ -97,15 +97,30 @@ function getAmountColor(type: string) {
         </el-col>
       </el-row>
 
-      <!-- 总资产 + 预算预警 -->
+      <!-- 净资产/总资产/总负债 + 预算预警 -->
       <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :xs="24" :sm="12">
+        <el-col :xs="24" :sm="8">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.totalBalance') }}</template>
             <div class="amount large">{{ formatAmount(dashboard.total_balance) }}</div>
           </el-card>
         </el-col>
-        <el-col :xs="24" :sm="12">
+        <el-col :xs="24" :sm="8">
+          <el-card shadow="hover">
+            <template #header>{{ t('dashboard.totalAssets') }}</template>
+            <div class="amount large">{{ formatAmount(dashboard.total_assets) }}</div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :sm="8">
+          <el-card shadow="hover">
+            <template #header>{{ t('dashboard.totalLiabilities') }}</template>
+            <div class="amount large">{{ formatAmount(dashboard.total_liabilities) }}</div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="20" style="margin-top: 20px">
+        <el-col :xs="24">
           <el-card shadow="hover">
             <template #header>{{ t('dashboard.budgetAlerts') }}</template>
             <el-table :data="dashboard.budget_alerts" size="small" v-if="dashboard.budget_alerts?.length">

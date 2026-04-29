@@ -34,10 +34,12 @@ export interface RecurringReminder {
  * 字段名与后端 DashboardResp JSON tag 完全对应
  */
 export interface DashboardResp {
-  month_income: string         // 本月收入（后端字段名 month_income）
+  month_income: string         // 净资产（总资产 - 总负债）
   month_expense: string        // 本月支出（后端字段名 month_expense）
   net_income: string           // 净收入（收入 - 支出）
-  total_balance: string        // 总余额（所有资产账户余额之和）
+  total_balance: string        // 净资产（总资产 - 总负债）
+  total_assets: string         // 总资产（所有资产账户余额之和）
+  total_liabilities: string    // 总负债（所有负债账户余额之和）
   budget_alerts: BudgetAlert[] // 预算预警列表
   recurring_reminders: RecurringReminder[] // 循环交易提醒列表
   recent_txns: {               // 最近交易列表（后端字段名 recent_txns）

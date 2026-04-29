@@ -510,7 +510,7 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 | Type | string (size:20) | 账户类型：asset/expense/revenue/liability |
 | CurrencyID | uint64 | 关联货币，外键 |
 | InitialBalance | decimal(19,4) | 初始余额，创建后不可修改 |
-| CurrentBalance | decimal(19,4) | 当前余额，系统自动计算 = 初始余额 + 收入 - 支出 |
+| CurrentBalance | decimal(19,4) | 当前余额，系统自动计算。资产=初始+收入-支出；负债=初始+欠款增加-还款；收入/支出=不追踪 |
 | IsVirtual | bool | 虚拟账户标记，不代表真实资金 |
 | Notes | text | 备注 |
 | Currency | Currency | 关联货币对象（Belongs To） |
@@ -549,9 +549,31 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 
 | 类型 | source_id → destination_id | 余额影响 |
 |------|---------------------------|----------|
-| withdrawal（支出） | 资产账户 → 支出账户 | 源账户余额减少 |
-| deposit（收入） | 收入账户 → 资产账户 | 目标账户余额增加 |
-| transfer（转账） | 资产A → 资产B | 源减少、目标增加 |
+| withdrawal（支出） | 资产/负债账户 → 支出/负债账户 | 见下方余额规则 |
+| deposit（收入） | 收入/负债账户 → 资产/负债账户 | 见下方余额规则 |
+| transfer（转账） | 资产/负债账户 → 资产/负债账户 | 见下方余额规则 |
+
+### 账户类型与交易使用规则
+
+四种账户类型在交易中的角色：
+
+| 账户类型 | 作为 source | 作为 destination | 余额含义 |
+|----------|------------|-----------------|---------|
+| asset（资产） | 取款/转账的付款方 | 存款/转账的收款方 | 正值=拥有的钱 |
+| expense（支出） | 不适用 | 取款的支出分类 | 不追踪余额 |
+| revenue（收入） | 存款的收入来源 | 不适用 | 不追踪余额 |
+| liability（负债） | 取款（信用卡消费）/转账/存款（取现） | 存款（借款）/取款（还款）/转账 | 正值=欠款金额 |
+
+**前端账户选择器规则**（`TransactionFormPage.vue`）：
+- withdrawal：source = 资产+负债账户，destination = 支出+负债账户
+- deposit：source = 收入+负债账户，destination = 资产+负债账户
+- transfer：source = 资产+负债账户，destination = 资产+负债账户
+
+**典型负债场景**：
+- 信用卡消费：withdrawal（负债→支出），负债余额增加
+- 还信用卡：withdrawal（资产→负债），资产减少、负债减少
+- 借款/贷款：deposit（收入→负债），负债余额增加
+- 信用卡取现：deposit（负债→资产），负债减少、资产增加
 
 ### 数据模型 (`model/transaction.go`)
 
@@ -611,13 +633,32 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 
 ### 余额计算 (`calculateBalanceChanges`)
 
-返回 `map[uint64]decimal.Decimal`，key 为账户ID，value 为变更量（正数=增加，负数=减少）：
+返回 `map[uint64]decimal.Decimal`，key 为账户ID，value 为变更量（正数=增加，负数=减少）。
 
-- withdrawal：`changes[sourceID] = -amount`
-- deposit：`changes[*destID] = +amount`
-- transfer：`changes[sourceID] = -amount`，`changes[*destID] = +amount`
+**函数签名**：`calculateBalanceChanges(txnType, amount, sourceID, destID, sourceType, destType)` — 需要传入源/目标账户类型，因为负债账户的余额方向与资产账户相反。
+
+**余额变更规则**（按账户类型）：
+
+| 账户类型 | 作为 source 时 | 作为 destination 时 |
+|----------|---------------|-------------------|
+| asset（资产） | `-amount`（钱流出，余额减少） | `+amount`（钱流入，余额增加） |
+| liability（负债） | `+amount`（欠款增加，如信用卡消费） | `-amount`（欠款减少，如还款） |
+| revenue（收入） | 不更新（仅分类用途） | 不适用 |
+| expense（支出） | 不适用 | 不更新（仅分类用途） |
+
+**各交易类型的余额变更**：
+
+| 交易类型 | source 变更 | destination 变更 |
+|----------|-----------|-----------------|
+| withdrawal | 资产：`-amount`，负债：`+amount` | 负债：`-amount`（还款），支出：不更新 |
+| deposit | 负债：`-amount`（取现） | 资产：`+amount`，负债：`+amount`（借款） |
+| transfer | 资产：`-amount`，负债：`+amount` | 资产：`+amount`，负债：`-amount` |
 
 **注意**：`TransactionService` 和 `TransactionBulkService` 各自有一份 `calculateBalanceChanges`，逻辑必须保持一致。
+
+### 账户验证 (`validateTransaction`)
+
+`validateTransaction` 验证交易类型和账户归属，返回源账户和目标账户模型（含类型信息）。返回值 `(*model.Account, *model.Account, error)` 供 `calculateBalanceChanges` 使用账户类型计算余额变更。
 
 ### 余额更新
 
@@ -666,6 +707,14 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 
 - **类型** (`types/transaction.ts`)：`Transaction` 接口与后端 `TransactionResp` 字段对齐，`amount` 为 string 类型避免浮点精度问题
 - **API** (`api/transaction.ts`)：`list`/`getTransaction`/`create`/`update`/`remove`/`search`
+
+### 仪表盘净资产
+
+`DashboardService.Get` 计算净资产（`total_balance`）= 所有资产账户余额之和 - 所有负债账户余额之和。同时返回 `total_assets`（总资产）和 `total_liabilities`（总负债）。
+
+**DashboardResp**：`month_income`、`month_expense`、`net_income`、`total_balance`（净资产）、`total_assets`（总资产）、`total_liabilities`（总负债）、`budget_alerts`、`recurring_reminders`、`recent_txns`
+
+前端仪表盘页面展示三张卡片：净资产、总资产、总负债。
 
 ## 账单管理
 

@@ -73,15 +73,24 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 	}
 
-	// 第2步：计算总资产余额（所有资产账户的当前余额之和）
+	// 第2步：计算净资产（资产账户余额之和 - 负债账户余额之和）
 	assetAccounts, err := s.accountRepo.List(userID, string(model.AccountTypeAsset), "", "name", 0, 1000)
 	if err != nil {
 		return nil, errcode.ErrInternal
 	}
-	totalBalance := decimal.Zero
+	totalAssets := decimal.Zero
 	for _, a := range assetAccounts {
-		totalBalance = totalBalance.Add(a.CurrentBalance)
+		totalAssets = totalAssets.Add(a.CurrentBalance)
 	}
+	liabilityAccounts, err := s.accountRepo.List(userID, string(model.AccountTypeLiability), "", "name", 0, 1000)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	totalLiabilities := decimal.Zero
+	for _, a := range liabilityAccounts {
+		totalLiabilities = totalLiabilities.Add(a.CurrentBalance)
+	}
+	totalBalance := totalAssets.Sub(totalLiabilities)
 
 	// Budget alerts
 	budgets, err := s.budgetRepo.List(userID)
@@ -176,13 +185,15 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	}
 
 	return &response.DashboardResp{
-		MonthIncome:   monthIncome.StringFixed(4),
-		MonthExpense:  monthExpense.StringFixed(4),
-		NetIncome:     monthIncome.Sub(monthExpense).StringFixed(4),
-		TotalBalance:  totalBalance.StringFixed(4),
-		BudgetAlerts:  budgetAlerts,
+		MonthIncome:      monthIncome.StringFixed(4),
+		MonthExpense:     monthExpense.StringFixed(4),
+		NetIncome:        monthIncome.Sub(monthExpense).StringFixed(4),
+		TotalBalance:     totalBalance.StringFixed(4),
+		TotalAssets:      totalAssets.StringFixed(4),
+		TotalLiabilities: totalLiabilities.StringFixed(4),
+		BudgetAlerts:     budgetAlerts,
 		RecurringReminders: recurringReminders,
-		RecentTxns:    recentTxnResps,
+		RecentTxns:       recentTxnResps,
 	}, nil
 }
 

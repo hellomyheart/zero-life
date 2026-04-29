@@ -129,6 +129,7 @@
     "assetAccount": "Asset Account",
     "expenseAccount": "Expense Account",
     "revenueAccount": "Revenue Account",
+    "liabilityAccount": "Liability Account",
     "sameAccountError": "Source and destination accounts cannot be the same"
   },
   "category": {
@@ -285,7 +286,9 @@
     "income": "Monthly Income",
     "expense": "Monthly Expense",
     "netIncome": "Net Income",
-    "totalBalance": "Total Balance",
+    "totalBalance": "Net Worth",
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities",
     "budgetAlerts": "Budget Alerts",
     "recurringReminders": "Recurring Reminders",
     "recentTransactions": "Recent Transactions"

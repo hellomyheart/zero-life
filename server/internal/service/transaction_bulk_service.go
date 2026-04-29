@@ -102,7 +102,15 @@ func (s *TransactionBulkService) BulkDelete(userID uint64, req *request.BulkDele
 			}
 			return err
 		}
-		changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
+		var sourceType model.AccountType
+		var destTypePtr *model.AccountType
+		if txn.Source.ID > 0 {
+			sourceType = txn.Source.Type
+		}
+		if txn.Destination != nil && txn.Destination.ID > 0 {
+			destTypePtr = &txn.Destination.Type
+		}
+		changes := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID, sourceType, destTypePtr)
 		txns = append(txns, txnInfo{id: id, changes: changes})
 	}
 
@@ -161,8 +169,15 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 
 	newType := model.TransactionType(req.Type)
 
-	// 计算旧余额变更（转换前的余额影响）
-	oldChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
+	var oldSourceType model.AccountType
+	var oldDestTypePtr *model.AccountType
+	if txn.Source.ID > 0 {
+		oldSourceType = txn.Source.Type
+	}
+	if txn.Destination != nil && txn.Destination.ID > 0 {
+		oldDestTypePtr = &txn.Destination.Type
+	}
+	oldChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID, oldSourceType, oldDestTypePtr)
 
 	// 根据转换类型更新交易字段
 	switch {
@@ -201,8 +216,19 @@ func (s *TransactionBulkService) ConvertType(userID, id uint64, req *request.Con
 		return nil, errcode.ErrInvalidTxnType
 	}
 
-	// 计算新余额变更（转换后的余额影响）
-	newChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID)
+	newSourceAccount, err := s.accountRepo.GetByID(txn.SourceID, userID)
+	if err != nil {
+		return nil, errcode.ErrNotFound
+	}
+	var newDestTypePtr *model.AccountType
+	if txn.DestinationID != nil {
+		newDestAccount, err := s.accountRepo.GetByID(*txn.DestinationID, userID)
+		if err != nil {
+			return nil, errcode.ErrNotFound
+		}
+		newDestTypePtr = &newDestAccount.Type
+	}
+	newChanges := s.calculateBalanceChanges(txn.Type, txn.Amount, txn.SourceID, txn.DestinationID, newSourceAccount.Type, newDestTypePtr)
 
 	// 计算净余额变更 = 新变更 - 旧变更
 	// 对每个受影响的账户，净变更 = 新影响 - 旧影响
@@ -277,8 +303,15 @@ func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.
 		Notes:         txn.Notes,
 	}
 
-	// Calculate balance changes
-	changes := s.calculateBalanceChanges(clone.Type, clone.Amount, clone.SourceID, clone.DestinationID)
+	var sourceType model.AccountType
+	var destTypePtr *model.AccountType
+	if txn.Source.ID > 0 {
+		sourceType = txn.Source.Type
+	}
+	if txn.Destination != nil && txn.Destination.ID > 0 {
+		destTypePtr = &txn.Destination.Type
+	}
+	changes := s.calculateBalanceChanges(clone.Type, clone.Amount, clone.SourceID, clone.DestinationID, sourceType, destTypePtr)
 
 	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
 		if err := s.txnRepo.CreateWithDB(dbTx, clone, tagIDs); err != nil {
@@ -303,22 +336,53 @@ func (s *TransactionBulkService) CloneTransaction(userID, id uint64) (*response.
 	return s.toResp(created), nil
 }
 
-// calculateBalanceChanges 根据交易类型计算各账户的余额变更
-// deposit：目标账户余额增加；withdrawal：源账户余额减少；transfer：源账户减少，目标账户增加
-func (s *TransactionBulkService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64) map[uint64]decimal.Decimal {
+// calculateBalanceChanges 根据交易类型和账户类型计算各账户的余额变更
+// 余额变更规则：
+//   - 资产账户作为 source：余额减少（钱流出）
+//   - 资产账户作为 destination：余额增加（钱流入）
+//   - 负债账户作为 source：余额增加（欠款增加，如信用卡消费）
+//   - 负债账户作为 destination：余额减少（欠款减少，如还款）
+//   - 收入/支出账户：不更新余额（仅作分类用途）
+func (s *TransactionBulkService) calculateBalanceChanges(txnType model.TransactionType, amount decimal.Decimal, sourceID uint64, destID *uint64, sourceType model.AccountType, destType *model.AccountType) map[uint64]decimal.Decimal {
 	changes := make(map[uint64]decimal.Decimal)
 
 	switch txnType {
 	case model.TransactionTypeDeposit:
-		if destID != nil {
-			changes[*destID] = amount
+		if destID != nil && destType != nil {
+			switch *destType {
+			case model.AccountTypeAsset:
+				changes[*destID] = amount
+			case model.AccountTypeLiability:
+				changes[*destID] = amount.Neg()
+			}
+		}
+		if sourceType == model.AccountTypeLiability {
+			changes[sourceID] = amount.Neg()
 		}
 	case model.TransactionTypeWithdrawal:
-		changes[sourceID] = amount.Neg()
+		switch sourceType {
+		case model.AccountTypeAsset:
+			changes[sourceID] = amount.Neg()
+		case model.AccountTypeLiability:
+			changes[sourceID] = amount
+		}
+		if destID != nil && destType != nil && *destType == model.AccountTypeLiability {
+			changes[*destID] = amount.Neg()
+		}
 	case model.TransactionTypeTransfer:
-		changes[sourceID] = amount.Neg()
-		if destID != nil {
-			changes[*destID] = amount
+		switch sourceType {
+		case model.AccountTypeAsset:
+			changes[sourceID] = amount.Neg()
+		case model.AccountTypeLiability:
+			changes[sourceID] = amount
+		}
+		if destID != nil && destType != nil {
+			switch *destType {
+			case model.AccountTypeAsset:
+				changes[*destID] = amount
+			case model.AccountTypeLiability:
+				changes[*destID] = amount.Neg()
+			}
 		}
 	}
 

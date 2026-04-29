@@ -108,26 +108,27 @@ const transactionTypeOptions = [
 const assetAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Asset))
 const expenseAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Expense))
 const revenueAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Revenue))
+const liabilityAccounts = computed(() => (accountStore.accounts ?? []).filter((a: { type: string }) => a.type === AccountType.Liability))
 
-// 取款：source=资产账户，destination=支出账户
-// 存款：source=收入账户，destination=资产账户
-// 转账：source=资产账户，destination=资产账户
+// 取款：source=资产/负债账户，destination=支出/负债账户
+// 存款：source=收入/负债账户，destination=资产/负债账户
+// 转账：source=资产/负债账户，destination=资产/负债账户
 const sourceAccountOptions = computed(() => {
-  if (form.type === TransactionType.Deposit) return revenueAccounts.value
-  return assetAccounts.value
+  if (form.type === TransactionType.Deposit) return [...revenueAccounts.value, ...liabilityAccounts.value]
+  return [...assetAccounts.value, ...liabilityAccounts.value]
 })
 const destinationAccountOptions = computed(() => {
-  if (form.type === TransactionType.Withdrawal) return expenseAccounts.value
-  return assetAccounts.value
+  if (form.type === TransactionType.Withdrawal) return [...expenseAccounts.value, ...liabilityAccounts.value]
+  return [...assetAccounts.value, ...liabilityAccounts.value]
 })
 const showDestination = computed(() => true)
 const sourceAccountLabel = computed(() => {
-  if (form.type === TransactionType.Deposit) return t('transaction.sourceAccount') + '（' + t('transaction.revenueAccount') + '）'
-  return t('transaction.sourceAccount') + '（' + t('transaction.assetAccount') + '）'
+  if (form.type === TransactionType.Deposit) return t('transaction.sourceAccount') + '（' + t('transaction.revenueAccount') + '/' + t('transaction.liabilityAccount') + '）'
+  return t('transaction.sourceAccount') + '（' + t('transaction.assetAccount') + '/' + t('transaction.liabilityAccount') + '）'
 })
 const destinationAccountLabel = computed(() => {
-  if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + '（' + t('transaction.expenseAccount') + '）'
-  return t('transaction.destinationAccount') + '（' + t('transaction.assetAccount') + '）'
+  if (form.type === TransactionType.Withdrawal) return t('transaction.destinationAccount') + '（' + t('transaction.expenseAccount') + '/' + t('transaction.liabilityAccount') + '）'
+  return t('transaction.destinationAccount') + '（' + t('transaction.assetAccount') + '/' + t('transaction.liabilityAccount') + '）'
 })
 
 const categoryTreeData = computed(() => {
