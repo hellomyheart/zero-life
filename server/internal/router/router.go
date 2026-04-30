@@ -34,14 +34,12 @@ type Router struct {
 	exportCtrl            *controller.ExportController
 	recurringTxnCtrl      *controller.RecurringTransactionController
 	webhookCtrl           *controller.WebhookController
-	transactionLinkCtrl   *controller.TransactionLinkController
 	preferenceCtrl        *controller.PreferenceController
 	reconciliationCtrl    *controller.ReconciliationController
 	chartCtrl             *controller.ChartController
 	insightCtrl           *controller.InsightController
 	mfaCtrl               *controller.MFAController
 	userCtrl              *controller.UserController
-	linkTypeCtrl          *controller.LinkTypeController
 	adminCtrl             *controller.AdminController
 	adminUserCtrl         *controller.AdminUserController
 	txnBulkCtrl           *controller.TransactionBulkController
@@ -69,14 +67,12 @@ func NewRouter(
 	exportCtrl *controller.ExportController,
 	recurringTxnCtrl *controller.RecurringTransactionController,
 	webhookCtrl *controller.WebhookController,
-	transactionLinkCtrl *controller.TransactionLinkController,
 	preferenceCtrl *controller.PreferenceController,
 	reconciliationCtrl *controller.ReconciliationController,
 	chartCtrl *controller.ChartController,
 	insightCtrl *controller.InsightController,
 	mfaCtrl *controller.MFAController,
 	userCtrl *controller.UserController,
-	linkTypeCtrl *controller.LinkTypeController,
 	adminCtrl *controller.AdminController,
 	adminUserCtrl *controller.AdminUserController,
 	txnBulkCtrl *controller.TransactionBulkController,
@@ -102,14 +98,12 @@ func NewRouter(
 		exportCtrl:           exportCtrl,
 		recurringTxnCtrl:     recurringTxnCtrl,
 		webhookCtrl:          webhookCtrl,
-		transactionLinkCtrl:  transactionLinkCtrl,
 		preferenceCtrl:       preferenceCtrl,
 		reconciliationCtrl:   reconciliationCtrl,
 		chartCtrl:            chartCtrl,
 		insightCtrl:          insightCtrl,
 		mfaCtrl:              mfaCtrl,
 		userCtrl:             userCtrl,
-		linkTypeCtrl:         linkTypeCtrl,
 		adminCtrl:            adminCtrl,
 		adminUserCtrl:        adminUserCtrl,
 		txnBulkCtrl:         txnBulkCtrl,
@@ -328,13 +322,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			webhooks.GET("/:id/deliveries", r.webhookCtrl.ListDeliveries)
 		}
 
-		transactionLinks := authenticated.Group("/transaction-links")
-		{
-			transactionLinks.POST("", r.transactionLinkCtrl.Create)
-			transactionLinks.GET("", r.transactionLinkCtrl.List)
-			transactionLinks.DELETE("/:id", r.transactionLinkCtrl.Delete)
-		}
-
 		preferences := authenticated.Group("/preferences")
 		{
 			preferences.GET("", r.preferenceCtrl.List)
@@ -392,16 +379,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			users.PUT("/:id/role", r.userCtrl.ChangeRole)
 			users.POST("/:id/lock", r.userCtrl.Lock)
 			users.POST("/:id/unlock", r.userCtrl.Unlock)
-		}
-
-		// Link type routes - 链接类型管理API
-		linkTypes := authenticated.Group("/link-types")
-		{
-			linkTypes.POST("", r.linkTypeCtrl.Create)
-			linkTypes.GET("", r.linkTypeCtrl.List)
-			linkTypes.GET("/:id", r.linkTypeCtrl.Get)
-			linkTypes.PUT("/:id", r.linkTypeCtrl.Update)
-			linkTypes.DELETE("/:id", r.linkTypeCtrl.Delete)
 		}
 
 		// Admin routes - 管理员API

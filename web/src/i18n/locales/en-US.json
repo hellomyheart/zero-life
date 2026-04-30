@@ -26,7 +26,6 @@
     "reconciliations": "Reconciliations",
     "settings": "Settings",
     "exchangeRates": "Exchange Rates",
-    "transactionLinks": "Transaction Links",
     "preferences": "Preferences",
     "cron": "Cron Jobs"
   },
@@ -523,19 +522,6 @@
     "language": "Language",
     "registeredAt": "Registered At",
     "langZhCN": "Chinese"
-  },
-  "transactionLink": {
-    "title": "Transaction Links",
-    "create": "Create Link",
-    "transaction": "Transaction ID",
-    "type": "Link Type",
-    "linkedJournal": "Linked Journal ID",
-    "transactionPlaceholder": "Enter transaction ID",
-    "linkedJournalPlaceholder": "Enter linked journal ID",
-    "deleteConfirm": "Are you sure you want to delete this link?",
-    "typeRolledBack": "Rolled Back",
-    "typeReconciled": "Reconciled",
-    "typeLinked": "Linked"
   },
   "preference": {
     "title": "Preferences",

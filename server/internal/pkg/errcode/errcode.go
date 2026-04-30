@@ -13,7 +13,6 @@
 //   - 9xxxx: 导入错误
 //   - 10xxxx: 定期交易错误
 //   - 11xxxx: Webhook错误
-//   - 13xxxx: 交易链接错误
 //   - 14xxxx: 偏好设置错误
 //   - 15xxxx: 对账错误
 //   - 16xxxx: MFA错误
@@ -98,10 +97,6 @@ var (
 	ErrWebhookURLInvalid     = &Error{Code: 110001, Message: "invalid webhook URL"}
 	ErrWebhookTriggerInvalid = &Error{Code: 110002, Message: "invalid webhook trigger"}
 	ErrWebhookDeliveryFail   = &Error{Code: 110003, Message: "webhook delivery failed"}
-
-	// 交易链接错误 13xxxx
-	ErrTransactionLinkInvalid = &Error{Code: 130001, Message: "invalid transaction link"}
-	ErrTransactionLinkExists  = &Error{Code: 130002, Message: "transaction link already exists"}
 
 	// 偏好设置错误 14xxxx
 	ErrPreferenceInvalid = &Error{Code: 140001, Message: "invalid preference key"}

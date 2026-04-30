@@ -125,8 +125,6 @@ func main() {
 		&model.Reconciliation{},
 		&model.TransactionReconciliation{},
 		&model.ReconciliationEntry{},
-		&model.LinkType{},
-		&model.TransactionJournalLink{},
 		&model.Preference{},
 		&model.Configuration{},
 		&model.BackupCode{},
@@ -167,8 +165,6 @@ func main() {
 	attachmentRepo := repository.NewAttachmentRepository(readDB, db)
 	webhookRepo := repository.NewWebhookRepository(readDB, db)
 	reconRepo := repository.NewReconciliationRepository(readDB, db)
-	linkTypeRepo := repository.NewLinkTypeRepository(readDB, db)
-	txnLinkRepo := repository.NewTransactionLinkRepository(readDB, db)
 	prefRepo := repository.NewPreferenceRepository(readDB, db)
 	rtRepo := repository.NewRecurringTransactionRepository(readDB, db)
 	configRepo := repository.NewConfigurationRepository(readDB, db)
@@ -197,8 +193,6 @@ func main() {
 	cronService := service.NewCronService(rtService, budgetService, db, logger)
 	reconService := service.NewReconciliationService(reconRepo, accountRepo, txnRepo)
 	txnBulkService := service.NewTransactionBulkService(txnRepo, accountRepo, db)
-	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
-	txnLinkService := service.NewTransactionLinkService(txnLinkRepo, txnRepo)
 	prefService := service.NewPreferenceService(prefRepo)
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
@@ -229,14 +223,12 @@ func main() {
 	exportCtrl := controller.NewExportController(exportService)
 	webhookCtrl := controller.NewWebhookController(webhookService)
 	reconCtrl := controller.NewReconciliationController(reconService)
-	txnLinkCtrl := controller.NewTransactionLinkController(txnLinkService)
 	prefCtrl := controller.NewPreferenceController(prefService)
 	rtCtrl := controller.NewRecurringTransactionController(rtService)
 	chartCtrl := controller.NewChartController(chartService)
 	insightCtrl := controller.NewInsightController(insightService)
 	mfaCtrl := controller.NewMFAController(mfaService)
 	userCtrl := controller.NewUserController(userService)
-	linkTypeCtrl := controller.NewLinkTypeController(linkTypeService)
 	adminService := service.NewAdminService(userRepo, configRepo)
 	adminCtrl := controller.NewAdminController(adminService)
 	adminUserCtrl := controller.NewAdminUserController(adminService)
@@ -271,14 +263,12 @@ func main() {
 		exportCtrl,
 		rtCtrl,
 		webhookCtrl,
-		txnLinkCtrl,
 		prefCtrl,
 		reconCtrl,
 		chartCtrl,
 		insightCtrl,
 		mfaCtrl,
 		userCtrl,
-		linkTypeCtrl,
 		adminCtrl,
 		adminUserCtrl,
 		txnBulkCtrl,

@@ -48,7 +48,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ## 关键约定
 
-- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=循环交易, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 13xxxx=交易链接, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA, 17xxxx=储蓄罐）
+- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=循环交易, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA, 17xxxx=储蓄罐）
 - **API 响应格式**：统一为 `{ "code": 0, "message": "success", "data": ... }`，通过 `controller.Success()` / `controller.Error()` 返回
 - **金额处理**：Go 用 `shopspring/decimal`，TS 用 `decimal.js` — 禁止用浮点数表示金额
 - **无测试套件**：前后端均未配置测试
@@ -612,8 +612,6 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 
 **`transaction_tags` 中间表**：复合主键 `(TransactionID, TagID)`
 
-**`transaction_journal_links` 表**：交易关联，字段 `TransactionID`、`LinkType`（related/reconciled/rolled_back）、`LinkedJournalID`
-
 ### API 端点
 
 **基础交易**（`/api/v1/transactions`）：
@@ -636,14 +634,6 @@ O(n) 两遍扫描，`Children` 使用 `[]*TagResp` 指针切片避免值副本�
 | `/transactions/bulk/delete` | POST | 批量删除 |
 | `/transactions/bulk/:id/convert` | POST | 类型转换 |
 | `/transactions/bulk/:id/clone` | POST | 克隆交易 |
-
-**交易关联**（`/api/v1/transaction-links`）：
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/transaction-links` | POST | 创建关联（验证两笔交易都属于当前用户） |
-| `/transaction-links` | GET | 关联列表 |
-| `/transaction-links/:id` | DELETE | 删除关联 |
 
 ### 余额计算 (`calculateBalanceChanges`)
 

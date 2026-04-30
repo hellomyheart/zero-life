@@ -26,7 +26,6 @@
     "reconciliations": "对账",
     "settings": "设置",
     "exchangeRates": "汇率",
-    "transactionLinks": "交易关联",
     "preferences": "偏好设置",
     "cron": "定时任务"
   },
@@ -523,19 +522,6 @@
     "language": "语言",
     "registeredAt": "注册时间",
     "langZhCN": "中文"
-  },
-  "transactionLink": {
-    "title": "交易关联管理",
-    "create": "新建关联",
-    "transaction": "交易 ID",
-    "type": "关联类型",
-    "linkedJournal": "关联交易日志 ID",
-    "transactionPlaceholder": "请输入交易 ID",
-    "linkedJournalPlaceholder": "请输入关联交易日志 ID",
-    "deleteConfirm": "确定要删除该关联吗？",
-    "typeRolledBack": "回滚",
-    "typeReconciled": "已对账",
-    "typeLinked": "已关联"
   },
   "preference": {
     "title": "偏好设置管理",

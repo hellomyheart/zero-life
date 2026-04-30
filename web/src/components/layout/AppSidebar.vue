@@ -177,12 +177,6 @@ function handleSelect(index: string) {
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- 交易关联 -->
-      <el-menu-item index="/transaction-links">
-        <el-icon><Link /></el-icon>
-        <template #title>{{ t('transactionLink.title') }}</template>
-      </el-menu-item>
-
       <!-- 定时任务 -->
       <el-menu-item index="/cron">
         <el-icon><Timer /></el-icon>
