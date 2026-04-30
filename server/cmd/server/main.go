@@ -192,7 +192,7 @@ func main() {
 	reportService := service.NewReportService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	dashboardService := service.NewDashboardService(txnRepo, accountRepo, budgetRepo, rtRepo, categoryRepo)
 	importService := service.NewImportService(txnService, accountRepo, db)
-	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo)
+	piggyBankService := service.NewPiggyBankService(piggyBankRepo, accountRepo, db)
 	attachmentService := service.NewAttachmentService(attachmentRepo, attachPath)
 	exportService := service.NewExportService(txnRepo, accountRepo, rtRepo, budgetRepo, categoryRepo, tagRepo, piggyBankRepo, ruleRepo)
 	rtService := service.NewRecurringTransactionService(rtRepo, txnRepo, txnService, accountRepo, db)

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/hellomyheart/zero-life/server/internal/model"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -22,9 +23,6 @@ func (r *PiggyBankRepository) GetByID(id, userID uint64) (*model.PiggyBank, erro
 	var piggyBank model.PiggyBank
 	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).
 		Preload("Account").
-		Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at DESC")
-		}).
 		First(&piggyBank).Error; err != nil {
 		return nil, err
 	}
@@ -35,7 +33,7 @@ func (r *PiggyBankRepository) List(userID uint64) ([]model.PiggyBank, error) {
 	var piggyBanks []model.PiggyBank
 	if err := r.readDB.Where("user_id = ?", userID).
 		Preload("Account").
-		Order("name ASC").Find(&piggyBanks).Error; err != nil {
+		Order("`order` ASC, name ASC").Find(&piggyBanks).Error; err != nil {
 		return nil, err
 	}
 	return piggyBanks, nil
@@ -43,6 +41,10 @@ func (r *PiggyBankRepository) List(userID uint64) ([]model.PiggyBank, error) {
 
 func (r *PiggyBankRepository) Update(piggyBank *model.PiggyBank) error {
 	return r.writeDB.Save(piggyBank).Error
+}
+
+func (r *PiggyBankRepository) UpdateWithDB(db *gorm.DB, piggyBank *model.PiggyBank) error {
+	return db.Save(piggyBank).Error
 }
 
 func (r *PiggyBankRepository) Delete(id, userID uint64) error {
@@ -59,6 +61,10 @@ func (r *PiggyBankRepository) Delete(id, userID uint64) error {
 
 func (r *PiggyBankRepository) CreateEvent(event *model.PiggyEvent) error {
 	return r.writeDB.Create(event).Error
+}
+
+func (r *PiggyBankRepository) CreateEventWithDB(db *gorm.DB, event *model.PiggyEvent) error {
+	return db.Create(event).Error
 }
 
 func (r *PiggyBankRepository) ListEvents(piggyBankID uint64) ([]model.PiggyEvent, error) {
@@ -83,4 +89,34 @@ func (r *PiggyBankRepository) Reorder(userID uint64, orders map[uint64]int) erro
 
 func (r *PiggyBankRepository) DeleteEvents(piggyBankID uint64) error {
 	return r.writeDB.Where("piggy_bank_id = ?", piggyBankID).Delete(&model.PiggyEvent{}).Error
+}
+
+func (r *PiggyBankRepository) DeleteEventsWithDB(db *gorm.DB, piggyBankID uint64) error {
+	return db.Where("piggy_bank_id = ?", piggyBankID).Delete(&model.PiggyEvent{}).Error
+}
+
+func (r *PiggyBankRepository) AddAmountWithDB(db *gorm.DB, id, userID uint64, amount, targetAmount decimal.Decimal) (bool, error) {
+	result := db.Model(&model.PiggyBank{}).
+		Where("id = ? AND user_id = ? AND current_amount + ? <= target_amount", id, userID, amount).
+		Update("current_amount", gorm.Expr("current_amount + ?", amount))
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected > 0, nil
+}
+
+func (r *PiggyBankRepository) RemoveAmountWithDB(db *gorm.DB, id, userID uint64, amount decimal.Decimal) (bool, error) {
+	result := db.Model(&model.PiggyBank{}).
+		Where("id = ? AND user_id = ? AND current_amount >= ?", id, userID, amount).
+		Update("current_amount", gorm.Expr("current_amount - ?", amount))
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected > 0, nil
+}
+
+func (r *PiggyBankRepository) ResetAmountWithDB(db *gorm.DB, id, userID uint64) error {
+	return db.Model(&model.PiggyBank{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Update("current_amount", decimal.Zero).Error
 }

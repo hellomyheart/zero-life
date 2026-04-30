@@ -1,42 +1,35 @@
 <script setup lang="ts">
-// 存钱罐列表页面 - 展示储蓄目标和进度支持存取款
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { list, create, update, remove, addAmount, removeAmount } from '@/api/piggyBank'
 import { formatAmount, formatDate } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
-import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq } from '@/types/piggyBank'
-import Pagination from '@/components/common/Pagination.vue'
+import type { PiggyBank, CreatePiggyBankReq, UpdatePiggyBankReq, AddAmountReq, RemoveAmountReq } from '@/types/piggyBank'
+import { AccountType } from '@/types/account'
+import Decimal from 'decimal.js'
 
 const { t } = useI18n()
-// 账户状态管理 - 用于获取账户下拉选项
+const router = useRouter()
 const accountStore = useAccountStore()
 
-/** 存钱罐列表数据 */
 const piggyBanks = ref<PiggyBank[]>([])
-/** 加载状态 */
 const loading = ref(false)
-/** 对话框显示状态 */
 const dialogVisible = ref(false)
-/** 对话框标题 */
 const dialogTitle = ref('')
-/** 当前编辑的存钱罐 ID，null表示新建 */
 const editingId = ref<number | null>(null)
-/** 存取款对话框显示状态 */
 const amountDialogVisible = ref(false)
-/** 存取款对话框标题 */
 const amountDialogTitle = ref('')
-/** 存取款对话框类型：add=存入, remove=取出 */
 const amountDialogType = ref<'add' | 'remove'>('add')
-/** 当前操作的存钱罐 ID */
 const amountDialogId = ref<number>(0)
-/** 存取款表单数据 */
+const amountDialogMaxAmount = ref('0')
 const amountForm = ref<AddAmountReq>({ amount: '0', note: '' })
-/** 分页参数 - page: 当前页码, page_size: 每页数量, total: 总记录数 */
-const pagination = reactive({ page: 1, page_size: 20, total: 0 })
 
-/** 存钱罐创建/编辑表单数据 */
+const assetAccounts = computed(() =>
+  accountStore.accounts.filter(a => a.type === AccountType.Asset)
+)
+
 const form = ref<CreatePiggyBankReq>({
   name: '',
   account_id: 0,
@@ -45,47 +38,18 @@ const form = ref<CreatePiggyBankReq>({
   notes: '',
 })
 
-/**
- * 获取存钱罐列表
- * 传入分页参数，从后端获取当前页的数据和总记录数
- */
 async function fetchPiggyBanks() {
   loading.value = true
   try {
     const res = await list()
-    const data = res as unknown as PiggyBank[]
-    piggyBanks.value = data
-    pagination.total = data.length
+    piggyBanks.value = res as unknown as PiggyBank[]
   } catch {
-    ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    ElMessage.error(t('common.fetchError'))
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 页码变化处理函数
- * @param page 新的页码
- */
-function handlePageChange(page: number) {
-  pagination.page = page
-  fetchPiggyBanks()
-}
-
-/**
- * 每页数量变化处理函数
- * @param size 新的每页数量
- */
-function handleSizeChange(size: number) {
-  pagination.page_size = size
-  pagination.page = 1
-  fetchPiggyBanks()
-}
-
-/**
- * 打开创建存钱罐对话框
- * 初始化表单为空值
- */
 function handleCreate() {
   dialogTitle.value = t('piggyBank.create')
   editingId.value = null
@@ -93,28 +57,14 @@ function handleCreate() {
   dialogVisible.value = true
 }
 
-/**
- * 打开编辑存钱罐对话框
- * @param row 选中的存钱罐数据
- */
 function handleEdit(row: PiggyBank) {
-  dialogTitle.value = t('piggyBank.edit')
-  editingId.value = row.id
-  form.value = {
-    name: row.name,
-    account_id: row.account_id,
-    target_amount: row.target_amount,
-    target_date: row.target_date,
-    notes: row.notes,
-  }
-  dialogVisible.value = true
+  router.push(`/piggy-banks/${row.id}`)
 }
 
-/**
- * 删除存钱罐
- * 弹出确认框后调用API删除
- * @param id 存钱罐ID
- */
+function handleRowClick(row: PiggyBank) {
+  router.push(`/piggy-banks/${row.id}`)
+}
+
 async function handleDelete(id: number) {
   try {
     await ElMessageBox.confirm(t('piggyBank.deleteConfirm'), t('common.confirm'), { type: 'warning' })
@@ -122,19 +72,25 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchPiggyBanks()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if ((err as string) !== 'cancel') ElMessage.error(t('common.failed'))
   }
 }
 
-/**
- * 提交创建/编辑表单
- * 根据editingId判断是创建还是更新操作
- */
 async function handleSubmit() {
   if (!form.value.name) {
     ElMessage.warning(t('common.required'))
     return
   }
+  if (!form.value.account_id) {
+    ElMessage.warning(t('piggyBank.accountRequired'))
+    return
+  }
+  const amount = new Decimal(form.value.target_amount)
+  if (!amount.isPositive()) {
+    ElMessage.warning(t('piggyBank.amountPositive'))
+    return
+  }
+
   try {
     if (editingId.value) {
       await update(editingId.value, form.value as UpdatePiggyBankReq)
@@ -149,40 +105,43 @@ async function handleSubmit() {
   }
 }
 
-/**
- * 打开存入金额对话框
- * @param row 选中的存钱罐数据
- */
 function handleAddMoney(row: PiggyBank) {
   amountDialogTitle.value = t('piggyBank.addMoney')
   amountDialogType.value = 'add'
   amountDialogId.value = row.id
+  const target = new Decimal(row.target_amount)
+  const current = new Decimal(row.current_amount)
+  amountDialogMaxAmount.value = target.minus(current).toString()
   amountForm.value = { amount: '0', note: '' }
   amountDialogVisible.value = true
 }
 
-/**
- * 打开取出金额对话框
- * @param row 选中的存钱罐数据
- */
 function handleRemoveMoney(row: PiggyBank) {
   amountDialogTitle.value = t('piggyBank.removeMoney')
   amountDialogType.value = 'remove'
   amountDialogId.value = row.id
+  amountDialogMaxAmount.value = row.current_amount
   amountForm.value = { amount: '0', note: '' }
   amountDialogVisible.value = true
 }
 
-/**
- * 提交存取款操作
- * 根据amountDialogType判断是存入还是取出，调用对应API
- */
 async function handleAmountSubmit() {
+  const amount = new Decimal(amountForm.value.amount)
+  if (!amount.isPositive()) {
+    ElMessage.warning(t('piggyBank.amountPositive'))
+    return
+  }
+  const max = new Decimal(amountDialogMaxAmount.value)
+  if (amount.greaterThan(max)) {
+    ElMessage.warning(amountDialogType.value === 'add' ? t('piggyBank.overDeposit') : t('piggyBank.overWithdraw'))
+    return
+  }
+
   try {
     if (amountDialogType.value === 'add') {
       await addAmount(amountDialogId.value, amountForm.value)
     } else {
-      await removeAmount(amountDialogId.value, amountForm.value)
+      await removeAmount(amountDialogId.value, amountForm.value as RemoveAmountReq)
     }
     ElMessage.success(t('common.success'))
     amountDialogVisible.value = false
@@ -192,8 +151,13 @@ async function handleAmountSubmit() {
   }
 }
 
+function progressStatus(percentage: number): '' | 'success' | 'warning' | 'exception' {
+  if (percentage >= 100) return 'success'
+  if (percentage >= 80) return 'warning'
+  return ''
+}
+
 onMounted(async () => {
-  // 打开页面时加载账户列表，供下拉选择使用
   await accountStore.fetchAccounts()
   await fetchPiggyBanks()
 })
@@ -206,53 +170,47 @@ onMounted(async () => {
       <el-button type="primary" @click="handleCreate">{{ t('piggyBank.create') }}</el-button>
     </div>
 
-    <el-table :data="piggyBanks" v-loading="loading" stripe>
-      <el-table-column prop="name" :label="t('piggyBank.name')" />
-      <el-table-column prop="target_amount" :label="t('piggyBank.targetAmount')" width="140">
+    <el-table :data="piggyBanks" v-loading="loading" stripe @row-click="handleRowClick" class="clickable-table">
+      <el-table-column prop="name" :label="t('piggyBank.name')" min-width="120" />
+      <el-table-column :label="t('piggyBank.account')" width="130" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.account?.name || '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="target_amount" :label="t('piggyBank.targetAmount')" width="140" align="right">
         <template #default="{ row }">{{ formatAmount(row.target_amount) }}</template>
       </el-table-column>
-      <el-table-column prop="current_amount" :label="t('piggyBank.currentAmount')" width="140">
+      <el-table-column prop="current_amount" :label="t('piggyBank.currentAmount')" width="140" align="right">
         <template #default="{ row }">{{ formatAmount(row.current_amount) }}</template>
       </el-table-column>
       <el-table-column :label="t('piggyBank.percentage')" width="180">
         <template #default="{ row }">
-          <el-progress :percentage="row.percentage || 0" :stroke-width="18" />
+          <el-progress :percentage="Math.round(row.percentage || 0)" :stroke-width="18" :status="progressStatus(row.percentage)" />
         </template>
       </el-table-column>
       <el-table-column prop="target_date" :label="t('piggyBank.targetDate')" width="120">
-        <template #default="{ row }">{{ row.target_date ? formatDate(row.target_date) : '-' }}</template>
+        <template #default="{ row }">{{ row.target_date ? formatDate(row.target_date, 'YYYY-MM-DD') : '-' }}</template>
       </el-table-column>
       <el-table-column :label="t('common.edit')" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button link type="success" @click="handleAddMoney(row)">{{ t('piggyBank.addMoney') }}</el-button>
-          <el-button link type="warning" @click="handleRemoveMoney(row)">{{ t('piggyBank.removeMoney') }}</el-button>
-          <el-button link type="primary" @click="handleEdit(row)">{{ t('common.edit') }}</el-button>
-          <el-button link type="danger" @click="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
+          <el-button link type="success" @click.stop="handleAddMoney(row)">{{ t('piggyBank.addMoney') }}</el-button>
+          <el-button link type="warning" @click.stop="handleRemoveMoney(row)">{{ t('piggyBank.removeMoney') }}</el-button>
+          <el-button link type="primary" @click.stop="handleEdit(row)">{{ t('common.edit') }}</el-button>
+          <el-button link type="danger" @click.stop="handleDelete(row.id)">{{ t('common.delete') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
-
-    <Pagination
-      :total="pagination.total"
-      :page="pagination.page"
-      :page-size="pagination.page_size"
-      @update:page="handlePageChange"
-      @update:page-size="handleSizeChange"
-    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item :label="t('piggyBank.name')">
           <el-input v-model="form.name" />
         </el-form-item>
-        <!-- 账户选择下拉框 - 选择存钱罐关联的账户 -->
-        <el-form-item :label="t('transaction.sourceAccount')">
-          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable clearable>
-            <el-option v-for="acc in accountStore.accounts" :key="acc.id" :label="acc.name" :value="acc.id" />
+        <el-form-item :label="t('piggyBank.account')">
+          <el-select v-model="form.account_id" :placeholder="t('common.selectPlaceholder')" filterable>
+            <el-option v-for="acc in assetAccounts" :key="acc.id" :label="acc.name" :value="acc.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('piggyBank.targetAmount')">
-          <el-input v-model="form.target_amount" />
+          <el-input v-model="form.target_amount" type="number" step="0.01" min="0" />
         </el-form-item>
         <el-form-item :label="t('piggyBank.targetDate')">
           <el-date-picker v-model="form.target_date" type="date" value-format="YYYY-MM-DD" />
@@ -270,7 +228,10 @@ onMounted(async () => {
     <el-dialog v-model="amountDialogVisible" :title="amountDialogTitle" width="400px">
       <el-form :model="amountForm" label-width="80px">
         <el-form-item :label="t('piggyBank.amount')">
-          <el-input v-model="amountForm.amount" />
+          <el-input v-model="amountForm.amount" type="number" step="0.01" min="0" />
+        </el-form-item>
+        <el-form-item :label="t('piggyBank.maxAllowed')">
+          <span class="hint-text">{{ formatAmount(amountDialogMaxAmount) }}</span>
         </el-form-item>
         <el-form-item :label="t('piggyBank.notes')">
           <el-input v-model="amountForm.note" />
@@ -294,5 +255,14 @@ onMounted(async () => {
 
 .page-header h2 {
   margin: 0;
+}
+
+.clickable-table :deep(.el-table__row) {
+  cursor: pointer;
+}
+
+.hint-text {
+  color: var(--app-text-secondary);
+  font-size: 13px;
 }
 </style>

@@ -1,5 +1,3 @@
-// Package service 业务逻辑层，实现核心业务逻辑
-// PiggyBankService 存钱罐业务逻辑，处理储蓄目标、存取和进度计算
 package service
 
 import (
@@ -14,31 +12,31 @@ import (
 	"gorm.io/gorm"
 )
 
-// PiggyBankService 存钱罐服务
-// 负责处理储蓄目标的创建、存取款、进度计算和事件记录
-// 依赖piggyBankRepo进行存钱罐数据访问，依赖accountRepo验证关联账户
 type PiggyBankService struct {
-	piggyBankRepo *repository.PiggyBankRepository // 存钱罐数据访问对象
-	accountRepo   *repository.AccountRepository   // 账户数据访问对象
+	piggyBankRepo *repository.PiggyBankRepository
+	accountRepo   *repository.AccountRepository
+	db            *gorm.DB
 }
 
-// NewPiggyBankService 创建存钱罐服务实例
-func NewPiggyBankService(piggyBankRepo *repository.PiggyBankRepository, accountRepo *repository.AccountRepository) *PiggyBankService {
-	return &PiggyBankService{piggyBankRepo: piggyBankRepo, accountRepo: accountRepo}
+func NewPiggyBankService(piggyBankRepo *repository.PiggyBankRepository, accountRepo *repository.AccountRepository, db *gorm.DB) *PiggyBankService {
+	return &PiggyBankService{piggyBankRepo: piggyBankRepo, accountRepo: accountRepo, db: db}
 }
 
-// Create 创建存钱罐
-// 设置目标金额和可选的目标日期，初始当前金额为0
-// 参数：
-//   - userID: 用户ID
-//   - req: 创建请求参数（名称、目标金额、目标日期、关联账户、备注）
-// 返回：
-//   - *response.PiggyBankResp: 创建成功的存钱罐信息（含完成百分比）
-//   - error: 错误信息
 func (s *PiggyBankService) Create(userID uint64, req *request.CreatePiggyBankReq) (*response.PiggyBankResp, error) {
 	targetAmount, err := decimal.NewFromString(req.TargetAmount)
 	if err != nil || !targetAmount.IsPositive() {
-		return nil, errcode.ErrBadRequest
+		return nil, errcode.ErrPiggyBankAmountInvalid
+	}
+
+	account, err := s.accountRepo.GetByID(req.AccountID, userID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errcode.ErrPiggyBankAccountInvalid
+		}
+		return nil, errcode.ErrInternal
+	}
+	if account.Type != model.AccountTypeAsset {
+		return nil, errcode.ErrPiggyBankAccountInvalid
 	}
 
 	piggyBank := &model.PiggyBank{
@@ -70,30 +68,17 @@ func (s *PiggyBankService) Create(userID uint64, req *request.CreatePiggyBankReq
 	return s.toResp(created), nil
 }
 
-// Get 获取单个存钱罐详情
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-// 返回：
-//   - *response.PiggyBankResp: 存钱罐信息（含完成百分比）
-//   - error: 错误信息
 func (s *PiggyBankService) Get(userID, id uint64) (*response.PiggyBankResp, error) {
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
 	return s.toResp(piggyBank), nil
 }
 
-// List 获取用户所有存钱罐列表
-// 参数：
-//   - userID: 用户ID
-// 返回：
-//   - []response.PiggyBankResp: 存钱罐列表
-//   - error: 错误信息
 func (s *PiggyBankService) List(userID uint64) ([]response.PiggyBankResp, error) {
 	piggyBanks, err := s.piggyBankRepo.List(userID)
 	if err != nil {
@@ -107,20 +92,11 @@ func (s *PiggyBankService) List(userID uint64) ([]response.PiggyBankResp, error)
 	return items, nil
 }
 
-// Update 更新存钱罐信息
-// 支持更新名称、目标金额、目标日期、备注
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-//   - req: 更新请求参数
-// 返回：
-//   - *response.PiggyBankResp: 更新后的存钱罐信息
-//   - error: 错误信息
 func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBankReq) (*response.PiggyBankResp, error) {
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
@@ -131,7 +107,10 @@ func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBan
 	if req.TargetAmount != nil {
 		ta, err := decimal.NewFromString(*req.TargetAmount)
 		if err != nil || !ta.IsPositive() {
-			return nil, errcode.ErrBadRequest
+			return nil, errcode.ErrPiggyBankAmountInvalid
+		}
+		if ta.LessThan(piggyBank.CurrentAmount) {
+			return nil, errcode.ErrPiggyBankTargetTooSmall
 		}
 		piggyBank.TargetAmount = ta
 	}
@@ -145,6 +124,9 @@ func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBan
 	if req.Notes != "" {
 		piggyBank.Notes = req.Notes
 	}
+	if req.ClearNotes {
+		piggyBank.Notes = ""
+	}
 
 	if err := s.piggyBankRepo.Update(piggyBank); err != nil {
 		return nil, errcode.ErrInternal
@@ -157,133 +139,112 @@ func (s *PiggyBankService) Update(userID, id uint64, req *request.UpdatePiggyBan
 	return s.toResp(updated), nil
 }
 
-// Delete 删除存钱罐
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-// 返回：
-//   - error: 错误信息
 func (s *PiggyBankService) Delete(userID, id uint64) error {
 	_, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return errcode.ErrNotFound
+			return errcode.ErrPiggyBankNotFound
 		}
 		return errcode.ErrInternal
 	}
 	return s.piggyBankRepo.Delete(id, userID)
 }
 
-// AddAmount 向存钱罐存入金额
-// 业务规则：存入后当前金额不能超过目标金额
-// 同时创建一条存入事件记录
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-//   - req: 存入请求参数（金额、备注）
-// 返回：
-//   - *response.PiggyBankResp: 更新后的存钱罐信息
-//   - error: 错误信息
 func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountReq) (*response.PiggyBankResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || !amount.IsPositive() {
-		return nil, errcode.ErrBadRequest
+		return nil, errcode.ErrPiggyBankAmountInvalid
 	}
 
 	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
 
-	// 业务规则：存入后当前金额不能超过目标金额（防止超额存入）
-	newAmount := piggyBank.CurrentAmount.Add(amount)
-	if newAmount.GreaterThan(piggyBank.TargetAmount) {
-		return nil, errcode.ErrBadRequest
-	}
+	var updated *model.PiggyBank
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		ok, err := s.piggyBankRepo.AddAmountWithDB(dbTx, id, userID, amount, piggyBank.TargetAmount)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errcode.ErrPiggyBankOverDeposit
+		}
 
-	piggyBank.CurrentAmount = newAmount
-	if err := s.piggyBankRepo.Update(piggyBank); err != nil {
+		event := &model.PiggyEvent{
+			PiggyBankID: id,
+			Amount:      amount,
+			Note:        req.Note,
+		}
+		if err := s.piggyBankRepo.CreateEventWithDB(dbTx, event); err != nil {
+			return err
+		}
+
+		updated, _ = s.piggyBankRepo.GetByID(id, userID)
+		return nil
+	}); err != nil {
+		if err == errcode.ErrPiggyBankOverDeposit {
+			return nil, err
+		}
 		return nil, errcode.ErrInternal
 	}
 
-	// 创建存入事件记录（正数金额）
-	event := &model.PiggyEvent{
-		PiggyBankID: id,
-		Amount:      amount,
-		Note:        req.Note,
-	}
-	if err := s.piggyBankRepo.CreateEvent(event); err != nil {
-		return nil, errcode.ErrInternal
-	}
-
-	updated, _ := s.piggyBankRepo.GetByID(id, userID)
 	return s.toResp(updated), nil
 }
 
-// RemoveAmount 从存钱罐取出金额
-// 业务规则：取出金额不能超过当前已存金额
-// 同时创建一条取出事件记录（金额为负值）
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-//   - req: 取出请求参数（金额、备注）
-// 返回：
-//   - *response.PiggyBankResp: 更新后的存钱罐信息
-//   - error: 错误信息
 func (s *PiggyBankService) RemoveAmount(userID, id uint64, req *request.RemoveAmountReq) (*response.PiggyBankResp, error) {
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil || !amount.IsPositive() {
-		return nil, errcode.ErrBadRequest
+		return nil, errcode.ErrPiggyBankAmountInvalid
 	}
 
-	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
+	_, err = s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
 
-	// 业务规则：取出金额不能超过当前已存金额（防止超额取出）
-	// 业务规则：取出金额不能超过当前已存金额（防止超额取出）
-	if amount.GreaterThan(piggyBank.CurrentAmount) {
-		return nil, errcode.ErrBadRequest
-	}
+	var updated *model.PiggyBank
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		ok, err := s.piggyBankRepo.RemoveAmountWithDB(dbTx, id, userID, amount)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errcode.ErrPiggyBankOverWithdraw
+		}
 
-	piggyBank.CurrentAmount = piggyBank.CurrentAmount.Sub(amount)
-	if err := s.piggyBankRepo.Update(piggyBank); err != nil {
+		event := &model.PiggyEvent{
+			PiggyBankID: id,
+			Amount:      amount.Neg(),
+			Note:        req.Note,
+		}
+		if err := s.piggyBankRepo.CreateEventWithDB(dbTx, event); err != nil {
+			return err
+		}
+
+		updated, _ = s.piggyBankRepo.GetByID(id, userID)
+		return nil
+	}); err != nil {
+		if err == errcode.ErrPiggyBankOverWithdraw {
+			return nil, err
+		}
 		return nil, errcode.ErrInternal
 	}
 
-	// 创建取出事件记录（负数金额，使用Neg()将正数转为负数）
-	event := &model.PiggyEvent{
-		PiggyBankID: id,
-		Amount:      amount.Neg(),
-		Note:        req.Note,
-	}
-	if err := s.piggyBankRepo.CreateEvent(event); err != nil {
-		return nil, errcode.ErrInternal
-	}
-
-	updated, _ := s.piggyBankRepo.GetByID(id, userID)
 	return s.toResp(updated), nil
 }
 
-// GetEvents 获取存钱罐的事件记录列表（存入/取出历史）
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-// 返回：
-//   - []response.PiggyEventResp: 事件列表
-//   - error: 错误信息
 func (s *PiggyBankService) GetEvents(userID, id uint64) ([]response.PiggyEventResp, error) {
 	_, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
@@ -307,8 +268,6 @@ func (s *PiggyBankService) GetEvents(userID, id uint64) ([]response.PiggyEventRe
 	return items, nil
 }
 
-// toResp 将存钱罐模型转换为响应对象
-// 自动计算完成百分比（当前金额/目标金额*100，上限100%）
 func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 	percentage := decimal.Zero
 	if pb.TargetAmount.IsPositive() {
@@ -325,12 +284,18 @@ func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 		targetDate = &td
 	}
 
+	var accountResp *response.AccountResp
+	if pb.Account.ID > 0 {
+		accountResp = accountModelToResp(&pb.Account)
+	}
+
 	return &response.PiggyBankResp{
 		ID:            pb.ID,
 		Name:          pb.Name,
 		TargetAmount:  pb.TargetAmount.StringFixed(4),
 		CurrentAmount: pb.CurrentAmount.StringFixed(4),
 		AccountID:     pb.AccountID,
+		Account:       accountResp,
 		TargetDate:    targetDate,
 		Notes:         pb.Notes,
 		Percentage:    pct,
@@ -339,41 +304,28 @@ func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 	}
 }
 
-// Reorder 批量更新存钱罐的排序顺序
-// 参数：
-//   - userID: 用户ID
-//   - orders: 存钱罐ID到排序值的映射
-// 返回：
-//   - error: 错误信息
 func (s *PiggyBankService) Reorder(userID uint64, orders map[uint64]int) error {
 	return s.piggyBankRepo.Reorder(userID, orders)
 }
 
-// ResetHistory 重置存钱罐历史
-// 删除所有存取事件记录，将当前金额重置为0
-// 参数：
-//   - userID: 用户ID
-//   - id: 存钱罐ID
-// 返回：
-//   - *response.PiggyBankResp: 重置后的存钱罐信息
-//   - error: 错误信息
 func (s *PiggyBankService) ResetHistory(userID, id uint64) (*response.PiggyBankResp, error) {
-	piggyBank, err := s.piggyBankRepo.GetByID(id, userID)
+	_, err := s.piggyBankRepo.GetByID(id, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errcode.ErrNotFound
+			return nil, errcode.ErrPiggyBankNotFound
 		}
 		return nil, errcode.ErrInternal
 	}
 
-	// Delete all events
-	if err := s.piggyBankRepo.DeleteEvents(id); err != nil {
-		return nil, errcode.ErrInternal
-	}
-
-	// Reset current amount to zero
-	piggyBank.CurrentAmount = decimal.Zero
-	if err := s.piggyBankRepo.Update(piggyBank); err != nil {
+	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := s.piggyBankRepo.ResetAmountWithDB(dbTx, id, userID); err != nil {
+			return err
+		}
+		if err := s.piggyBankRepo.DeleteEventsWithDB(dbTx, id); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return nil, errcode.ErrInternal
 	}
 

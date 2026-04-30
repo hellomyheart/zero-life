@@ -397,7 +397,17 @@
     "account": "关联账户",
     "events": "存取记录",
     "resetHistory": "重置历史",
-    "reorder": "重新排序"
+    "reorder": "重新排序",
+    "remaining": "剩余金额",
+    "info": "基本信息",
+    "maxAdd": "可存入上限",
+    "maxRemove": "可取出上限",
+    "maxAllowed": "最大额度",
+    "amountPositive": "金额必须为正数",
+    "overDeposit": "存入金额将超过目标金额",
+    "overWithdraw": "取出金额超过当前金额",
+    "accountRequired": "请选择关联账户",
+    "resetConfirm": "确定要重置该储蓄罐的历史记录吗？当前金额将归零，所有存取记录将被清除。"
   },
   "recurringTransaction": {
     "title": "定期交易",

@@ -118,6 +118,14 @@ var (
 	ErrMFAInvalidCode     = &Error{Code: 160003, Message: "invalid MFA code"}
 	ErrMFANotEnabled      = &Error{Code: 160004, Message: "MFA is not enabled"}
 	ErrMFAInvalidToken    = &Error{Code: 160005, Message: "invalid MFA token"}
+
+	// 储蓄罐错误 17xxxx
+	ErrPiggyBankAmountInvalid  = &Error{Code: 170001, Message: "piggy bank target amount must be greater than zero"}
+	ErrPiggyBankOverDeposit    = &Error{Code: 170002, Message: "deposit would exceed target amount"}
+	ErrPiggyBankOverWithdraw   = &Error{Code: 170003, Message: "withdrawal exceeds current amount"}
+	ErrPiggyBankTargetTooSmall = &Error{Code: 170004, Message: "target amount cannot be less than current amount"}
+	ErrPiggyBankAccountInvalid = &Error{Code: 170005, Message: "associated account must be an asset account owned by the user"}
+	ErrPiggyBankNotFound       = &Error{Code: 170006, Message: "piggy bank not found"}
 )
 
 // WithMessage 创建具有自定义消息的错误

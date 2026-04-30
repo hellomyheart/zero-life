@@ -136,6 +136,12 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/piggy-banks/:id',
+    name: 'PiggyBankDetail',
+    component: () => import('@/pages/piggyBanks/PiggyBankDetailPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/recurring-transactions',
     name: 'RecurringTransactionList',
     component: () => import('@/pages/recurringTransactions/RecurringTransactionListPage.vue'),

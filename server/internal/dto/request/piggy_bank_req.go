@@ -14,8 +14,9 @@ type CreatePiggyBankReq struct {
 type UpdatePiggyBankReq struct {
 	Name         string  `json:"name"`          // 存钱罐名称
 	TargetAmount *string `json:"target_amount"` // 目标金额
-	TargetDate   *string `json:"target_date"`    // 目标达成日期
-	Notes        string  `json:"notes"`          // 备注
+	TargetDate   *string `json:"target_date"`   // 目标达成日期
+	Notes        string  `json:"notes"`         // 备注
+	ClearNotes   bool    `json:"clear_notes"`   // 是否清空备注
 }
 
 // AddAmountReq 存入金额请求
