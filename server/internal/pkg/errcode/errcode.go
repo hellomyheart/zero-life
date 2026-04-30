@@ -126,6 +126,7 @@ var (
 	ErrPiggyBankTargetTooSmall = &Error{Code: 170004, Message: "target amount cannot be less than current amount"}
 	ErrPiggyBankAccountInvalid = &Error{Code: 170005, Message: "associated account must be an asset account owned by the user"}
 	ErrPiggyBankNotFound       = &Error{Code: 170006, Message: "piggy bank not found"}
+	ErrPiggyBankAccountInsufficient = &Error{Code: 170007, Message: "associated account balance is insufficient for this deposit"}
 )
 
 // WithMessage 创建具有自定义消息的错误

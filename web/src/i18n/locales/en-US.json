@@ -406,6 +406,7 @@
     "amountPositive": "Amount must be positive",
     "overDeposit": "Deposit would exceed target amount",
     "overWithdraw": "Withdrawal exceeds current amount",
+    "accountInsufficient": "Associated account balance is insufficient for this deposit",
     "accountRequired": "Please select an account",
     "resetConfirm": "Are you sure you want to reset this piggy bank's history? The current amount will be set to zero and all events will be deleted."
   },

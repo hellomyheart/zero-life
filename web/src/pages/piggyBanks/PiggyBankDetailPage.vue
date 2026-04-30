@@ -29,9 +29,7 @@ const editForm = ref<UpdatePiggyBankReq>({})
 
 const maxAddAmount = computed(() => {
   if (!piggyBank.value) return '0'
-  const target = new Decimal(piggyBank.value.target_amount)
-  const current = new Decimal(piggyBank.value.current_amount)
-  return target.minus(current).toString()
+  return piggyBank.value.available_deposit || '0'
 })
 
 function formatEventAmount(event: PiggyEvent): string {

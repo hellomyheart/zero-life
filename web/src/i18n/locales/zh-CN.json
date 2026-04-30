@@ -406,6 +406,7 @@
     "amountPositive": "金额必须为正数",
     "overDeposit": "存入金额将超过目标金额",
     "overWithdraw": "取出金额超过当前金额",
+    "accountInsufficient": "关联账户余额不足以存入该金额",
     "accountRequired": "请选择关联账户",
     "resetConfirm": "确定要重置该储蓄罐的历史记录吗？当前金额将归零，所有存取记录将被清除。"
   },

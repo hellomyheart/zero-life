@@ -120,3 +120,17 @@ func (r *PiggyBankRepository) ResetAmountWithDB(db *gorm.DB, id, userID uint64) 
 		Where("id = ? AND user_id = ?", id, userID).
 		Update("current_amount", decimal.Zero).Error
 }
+
+func (r *PiggyBankRepository) SumCurrentAmountByAccount(accountID, userID uint64) (decimal.Decimal, error) {
+	var sum *decimal.Decimal
+	if err := r.readDB.Model(&model.PiggyBank{}).
+		Select("COALESCE(SUM(current_amount), 0)").
+		Where("account_id = ? AND user_id = ?", accountID, userID).
+		Scan(&sum).Error; err != nil {
+		return decimal.Zero, err
+	}
+	if sum == nil {
+		return decimal.Zero, nil
+	}
+	return *sum, nil
+}

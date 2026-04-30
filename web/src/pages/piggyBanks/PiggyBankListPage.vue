@@ -109,9 +109,7 @@ function handleAddMoney(row: PiggyBank) {
   amountDialogTitle.value = t('piggyBank.addMoney')
   amountDialogType.value = 'add'
   amountDialogId.value = row.id
-  const target = new Decimal(row.target_amount)
-  const current = new Decimal(row.current_amount)
-  amountDialogMaxAmount.value = target.minus(current).toString()
+  amountDialogMaxAmount.value = row.available_deposit || '0'
   amountForm.value = { amount: '0', note: '' }
   amountDialogVisible.value = true
 }

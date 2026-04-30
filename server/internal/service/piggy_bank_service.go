@@ -164,6 +164,25 @@ func (s *PiggyBankService) AddAmount(userID, id uint64, req *request.AddAmountRe
 		return nil, errcode.ErrInternal
 	}
 
+	// 校验目标金额限制
+	if piggyBank.CurrentAmount.Add(amount).GreaterThan(piggyBank.TargetAmount) {
+		return nil, errcode.ErrPiggyBankOverDeposit
+	}
+
+	// 校验关联账户余额：账户余额 - 同账户所有储蓄罐已存总额 >= 本次存入
+	account, err := s.accountRepo.GetByID(piggyBank.AccountID, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	lockedTotal, err := s.piggyBankRepo.SumCurrentAmountByAccount(piggyBank.AccountID, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
+	accountAvailable := account.CurrentBalance.Sub(lockedTotal)
+	if accountAvailable.LessThan(amount) {
+		return nil, errcode.ErrPiggyBankAccountInsufficient
+	}
+
 	var updated *model.PiggyBank
 	if err := s.db.Transaction(func(dbTx *gorm.DB) error {
 		ok, err := s.piggyBankRepo.AddAmountWithDB(dbTx, id, userID, amount, piggyBank.TargetAmount)
@@ -268,6 +287,35 @@ func (s *PiggyBankService) GetEvents(userID, id uint64) ([]response.PiggyEventRe
 	return items, nil
 }
 
+// calculateAvailableDeposit 计算储蓄罐的可存入金额
+// 公式：min(账户余额 - 同账户所有储蓄罐已存总额, 目标金额 - 当前已存金额)
+// 结果不会小于0
+func (s *PiggyBankService) calculateAvailableDeposit(pb *model.PiggyBank) decimal.Decimal {
+	targetRemaining := pb.TargetAmount.Sub(pb.CurrentAmount)
+	if !targetRemaining.IsPositive() {
+		return decimal.Zero
+	}
+
+	if pb.Account.ID == 0 {
+		return targetRemaining
+	}
+
+	accountAvailable := pb.Account.CurrentBalance
+	lockedTotal, err := s.piggyBankRepo.SumCurrentAmountByAccount(pb.AccountID, pb.UserID)
+	if err != nil {
+		return targetRemaining
+	}
+	accountAvailable = accountAvailable.Sub(lockedTotal)
+	if !accountAvailable.IsPositive() {
+		return decimal.Zero
+	}
+
+	if accountAvailable.LessThan(targetRemaining) {
+		return accountAvailable
+	}
+	return targetRemaining
+}
+
 func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 	percentage := decimal.Zero
 	if pb.TargetAmount.IsPositive() {
@@ -289,18 +337,21 @@ func (s *PiggyBankService) toResp(pb *model.PiggyBank) *response.PiggyBankResp {
 		accountResp = accountModelToResp(&pb.Account)
 	}
 
+	availableDeposit := s.calculateAvailableDeposit(pb)
+
 	return &response.PiggyBankResp{
-		ID:            pb.ID,
-		Name:          pb.Name,
-		TargetAmount:  pb.TargetAmount.StringFixed(4),
-		CurrentAmount: pb.CurrentAmount.StringFixed(4),
-		AccountID:     pb.AccountID,
-		Account:       accountResp,
-		TargetDate:    targetDate,
-		Notes:         pb.Notes,
-		Percentage:    pct,
-		CreatedAt:     pb.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     pb.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:               pb.ID,
+		Name:             pb.Name,
+		TargetAmount:     pb.TargetAmount.StringFixed(4),
+		CurrentAmount:    pb.CurrentAmount.StringFixed(4),
+		AccountID:        pb.AccountID,
+		Account:          accountResp,
+		TargetDate:       targetDate,
+		Notes:            pb.Notes,
+		Percentage:       pct,
+		AvailableDeposit: availableDeposit.StringFixed(4),
+		CreatedAt:        pb.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:        pb.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }
 

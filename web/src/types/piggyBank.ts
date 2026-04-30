@@ -10,6 +10,7 @@ export interface PiggyBank {
   target_date: string | null
   notes: string
   percentage: number
+  available_deposit: string
   created_at: string
   updated_at: string
 }
