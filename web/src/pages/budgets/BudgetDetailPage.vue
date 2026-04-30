@@ -57,8 +57,8 @@ const periodRange = computed(() => {
 })
 
 const categoryIds = computed(() => {
-  if (!budget.value) return []
-  return budget.value.categories.map(c => c.id)
+  if (!budget.value) return ''
+  return budget.value.categories.map(c => c.id).join(',')
 })
 
 function formatTransactionAmount(row: Transaction): string {

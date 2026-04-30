@@ -50,11 +50,9 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
-	// Monthly income & expense
-	// 注意：EndDate 使用明天日期，确保包含当天的所有交易
 	monthFilter := repository.TransactionFilter{
 		StartDate: monthStart.Format("2006-01-02"),
-		EndDate:   now.AddDate(0, 0, 1).Format("2006-01-02"),
+		EndDate:   now.Format("2006-01-02"),
 	}
 	monthTxns, err := s.txnRepo.ListAll(userID, monthFilter)
 	if err != nil {
