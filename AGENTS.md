@@ -48,7 +48,7 @@ docker compose up -d --build  # 代码更新后重新构建
 
 ## 关键约定
 
-- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=循环交易, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 12xxxx=对象组, 13xxxx=交易链接, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA）
+- **错误码**：按模块分段定义在 `internal/pkg/errcode/errcode.go`（1xxxx=认证, 2xxxx=账户, 3xxxx=交易, 4xxxx=分类, 5xxxx=标签, 6xxxx=预算, 7xxxx=循环交易, 8xxxx=规则, 9xxxx=导入, 10xxxx=定期交易, 11xxxx=Webhook, 12xxxx=对象组, 13xxxx=交易链接, 14xxxx=偏好, 15xxxx=对账, 16xxxx=MFA, 17xxxx=储蓄罐）
 - **API 响应格式**：统一为 `{ "code": 0, "message": "success", "data": ... }`，通过 `controller.Success()` / `controller.Error()` 返回
 - **金额处理**：Go 用 `shopspring/decimal`，TS 用 `decimal.js` — 禁止用浮点数表示金额
 - **无测试套件**：前后端均未配置测试
@@ -806,7 +806,7 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 
 储蓄罐用于设定储蓄目标并跟踪进度。每个储蓄罐关联一个资产账户，记录目标金额、当前已存金额和可选的目标日期。
 
-**重要：储蓄罐是虚拟记账，不关联真实资金流动。** 存取操作仅修改储蓄罐自身的 `current_amount`，不会扣减或增加关联资产账户的余额，也不会创建交易记录。存入一个亿就是一个亿，不检查关联账户余额是否足够。
+**储蓄罐是虚拟记账，存取不扣减/增加关联账户余额，不创建交易记录。** 但存入时校验关联账户余额是否足够（防止存入金额超过账户实际持有资金），取出时不校验账户余额（取出是释放虚拟锁定，永远合理）。
 
 ### 数据模型 (`model/piggy_bank.go`)
 
@@ -819,7 +819,7 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 | Name | string (size:100) | 储蓄罐名称 |
 | TargetAmount | decimal(19,4) | 目标金额，必须为正数 |
 | CurrentAmount | decimal(19,4) | 当前已存金额，默认0 |
-| AccountID | uint64 | 关联资产账户ID（仅展示用途，存取不扣减账户余额） |
+| AccountID | uint64 | 关联资产账户ID（存入时校验账户余额） |
 | Order | int (default:0) | 排序权重 |
 | TargetDate | *time.Time (indexed) | 目标完成日期（可选） |
 | Notes | text | 备注 |
@@ -855,28 +855,80 @@ Webhook 在事务成功提交后触发，避免事务回滚时 Webhook 已发出
 
 ### 业务规则
 
-1. **创建**：目标金额必须为正数；关联账户必填
-2. **存入**：金额必须为正数；存入后当前金额不能超过目标金额（`CurrentAmount + amount > TargetAmount` 则拒绝）
-3. **取出**：金额必须为正数；取出金额不能超过当前已存金额（`amount > CurrentAmount` 则拒绝）
-4. **存取不关联真实资金**：存取仅修改 `current_amount`，不扣减/增加关联账户余额，不创建交易记录
+1. **创建**：目标金额必须为正数；关联账户必填且必须是当前用户的 asset 类型账户（`ErrPiggyBankAccountInvalid`，170005）
+2. **更新目标金额**：新目标金额不能小于当前已存金额（`ErrPiggyBankTargetTooSmall`，170004）
+3. **存入**：双重校验：
+   - 目标金额限制：存入后当前金额不能超过目标金额（`ErrPiggyBankOverDeposit`，170002）
+   - 账户余额限制：关联账户余额 - 同账户所有储蓄罐已存总额 >= 本次存入金额（`ErrPiggyBankAccountInsufficient`，170007）
+4. **取出**：金额必须为正数；取出金额不能超过当前已存金额（`ErrPiggyBankOverWithdraw`，170003）。取出时不校验账户余额（取出是释放虚拟锁定）
 5. **完成百分比**：`CurrentAmount / TargetAmount * 100`，上限100%
-6. **重置**：清空所有事件记录，当前金额归零
+6. **重置**：清空所有事件记录，当前金额归零，事务保证原子性
+
+### 账户余额校验（存入时）
+
+存入时校验关联账户余额，防止存入金额超过账户实际持有资金。多个储蓄罐可绑定同一账户，校验时需考虑同账户下所有储蓄罐的已存总额。
+
+**校验逻辑**（`AddAmount`）：
+1. 查询关联账户的 `current_balance`
+2. 查询该账户下所有储蓄罐的 `current_amount` 之和（`SumCurrentAmountByAccount`）
+3. 计算：`账户余额 - 同账户储蓄罐已存总额 >= 本次存入金额`
+4. 不满足则返回 `ErrPiggyBankAccountInsufficient`
+
+**可存入金额**（`available_deposit`，响应中实时计算）：
+```
+account_available = max(account.current_balance - SUM(同账户储蓄罐.current_amount), 0)
+target_remaining = target_amount - current_amount
+available_deposit = min(account_available, target_remaining)
+```
+
+**超额场景处理**：如果账户余额因支出减少，导致储蓄罐的 `current_amount` 超出了合理范围，系统不自动修正。下次存入时校验会阻止继续存入，用户只能先取出多存的金额，才能再存入。前端通过 `available_deposit` 字段实时展示可存入上限。
+
+**举例**：
+- 账户余额 10000，储蓄罐A（目标5000，已存3000），储蓄罐B（目标8000，已存4000）
+- 已锁定总额 = 3000 + 4000 = 7000
+- 账户剩余可分配 = 10000 - 7000 = 3000
+- 储蓄罐A 再存入：min(3000, 5000-3000) = min(3000, 2000) = **2000**
+- 如果账户支出 5000，余额变 5000：账户剩余可分配 = 5000 - 7000 = **-2000**（已超额）
+- 储蓄罐A 存入被拒绝（`available_deposit = 0`），只能先取出
+
+### 事务一致性
+
+- **存入/取出**：在 `db.Transaction()` 中执行，金额更新（SQL 原子表达式）和事件记录创建在同一事务中
+- **原子更新**：`AddAmountWithDB` 使用 `UPDATE ... SET current_amount = current_amount + ? WHERE current_amount + ? <= target_amount`，通过 `RowsAffected` 判断是否超额，避免先读后写竞态
+- **取出原子更新**：`RemoveAmountWithDB` 使用 `UPDATE ... SET current_amount = current_amount - ? WHERE current_amount >= ?`
+- **重置**：`ResetAmountWithDB` + `DeleteEventsWithDB` 在同一事务中执行
+- **Repository WithDB 方法**：`UpdateWithDB`/`CreateEventWithDB`/`DeleteEventsWithDB`/`AddAmountWithDB`/`RemoveAmountWithDB`/`ResetAmountWithDB` 接受外部事务对象
+
+### 错误码（17xxxx）
+
+| 错误码 | Code | 说明 |
+|--------|------|------|
+| `ErrPiggyBankAmountInvalid` | 170001 | 目标金额必须为正数 |
+| `ErrPiggyBankOverDeposit` | 170002 | 存入后超过目标金额 |
+| `ErrPiggyBankOverWithdraw` | 170003 | 取出超过当前金额 |
+| `ErrPiggyBankTargetTooSmall` | 170004 | 目标金额不能小于当前已存金额 |
+| `ErrPiggyBankAccountInvalid` | 170005 | 关联账户无效（不存在/非 asset 类型/非本人） |
+| `ErrPiggyBankNotFound` | 170006 | 储蓄罐不存在 |
+| `ErrPiggyBankAccountInsufficient` | 170007 | 关联账户余额不足以存入该金额 |
 
 ### 请求/响应 DTO
 
 **CreatePiggyBankReq**：`name`(必填)、`target_amount`(必填，正数)、`account_id`(必填)、`target_date`(可选)、`notes`(可选)
 
-**UpdatePiggyBankReq**：`name`(可选)、`target_amount`(*string，可选，正数)、`target_date`(*string，可选)、`notes`(可选)
+**UpdatePiggyBankReq**：`name`(可选)、`target_amount`(*string，可选，正数)、`target_date`(*string，可选)、`notes`(可选)、`clear_notes`(bool，可选，清空备注)
 
 **AddAmountReq**：`amount`(必填，正数字符串)、`note`(可选)
 
 **RemoveAmountReq**：`amount`(必填，正数字符串)、`note`(可选)
 
-**PiggyBankResp**：`id`、`name`、`target_amount`(string)、`current_amount`(string)、`account_id`、`target_date`、`notes`、`percentage`(float64)、`created_at`、`updated_at`
+**PiggyBankResp**：`id`、`name`、`target_amount`(string)、`current_amount`(string)、`account_id`、`account`(*AccountResp)、`target_date`、`notes`、`percentage`(float64)、`available_deposit`(string，可存入金额)、`created_at`、`updated_at`
+
+**PiggyEventResp**：`id`、`piggy_bank_id`、`amount`(string)、`transaction_id`、`note`、`created_at`
 
 ### 前端实现
 
-- **类型** (`types/piggyBank.ts`)：`PiggyBank`、`PiggyEvent`、`CreatePiggyBankReq`、`UpdatePiggyBankReq`、`AddAmountReq`、`RemoveAmountReq`
-- **API** (`api/piggyBank.ts`)：`list`/`getPiggyBank`/`create`/`update`/`remove`/`addAmount`/`removeAmount`/`getEvents`
+- **类型** (`types/piggyBank.ts`)：`PiggyBank` 接口含 `available_deposit` 和 `account?` 字段，与后端 `PiggyBankResp` 完全对齐
+- **API** (`api/piggyBank.ts`)：`list`/`getPiggyBank`/`create`/`update`/`remove`/`addAmount`/`removeAmount`/`getEvents`/`reorder`/`resetHistory`；`addAmount`/`removeAmount` 返回 `PiggyBank`（更新后的数据）
 - **无独立 Store**：页面直接调用 API
-- **列表页** (`pages/piggyBanks/PiggyBankListPage.vue`)：表格展示储蓄罐列表，含进度条和百分比；存入/取出对话框使用 `el-input`（非 AmountInput），无前端校验
+- **列表页** (`pages/piggyBanks/PiggyBankListPage.vue`)：表格展示储蓄罐列表，含进度条和状态颜色；账户选择器过滤仅 asset 类型；存入对话框显示 `available_deposit` 作为可存入上限；行点击跳转详情页；金额输入添加前端校验
+- **详情页** (`pages/piggyBanks/PiggyBankDetailPage.vue`)：三卡片（目标/当前/剩余）；进度条；基本信息（关联账户、目标日期、备注）；存取记录列表（区分存入绿色+号/取出红色-号）；存入/取出/编辑/删除/重置历史操作
