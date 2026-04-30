@@ -125,13 +125,7 @@ func (ctrl *ReportController) Category(c *gin.Context) {
 func (ctrl *ReportController) Budget(c *gin.Context) {
 	userID := c.GetUint64("user_id")
 
-	var req request.ReportReq
-	if err := c.ShouldBindQuery(&req); err != nil {
-		Error(c, http.StatusBadRequest, errcode.ErrBadRequest)
-		return
-	}
-
-	result, err := ctrl.reportService.Budget(userID, &req)
+	result, err := ctrl.reportService.Budget(userID)
 	if err != nil {
 		handleError(c, err)
 		return

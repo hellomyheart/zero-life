@@ -30,7 +30,7 @@ const editingId = ref<number | null>(null)
 
 const form = ref({
   name: '',
-  amount: '0',
+  amount: '',
   period: BudgetPeriod.Monthly,
   category_ids: [] as number[],
 })

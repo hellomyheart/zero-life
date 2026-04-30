@@ -134,18 +134,19 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 			spent = spent.Add(txn.Amount)
 		}
 
-		var usageRate float64
+		usageRateDecimal := decimal.Zero
 		if !b.Amount.IsZero() {
-			usageRate, _ = spent.Div(b.Amount).Float64()
+			usageRateDecimal = spent.Div(b.Amount)
 		}
 		status := "normal"
-		if usageRate >= 1.0 {
+		if usageRateDecimal.GreaterThanOrEqual(decimal.NewFromInt(1)) {
 			status = "overspent"
-		} else if usageRate >= 0.8 {
+		} else if usageRateDecimal.GreaterThanOrEqual(decimal.NewFromFloat(0.8)) {
 			status = "warning"
 		}
 
 		if status != "normal" {
+			usageRate, _ := usageRateDecimal.Float64()
 			budgetAlerts = append(budgetAlerts, response.BudgetAlertResp{
 				BudgetID:   b.ID,
 				BudgetName: b.Name,

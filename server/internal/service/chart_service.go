@@ -169,7 +169,10 @@ func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingD
 			allCategoryIDs = append(allCategoryIDs, cat.ID)
 		}
 		expandedIDs, err := s.categoryRepo.GetDescendantIDs(allCategoryIDs, userID)
-		if err == nil && len(expandedIDs) > 0 {
+		if err != nil {
+			return nil, err
+		}
+		if len(expandedIDs) > 0 {
 			filter := repository.TransactionFilter{
 				Type:        string(model.TransactionTypeWithdrawal),
 				StartDate:   start.Format("2006-01-02"),
@@ -177,10 +180,11 @@ func (s *ChartService) BudgetSpending(userID, budgetID uint64) (*BudgetSpendingD
 				CategoryIDs: expandedIDs,
 			}
 			txns, err := s.txnRepo.ListAll(userID, filter)
-			if err == nil {
-				for _, txn := range txns {
-					spent = spent.Add(txn.Amount)
-				}
+			if err != nil {
+				return nil, err
+			}
+			for _, txn := range txns {
+				spent = spent.Add(txn.Amount)
 			}
 		}
 	}

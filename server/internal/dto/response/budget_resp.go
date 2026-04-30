@@ -14,7 +14,7 @@ type BudgetResp struct {
 	Categories []CategoryResp `json:"categories"`  // 关联分类列表
 	Spent      string         `json:"spent"`       // 已支出金额
 	Remaining  string         `json:"remaining"`   // 剩余金额
-	UsageRate  float64        `json:"usage_rate"`  // 使用率（百分比）
+	UsageRate  float64        `json:"usage_rate"`  // 使用率（比率，0~1+，如0.8表示80%）
 	Status     string         `json:"status"`      // 状态：normal(正常)/warning(预警)/overspent(超支)
 	CreatedAt  time.Time      `json:"created_at"`  // 创建时间
 	UpdatedAt  time.Time      `json:"updated_at"`  // 更新时间
@@ -27,7 +27,7 @@ type BudgetHistoryResp struct {
 	PeriodEnd   time.Time `json:"period_end"`   // 周期结束时间
 	Amount      string    `json:"amount"`       // 预算金额
 	Spent       string    `json:"spent"`        // 实际支出
-	UsageRate   float64   `json:"usage_rate"`   // 使用率
+	UsageRate   float64   `json:"usage_rate"`   // 使用率（比率，0~1+，如0.8表示80%）
 	CreatedAt   time.Time `json:"created_at"`   // 创建时间
 	UpdatedAt   time.Time `json:"updated_at"`   // 更新时间
 }

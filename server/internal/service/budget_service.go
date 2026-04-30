@@ -31,11 +31,19 @@ func (s *BudgetService) validateCategoryIDs(categoryIDs []uint64, userID uint64)
 	if len(categoryIDs) == 0 {
 		return errcode.ErrBudgetCategoryRequired
 	}
-	count, err := s.categoryRepo.CountByIDsAndUserID(categoryIDs, userID)
+	seen := make(map[uint64]struct{}, len(categoryIDs))
+	deduped := make([]uint64, 0, len(categoryIDs))
+	for _, id := range categoryIDs {
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			deduped = append(deduped, id)
+		}
+	}
+	count, err := s.categoryRepo.CountByIDsAndUserID(deduped, userID)
 	if err != nil {
 		return errcode.ErrInternal
 	}
-	if int(count) != len(categoryIDs) {
+	if int(count) != len(deduped) {
 		return errcode.ErrBudgetCategoryInvalid
 	}
 	return nil
@@ -301,14 +309,13 @@ func budgetPeriodPrev(period model.BudgetPeriod, t time.Time) time.Time {
 	}
 }
 
-func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) decimal.Decimal {
+func (s *BudgetService) calculateSpent(budget *model.Budget, userID uint64) (decimal.Decimal, error) {
 	if !budget.IsEnabled {
-		return decimal.Zero
+		return decimal.Zero, nil
 	}
 	now := time.Now()
 	start, end := budgetPeriodRange(budget.Period, now)
-	spent, _ := s.calculateSpentInRangeWithError(budget, userID, start, end)
-	return spent
+	return s.calculateSpentInRangeWithError(budget, userID, start, end)
 }
 
 func (s *BudgetService) calculateSpentInRangeWithError(budget *model.Budget, userID uint64, start, end time.Time) (decimal.Decimal, error) {
@@ -347,7 +354,10 @@ func (s *BudgetService) calculateSpentInRangeWithError(budget *model.Budget, use
 }
 
 func (s *BudgetService) toRespWithUsage(budget *model.Budget, userID uint64) (*response.BudgetResp, error) {
-	spent := s.calculateSpent(budget, userID)
+	spent, err := s.calculateSpent(budget, userID)
+	if err != nil {
+		return nil, errcode.ErrInternal
+	}
 	remaining := budget.Amount.Sub(spent)
 
 	var usageRate float64

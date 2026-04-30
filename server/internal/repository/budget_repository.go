@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/hellomyheart/zero-life/server/internal/model"
 	"gorm.io/gorm"
 )
@@ -128,13 +130,16 @@ func (r *BudgetRepository) UpsertHistory(history *model.BudgetHistory) error {
 	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		var existing model.BudgetHistory
 		err := tx.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
-		if err == nil {
-			return tx.Model(&existing).Updates(map[string]interface{}{
-				"period_end": history.PeriodEnd,
-				"spent":      history.Spent,
-				"updated_at": history.UpdatedAt,
-			}).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return tx.Create(history).Error
+			}
+			return err
 		}
-		return tx.Create(history).Error
+		return tx.Model(&existing).Updates(map[string]interface{}{
+			"period_end": history.PeriodEnd,
+			"spent":      history.Spent,
+			"updated_at": history.UpdatedAt,
+		}).Error
 	})
 }

@@ -184,7 +184,7 @@ func (s *ReportService) Category(userID uint64, req *request.ReportReq) (*respon
 // 返回：
 //   - *response.BudgetReportResp: 预算报表数据
 //   - error: 错误信息
-func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response.BudgetReportResp, error) {
+func (s *ReportService) Budget(userID uint64) (*response.BudgetReportResp, error) {
 	budgets, err := s.budgetRepo.List(userID)
 	if err != nil {
 		return nil, errcode.ErrInternal
@@ -197,16 +197,17 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 			continue
 		}
 
-		// 根据预算周期计算当前周期范围
 		periodStart, periodEnd := budgetPeriodRange(b.Period, now)
 
-		// 展开分类后代：选择父分类时自动包含所有子分类的交易
 		catIDs := make([]uint64, 0, len(b.Categories))
 		for _, cat := range b.Categories {
 			catIDs = append(catIDs, cat.ID)
 		}
 		expandedIDs, err := s.categoryRepo.GetDescendantIDs(catIDs, userID)
-		if err != nil || len(expandedIDs) == 0 {
+		if err != nil {
+			return nil, errcode.ErrInternal
+		}
+		if len(expandedIDs) == 0 {
 			continue
 		}
 
@@ -219,7 +220,7 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 
 		txns, err := s.txnRepo.ListAll(userID, filter)
 		if err != nil {
-			continue
+			return nil, errcode.ErrInternal
 		}
 
 		spent := decimal.Zero
@@ -228,10 +229,11 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 		}
 
 		remaining := b.Amount.Sub(spent)
-		var usageRate float64
+		usageRateDecimal := decimal.Zero
 		if !b.Amount.IsZero() {
-			usageRate, _ = spent.Div(b.Amount).Float64()
+			usageRateDecimal = spent.Div(b.Amount)
 		}
+		usageRate, _ := usageRateDecimal.Float64()
 
 		items = append(items, response.BudgetReportItemResp{
 			BudgetID:   b.ID,

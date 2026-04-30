@@ -238,6 +238,9 @@ docker compose up -d --build  # 代码更新后重新构建
 | Amount | decimal(19,4) | 该周期的预算金额 |
 | Spent | decimal(19,4) | 该周期的实际支出 |
 | CreatedAt | time.Time | 创建时间 |
+| UpdatedAt | time.Time | 更新时间 |
+
+**唯一索引**：`idx_budget_history_budget_period` — `(budget_id, period_start)` 联合唯一索引，确保同一预算同一周期只有一条快照记录
 
 ### API 端点
 
@@ -256,24 +259,28 @@ docker compose up -d --build  # 代码更新后重新构建
 
 **UpdateBudgetReq**：`name`(可选)、`amount`(可选)、`period`(可选，omitempty oneof)、`category_ids`(可选，nil=保留现有)、`is_enabled`(*bool，可选)
 
-**BudgetResp**：`id`、`name`、`amount`(string, StringFixed(4))、`period`、`is_enabled`、`categories`([]CategoryResp)、`spent`(string)、`remaining`(string)、`usage_rate`(float64)、`status`(normal/warning/overspent)、`created_at`、`updated_at`
+**BudgetResp**：`id`、`name`、`amount`(string, StringFixed(4))、`period`、`is_enabled`、`categories`([]CategoryResp)、`spent`(string)、`remaining`(string)、`usage_rate`(float64, 比率0~1+)、`status`(normal/warning/overspent)、`created_at`、`updated_at`
 
-**BudgetHistoryResp**：`id`、`period_start`、`period_end`、`amount`(string)、`spent`(string)、`usage_rate`(float64)、`created_at`
+**BudgetHistoryResp**：`id`、`period_start`、`period_end`、`amount`(string)、`spent`(string)、`usage_rate`(float64, 比率0~1+)、`created_at`、`updated_at`
 
 ### 业务规则
 
 1. **金额校验**：创建和更新时金额必须大于零（`ErrBudgetAmountInvalid`，60001）
 2. **分类关联**：创建时至少关联1个分类；更新时若未提供 `category_ids` 则保留现有分类（全量替换语义）
-3. **启用/禁用**：`is_enabled=false` 的预算跳过支出计算，返回零值
-4. **级联删除**：删除预算时同时删除 `budget_categories` 关联 + `budget_history` 历史记录，事务保证原子性
-5. **空字符串语义**：`UpdateBudgetReq` 中 `name`/`amount`/`period` 为空字符串表示"不修改"；`is_enabled` 使用 `*bool` 指针区分"未提供"和"设为false"
+3. **分类校验**：`validateCategoryIDs` 会去重后校验所有分类ID存在且属于当前用户（`ErrBudgetCategoryInvalid`，60002；`ErrBudgetCategoryRequired`，60003）
+4. **启用/禁用**：`is_enabled=false` 的预算跳过支出计算，返回零值
+5. **级联删除**：删除预算时同时删除 `budget_categories` 关联 + `budget_history` 历史记录，事务保证原子性
+6. **空字符串语义**：`UpdateBudgetReq` 中 `name`/`amount`/`period` 为空字符串表示"不修改"；`is_enabled` 使用 `*bool` 指针区分"未提供"和"设为false"
 
 ### 支出计算 (`calculateSpent`)
 
 1. 根据 `budgetPeriodRange(period, now)` 计算当前周期的起止时间
 2. 收集预算关联的所有分类ID → 调用 `GetDescendantIDs` 展开子分类
-3. 查询时间范围内、展开后分类下的 withdrawal 交易
-4. 累加交易金额
+3. 若展开后分类ID为空，返回零值（不查询交易）
+4. 查询时间范围内、展开后分类下的 withdrawal 交易
+5. 累加交易金额
+
+`calculateSpent` 返回 `(decimal.Decimal, error)`，错误会向上传播到 `toRespWithUsage` 并返回 `errcode.ErrInternal`。`calculateSpentInRangeWithError` 同理，用于历史快照支出计算。
 
 **`budgetPeriodRange` 函数**：根据周期类型计算起止时间，支持5种周期：
 - daily：当天 00:00:00 ~ 23:59:59
@@ -282,22 +289,28 @@ docker compose up -d --build  # 代码更新后重新构建
 - quarterly：本季度首月1日 ~ 季末
 - yearly：本年1月1日 ~ 12月31日
 
-**使用场景**（4处支出计算，逻辑必须一致）：
+**使用场景**（5处支出计算，逻辑必须一致）：
 - `BudgetService.calculateSpent`：预算列表/详情的使用率计算
-- `BudgetService.calculateSpentInRange`：历史快照的支出计算
+- `BudgetService.calculateSpentInRangeWithError`：历史快照的支出计算
 - `DashboardService.Get`：仪表盘预算预警
 - `ChartService.BudgetSpending`：预算支出图表
 - `ReportService.Budget`：预算报表
 
+**错误处理**：所有5处支出计算均向上传播错误（不再静默吞错），`BudgetService.calculateSpent` 返回 `(decimal.Decimal, error)`，`DashboardService`/`ChartService`/`ReportService` 在 `GetDescendantIDs` 或 `ListAll` 失败时返回 `errcode.ErrInternal`。
+
 ### 状态判定
 
 使用率 ≥100% → `overspent`，≥80% → `warning`，<80% → `normal`。除零保护：金额为零时使用率为0。
+
+**所有5处支出计算的状态判定均使用 decimal 比较**（非 float64），避免浮点精度问题：`usageRateDecimal.GreaterThanOrEqual(decimal.NewFromInt(1))` 和 `decimal.NewFromFloat(0.8)`。
 
 ### 历史快照 (`SnapshotHistory`)
 
 `CronService` 每天 09:00 执行，遍历所有启用预算，为近2年内所有已结束周期生成/更新快照（UPSERT），当前周期不生成（可看实时数据）。`UpsertHistory` 按 `budget_id + period_start` 判重，存在则只更新 `period_end`/`spent`，不更新 `amount`。
 
 **Amount 保留策略**：已有快照的 `Amount` 不会被覆盖，保留该周期首次生成时的预算金额。只有新建快照时才写入当前预算金额。这样用户修改预算金额后，历史快照中的限额仍反映该周期实际设定的值。
+
+**UpsertHistory 实现**：在事务中先查询 `WHERE budget_id = ? AND period_start = ?`，若 `errors.Is(err, gorm.ErrRecordNotFound)` 则创建新记录，否则更新已有记录。显式判断 `ErrRecordNotFound` 而非 `err != nil`，避免其他数据库错误被误判为"记录不存在"而创建重复记录。
 
 ### 交易查询
 
@@ -306,9 +319,9 @@ docker compose up -d --build  # 代码更新后重新构建
 ### 前端实现
 
 - **类型** (`types/budget.ts`)：`Budget` 接口含 `spent`/`remaining`/`usage_rate`/`status` 字段，`BudgetPeriod` 枚举定义5种周期
-- **列表页** (`pages/budgets/BudgetListPage.vue`)：表格展示预算列表，含使用率进度条和状态标签；创建/编辑对话框含分类树形选择器
+- **列表页** (`pages/budgets/BudgetListPage.vue`)：表格展示预算列表，含使用率进度条和状态标签；创建/编辑对话框含分类树形选择器；金额输入添加前端校验（`isNaN(numAmount) || numAmount <= 0`）；表单初始金额为空字符串
 - **详情页** (`pages/budgets/BudgetDetailPage.vue`)：三卡片展示金额/已用/剩余；使用率进度条；分类标签；历史趋势折线图（LineChart）；当前周期关联交易列表（分页）
-- **报表页** (`pages/reports/BudgetReport.vue`)：柱状图对比预算金额vs已用金额；明细表格
+- **报表页** (`pages/reports/BudgetReport.vue`)：柱状图对比预算金额vs已用金额；明细表格；无日期范围选择器（预算报表按各预算自身周期计算，不接受日期范围参数）
 - **无独立 Store**：预算页面直接调用 API，数据存在组件本地 ref 中
 
 ### 定时任务管理
