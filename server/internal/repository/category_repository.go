@@ -117,3 +117,9 @@ func (r *CategoryRepository) GetDescendantIDs(ids []uint64, userID uint64) ([]ui
 
 	return result, nil
 }
+
+func (r *CategoryRepository) CountByIDsAndUserID(ids []uint64, userID uint64) (int64, error) {
+	var count int64
+	err := r.readDB.Model(&model.Category{}).Where("id IN ? AND user_id = ?", ids, userID).Count(&count).Error
+	return count, err
+}

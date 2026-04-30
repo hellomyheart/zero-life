@@ -311,7 +311,7 @@ func (r *TransactionRepository) applyFilter(query *gorm.DB, filter TransactionFi
 	}
 	if filter.EndDate != "" {
 		if t, err := time.Parse("2006-01-02", filter.EndDate); err == nil {
-			query = query.Where("date <= ?", t)
+			query = query.Where("date < ?", t.AddDate(0, 0, 1))
 		}
 	}
 	if filter.AccountID != nil {

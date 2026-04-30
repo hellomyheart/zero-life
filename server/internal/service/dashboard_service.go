@@ -116,7 +116,7 @@ func (s *DashboardService) Get(userID uint64) (*response.DashboardResp, error) {
 		}
 		// 展开子分类：选择父分类时自动包含所有子分类的交易
 		descendantIDs, err := s.categoryRepo.GetDescendantIDs(catIDs, userID)
-		if err != nil {
+		if err != nil || len(descendantIDs) == 0 {
 			continue
 		}
 

@@ -14,6 +14,10 @@ func NewBudgetRepository(readDB, writeDB *gorm.DB) *BudgetRepository {
 	return &BudgetRepository{readDB: readDB, writeDB: writeDB}
 }
 
+func (r *BudgetRepository) WriteDB() *gorm.DB {
+	return r.writeDB
+}
+
 func (r *BudgetRepository) Create(budget *model.Budget, categoryIDs []uint64) error {
 	return r.writeDB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(budget).Error; err != nil {
@@ -36,8 +40,12 @@ func (r *BudgetRepository) Create(budget *model.Budget, categoryIDs []uint64) er
 }
 
 func (r *BudgetRepository) GetByID(id, userID uint64) (*model.Budget, error) {
+	return r.GetByIDWithDB(r.readDB, id, userID)
+}
+
+func (r *BudgetRepository) GetByIDWithDB(db *gorm.DB, id, userID uint64) (*model.Budget, error) {
 	var budget model.Budget
-	if err := r.readDB.Where("id = ? AND user_id = ?", id, userID).
+	if err := db.Where("id = ? AND user_id = ?", id, userID).
 		Preload("Categories").
 		First(&budget).Error; err != nil {
 		return nil, err
@@ -117,13 +125,16 @@ func (r *BudgetRepository) ListAllEnabled() ([]model.Budget, error) {
 }
 
 func (r *BudgetRepository) UpsertHistory(history *model.BudgetHistory) error {
-	var existing model.BudgetHistory
-	err := r.writeDB.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
-	if err == nil {
-		return r.writeDB.Model(&existing).Updates(map[string]interface{}{
-			"period_end": history.PeriodEnd,
-			"spent":      history.Spent,
-		}).Error
-	}
-	return r.writeDB.Create(history).Error
+	return r.writeDB.Transaction(func(tx *gorm.DB) error {
+		var existing model.BudgetHistory
+		err := tx.Where("budget_id = ? AND period_start = ?", history.BudgetID, history.PeriodStart).First(&existing).Error
+		if err == nil {
+			return tx.Model(&existing).Updates(map[string]interface{}{
+				"period_end": history.PeriodEnd,
+				"spent":      history.Spent,
+				"updated_at": history.UpdatedAt,
+			}).Error
+		}
+		return tx.Create(history).Error
+	})
 }

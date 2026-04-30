@@ -65,7 +65,7 @@ async function fetchBudgets() {
 function handleCreate() {
   dialogTitle.value = t('budget.create')
   editingId.value = null
-  form.value = { name: '', amount: '0', period: BudgetPeriod.Monthly, category_ids: [] }
+  form.value = { name: '', amount: '', period: BudgetPeriod.Monthly, category_ids: [] }
   dialogVisible.value = true
 }
 
@@ -92,13 +92,18 @@ async function handleDelete(id: number) {
     ElMessage.success(t('common.success'))
     await fetchBudgets()
   } catch (err) {
-    if ((err as string) !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
+    if (err !== 'cancel' && (err as { message?: string }).message !== 'cancel') ElMessage.error(t('common.fetchError') || 'Failed to load data')
   }
 }
 
 async function handleSubmit() {
   if (!form.value.name || !form.value.amount || form.value.category_ids.length === 0) {
     ElMessage.warning(t('common.required'))
+    return
+  }
+  const numAmount = Number(form.value.amount)
+  if (isNaN(numAmount) || numAmount <= 0) {
+    ElMessage.warning(t('budget.amountInvalid') || 'Amount must be greater than 0')
     return
   }
   try {

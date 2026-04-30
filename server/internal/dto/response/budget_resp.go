@@ -29,4 +29,5 @@ type BudgetHistoryResp struct {
 	Spent       string    `json:"spent"`        // 实际支出
 	UsageRate   float64   `json:"usage_rate"`   // 使用率
 	CreatedAt   time.Time `json:"created_at"`   // 创建时间
+	UpdatedAt   time.Time `json:"updated_at"`   // 更新时间
 }

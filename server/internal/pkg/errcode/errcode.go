@@ -74,7 +74,9 @@ var (
 	ErrTagTooDeep      = &Error{Code: 50003, Message: "tag hierarchy exceeds 5 levels"}
 
 	// 预算错误 6xxxx
-	ErrBudgetAmountInvalid = &Error{Code: 60001, Message: "budget amount must be greater than zero"}
+	ErrBudgetAmountInvalid    = &Error{Code: 60001, Message: "budget amount must be greater than zero"}
+	ErrBudgetCategoryInvalid  = &Error{Code: 60002, Message: "category does not exist or does not belong to the user"}
+	ErrBudgetCategoryRequired = &Error{Code: 60003, Message: "budget must have at least one category"}
 
 	// 循环交易错误 7xxxx
 	ErrRecurringAmountInvalid = &Error{Code: 70001, Message: "recurring transaction amount must be greater than zero"}

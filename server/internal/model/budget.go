@@ -155,13 +155,12 @@ type BudgetHistory struct {
 
 	// BudgetID 预算 ID
 	// 关联到 budgets 表
-	// gorm:"index" 创建索引，加速按预算查询历史记录
-	BudgetID uint64 `gorm:"not null;index" json:"budget_id"`
+	BudgetID uint64 `gorm:"not null;uniqueIndex:idx_budget_period" json:"budget_id"`
 
 	// PeriodStart 周期开始日期
 	// 如月度预算：2026-04-01
 	// 如年度预算：2026-01-01
-	PeriodStart time.Time `gorm:"not null" json:"period_start"`
+	PeriodStart time.Time `gorm:"not null;uniqueIndex:idx_budget_period" json:"period_start"`
 
 	// PeriodEnd 周期结束日期
 	// 如月度预算：2026-04-30
@@ -180,6 +179,9 @@ type BudgetHistory struct {
 
 	// CreatedAt 历史记录创建时间
 	CreatedAt time.Time `gorm:"not null" json:"created_at"`
+
+	// UpdatedAt 历史记录最后更新时间
+	UpdatedAt time.Time `gorm:"not null" json:"updated_at"`
 }
 
 // TableName 指定 BudgetHistory 模型对应的数据库表名为 budget_history

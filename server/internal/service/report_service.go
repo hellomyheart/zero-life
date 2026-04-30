@@ -206,7 +206,7 @@ func (s *ReportService) Budget(userID uint64, req *request.ReportReq) (*response
 			catIDs = append(catIDs, cat.ID)
 		}
 		expandedIDs, err := s.categoryRepo.GetDescendantIDs(catIDs, userID)
-		if err != nil {
+		if err != nil || len(expandedIDs) == 0 {
 			continue
 		}
 
