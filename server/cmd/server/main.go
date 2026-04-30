@@ -128,7 +128,6 @@ func main() {
 		&model.LinkType{},
 		&model.TransactionJournalLink{},
 		&model.Preference{},
-		&model.ObjectGroup{},
 		&model.Configuration{},
 		&model.BackupCode{},
 		&model.KVStore{},
@@ -172,7 +171,6 @@ func main() {
 	txnLinkRepo := repository.NewTransactionLinkRepository(readDB, db)
 	prefRepo := repository.NewPreferenceRepository(readDB, db)
 	rtRepo := repository.NewRecurringTransactionRepository(readDB, db)
-	ogRepo := repository.NewObjectGroupRepository(readDB, db)
 	configRepo := repository.NewConfigurationRepository(readDB, db)
 
 	// 新增MFA服务（需在authService之前初始化，因为authService依赖mfaService）
@@ -202,7 +200,6 @@ func main() {
 	linkTypeService := service.NewLinkTypeService(linkTypeRepo)
 	txnLinkService := service.NewTransactionLinkService(txnLinkRepo, txnRepo)
 	prefService := service.NewPreferenceService(prefRepo)
-	ogService := service.NewObjectGroupService(ogRepo)
 	// 新增图表和洞察服务
 	chartService := service.NewChartService(txnRepo, accountRepo, budgetRepo, categoryRepo, tagRepo)
 	insightService := service.NewInsightService(txnRepo, accountRepo, categoryRepo)
@@ -235,7 +232,6 @@ func main() {
 	txnLinkCtrl := controller.NewTransactionLinkController(txnLinkService)
 	prefCtrl := controller.NewPreferenceController(prefService)
 	rtCtrl := controller.NewRecurringTransactionController(rtService)
-	ogCtrl := controller.NewObjectGroupController(ogService)
 	chartCtrl := controller.NewChartController(chartService)
 	insightCtrl := controller.NewInsightController(insightService)
 	mfaCtrl := controller.NewMFAController(mfaService)
@@ -275,7 +271,6 @@ func main() {
 		exportCtrl,
 		rtCtrl,
 		webhookCtrl,
-		ogCtrl,
 		txnLinkCtrl,
 		prefCtrl,
 		reconCtrl,

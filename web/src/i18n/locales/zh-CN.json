@@ -26,7 +26,6 @@
     "reconciliations": "对账",
     "settings": "设置",
     "exchangeRates": "汇率",
-    "objectGroups": "对象分组",
     "transactionLinks": "交易关联",
     "preferences": "偏好设置",
     "cron": "定时任务"
@@ -524,22 +523,6 @@
     "language": "语言",
     "registeredAt": "注册时间",
     "langZhCN": "中文"
-  },
-  "objectGroup": {
-    "title": "对象分组管理",
-    "create": "新建分组",
-    "edit": "编辑分组",
-    "delete": "删除分组",
-    "name": "分组名称",
-    "type": "关联类型",
-    "entityId": "实体 ID",
-    "namePlaceholder": "请输入分组名称",
-    "entityIdPlaceholder": "请输入关联实体 ID",
-    "deleteConfirm": "确定要删除该分组吗？",
-    "typeTransaction": "交易",
-    "typeRecurringTransaction": "循环交易",
-    "typeBudget": "预算",
-    "typePiggyBank": "储蓄罐"
   },
   "transactionLink": {
     "title": "交易关联管理",

@@ -177,12 +177,6 @@ function handleSelect(index: string) {
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- 对象分组 -->
-      <el-menu-item index="/object-groups">
-        <el-icon><Menu /></el-icon>
-        <template #title>{{ t('objectGroup.title') }}</template>
-      </el-menu-item>
-
       <!-- 交易关联 -->
       <el-menu-item index="/transaction-links">
         <el-icon><Link /></el-icon>

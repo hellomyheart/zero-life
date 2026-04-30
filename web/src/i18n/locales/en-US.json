@@ -26,7 +26,6 @@
     "reconciliations": "Reconciliations",
     "settings": "Settings",
     "exchangeRates": "Exchange Rates",
-    "objectGroups": "Object Groups",
     "transactionLinks": "Transaction Links",
     "preferences": "Preferences",
     "cron": "Cron Jobs"
@@ -524,22 +523,6 @@
     "language": "Language",
     "registeredAt": "Registered At",
     "langZhCN": "Chinese"
-  },
-  "objectGroup": {
-    "title": "Object Groups",
-    "create": "Create Group",
-    "edit": "Edit Group",
-    "delete": "Delete Group",
-    "name": "Group Name",
-    "type": "Groupable Type",
-    "entityId": "Entity ID",
-    "namePlaceholder": "Enter group name",
-    "entityIdPlaceholder": "Enter entity ID",
-    "deleteConfirm": "Are you sure you want to delete this group?",
-    "typeTransaction": "Transaction",
-    "typeRecurringTransaction": "Recurring Transaction",
-    "typeBudget": "Budget",
-    "typePiggyBank": "Piggy Bank"
   },
   "transactionLink": {
     "title": "Transaction Links",

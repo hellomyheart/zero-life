@@ -13,7 +13,6 @@
 //   - 9xxxx: 导入错误
 //   - 10xxxx: 定期交易错误
 //   - 11xxxx: Webhook错误
-//   - 12xxxx: 对象组错误
 //   - 13xxxx: 交易链接错误
 //   - 14xxxx: 偏好设置错误
 //   - 15xxxx: 对账错误
@@ -99,9 +98,6 @@ var (
 	ErrWebhookURLInvalid     = &Error{Code: 110001, Message: "invalid webhook URL"}
 	ErrWebhookTriggerInvalid = &Error{Code: 110002, Message: "invalid webhook trigger"}
 	ErrWebhookDeliveryFail   = &Error{Code: 110003, Message: "webhook delivery failed"}
-
-	// 对象组错误 12xxxx
-	ErrObjectGroupNameExists = &Error{Code: 120001, Message: "object group name already exists"}
 
 	// 交易链接错误 13xxxx
 	ErrTransactionLinkInvalid = &Error{Code: 130001, Message: "invalid transaction link"}

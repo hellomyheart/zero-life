@@ -34,7 +34,6 @@ type Router struct {
 	exportCtrl            *controller.ExportController
 	recurringTxnCtrl      *controller.RecurringTransactionController
 	webhookCtrl           *controller.WebhookController
-	objectGroupCtrl       *controller.ObjectGroupController
 	transactionLinkCtrl   *controller.TransactionLinkController
 	preferenceCtrl        *controller.PreferenceController
 	reconciliationCtrl    *controller.ReconciliationController
@@ -70,7 +69,6 @@ func NewRouter(
 	exportCtrl *controller.ExportController,
 	recurringTxnCtrl *controller.RecurringTransactionController,
 	webhookCtrl *controller.WebhookController,
-	objectGroupCtrl *controller.ObjectGroupController,
 	transactionLinkCtrl *controller.TransactionLinkController,
 	preferenceCtrl *controller.PreferenceController,
 	reconciliationCtrl *controller.ReconciliationController,
@@ -104,7 +102,6 @@ func NewRouter(
 		exportCtrl:           exportCtrl,
 		recurringTxnCtrl:     recurringTxnCtrl,
 		webhookCtrl:          webhookCtrl,
-		objectGroupCtrl:      objectGroupCtrl,
 		transactionLinkCtrl:  transactionLinkCtrl,
 		preferenceCtrl:       preferenceCtrl,
 		reconciliationCtrl:   reconciliationCtrl,
@@ -329,15 +326,6 @@ func (r *Router) Setup(jwtService *jwt.Service, db *gorm.DB) {
 			webhooks.PUT("/:id", r.webhookCtrl.Update)
 			webhooks.DELETE("/:id", r.webhookCtrl.Delete)
 			webhooks.GET("/:id/deliveries", r.webhookCtrl.ListDeliveries)
-		}
-
-		objectGroups := authenticated.Group("/object-groups")
-		{
-			objectGroups.POST("", r.objectGroupCtrl.Create)
-			objectGroups.GET("", r.objectGroupCtrl.List)
-			objectGroups.GET("/:id", r.objectGroupCtrl.Get)
-			objectGroups.PUT("/:id", r.objectGroupCtrl.Update)
-			objectGroups.DELETE("/:id", r.objectGroupCtrl.Delete)
 		}
 
 		transactionLinks := authenticated.Group("/transaction-links")

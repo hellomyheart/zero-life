@@ -214,12 +214,6 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/object-groups',
-    name: 'ObjectGroupList',
-    component: () => import('@/pages/objectGroups/ObjectGroupListPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/transaction-links',
     name: 'TransactionLinkList',
     component: () => import('@/pages/transactionLinks/TransactionLinkListPage.vue'),
